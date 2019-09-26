@@ -53,7 +53,28 @@ Mælt er með að búa til eina skrá sem heitir "moses". Í þessa skrá eru ö
 ## Running on the Terra cluster
 First you need to get access to the cluster. Contact a cluster admin and get a username and password.
 
-### Establish an ssh tunnel
+- It is recommended to install Anaconda into your home directory on the cluster.
+- Install the dependencies from the setup section on the server into your home directory.
+    
+- clone the project to the server
+    
+    # assumes that you have an ssh key on the server
+    git clone git@github.com:cadia-lvl/SMT.git 
+
+Schedule the jupyter-notebook server using 'sbatch'.
+
+    cd SMT
+    sbatch run-jupyter.sbatch
+
+This will schedule the task on the cluster (should take less than 1 second). Check the status by using
+
+    squeue
+
+When the server is running grab the token which you will use to login to the notebook server. 
+
+    grep 'token' -m 1 server.out | awk -F '=' '{print $2}' 
+
+Establish an ssh tunnel to the server running
 Subtitude your username into the following command
 
     ssh -L 127.0.0.1:8080:127.0.0.1:8080 <username>@terra.hir.is -N

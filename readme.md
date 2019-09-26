@@ -50,3 +50,11 @@ Mælt er með að búa til eina skrá sem heitir "moses". Í þessa skrá eru ö
     git clone --branch patch-1 https://github.com/k4r573n/MosesSuite.git
     pip install tokenizer nltk google-cloud-translate
 
+## Running on the Terra cluster
+First you need to get access to the cluster. Contact a cluster admin and get a username and password.
+
+### Establish an ssh tunnel
+Subtitude your username into the following command
+
+    ssh -L 127.0.0.1:8080:127.0.0.1:8080 <username>@terra.hir.is -N
+    

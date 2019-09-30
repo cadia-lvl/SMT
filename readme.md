@@ -13,13 +13,23 @@ Best er að byrja á því að sækja þetta repo:
 
     mkdir moses
     cd moses
-    # Word alignment
+    # EITHER install giza or mgiza. Giza is single threaded, mgiza is multithreaded.
     git clone https://github.com/moses-smt/giza-pp.git
-    mkdir tools
+    mkdir -p tools
     ln -s giza-pp/GIZA++-v2/GIZA++ tools/GIZA++
     ln -s giza-pp/GIZA++-v2/snt2cooc.out tools/snt2cooc.out
     ln -s giza-pp/mkcls-v2/mkcls tools/mkcls
-    
+
+    # optional, to run giza multithreaded. Recommended for large corpora.    
+    git clone https://github.com/moses-smt/mgiza.git
+    mkdir -p tools
+    cd mgiza/mgizapp
+    cmake .
+    make -j4
+    make -j4 install
+    cp bin/* ../../tools
+    cp scripts/merge_alignment.py ../../tools
+
     # Moses
     git clone git://github.com/moses-smt/mosesdecoder.git
     sudo apt-get install automake \
@@ -40,16 +50,29 @@ Best er að byrja á því að sækja þetta repo:
      doxygen
 
     cd mosesdecoder
-    # Þetta forrit er til þess að þjappa saman orðþýingaruppflettingum og hraðar kerfinu töluvert.
-    make -f contrib/Makefiles/install-dependencies.gmake cmph
+    # Þetta forrit er til þess að þjappa saman orðþýingaruppflettingum og hraðar kerfinu töluvert. -j4 notar 4 þræði til að þýða.
+    make -j4 -f contrib/Makefiles/install-dependencies.gmake cmph
 
-    ./bjam --with-cmph=$(pwd)/opt
+    ./bjam -j4 --with-cmph=$(pwd)/opt
     cd ..
     
     # Tokenizers and other tools
     git clone --branch patch-1 https://github.com/k4r573n/MosesSuite.git
     cd SMT
     conda env create -f environment.yml 
+
+    # Running the notebook
+    # The notebook assumes some environment variables. Examples below
+    # You can add the exports to .bashrc if you want.
+    export MOSES_SUITE=/home/staff/$USER/moses/MosesSuite
+    export MOSESDECODER=/home/staff/$USER/moses/mosesdecoder
+    export MOSESDECODER_TOOLS=/home/staff/$USER/moses/tools
+    export WORKING_DIR=/mnt/scratch/smt
+    export MODEL_DIR=/somewhere
+    export THREADS=4
+
+    conda activate jupyter
+    jupyter-notebook .
 
 ## Running on the Terra cluster
 First you need to get access to the cluster. Contact a cluster admin and get a username and password.

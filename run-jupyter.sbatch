@@ -2,9 +2,9 @@
 
 #SBATCH --job-name=haukur-jupyter
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=32GB
-#SBATCH --time=14:00:00
+#SBATCH --cpus-per-task=20
+#SBATCH --mem=16GB
+#SBATCH --time=2-14:00:00
 #SBATCH --output=server.out
 #SBATCH --error=server.out
 
@@ -16,6 +16,7 @@ export MOSESDECODER=/home/staff/$USER/moses/mosesdecoder
 export MOSESDECODER_TOOLS=/home/staff/$USER/moses/tools
 export WORKING_DIR=/mnt/scratch/smt
 export MODEL_DIR=$PWD
+export THREADS=20
 
 port=8080
 

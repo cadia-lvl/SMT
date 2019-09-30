@@ -43,7 +43,7 @@ Best er að byrja á því að sækja þetta repo:
     # Þetta forrit er til þess að þjappa saman orðþýingaruppflettingum og hraðar kerfinu töluvert.
     make -f contrib/Makefiles/install-dependencies.gmake cmph
 
-    ./bjam --with-cmph=$(pwd)/opt/local
+    ./bjam --with-cmph=$(pwd)/opt
     cd ..
     
     # Tokenizers and other tools

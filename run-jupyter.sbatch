@@ -17,6 +17,7 @@ export MOSESDECODER_TOOLS=/home/staff/$USER/moses/tools
 export WORKING_DIR=/mnt/scratch/smt
 export MODEL_DIR=$PWD
 export THREADS=20
+export LC_ALL=C
 
 port=8080
 

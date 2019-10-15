@@ -6,10 +6,11 @@ corpora. The module is currently limted to EN and IS corpora.
 """
 import os
 import re
+from random import sample
 from glob import glob
 from os.path import getsize
 from dataclasses import dataclass
-from typing import Tuple, Optional, List, Dict, Generator, Sequence
+from typing import Tuple, Optional, List, Dict, Iterable, Sequence
 from subprocess import run, PIPE, Popen
 from enum import Enum
 
@@ -46,7 +47,7 @@ class Corpus:
 
     def get_corpus_info(self) -> Tuple[str, int, int]:
         size_MB = getsize(self.get_filepath()) >> 20
-        line_count = get_line_count(self.get_filepath())
+        line_count = _get_line_count(self.get_filepath())
         return (self.get_filepath(), size_MB, line_count)
 
     def get_filepath(self) -> str:
@@ -60,24 +61,28 @@ class Corpus:
 
 @dataclass(frozen=True)
 class ParaCorpus:
-    """A datatype to handle EN IS parallel corpus."""  # noqa: D203
+    """  # noqa: D203
+    A datatype to handle EN IS parallel corpus.
+    """
     EN: Corpus
     IS: Corpus
 
     def get_filepath_wo_extension(self) -> str:
-        stage = get_stage((self.EN, self.IS))
-        data_dir = get_data_dir((self.EN, self.IS))
+        stage = _get_stage((self.EN, self.IS))
+        data_dir = _get_data_dir((self.EN, self.IS))
         return os.path.join(data_dir,
                             stage)
 
 
 @dataclass(frozen=True)
 class Model(Corpus):
-    """A datatype to handle model configuration files. Is the same as Corpus."""
+    """ # noqa: D203
+    A datatype to handle model configuration files. Is the same as Corpus.
+    """
 
 
 def from_para(other_para: ParaCorpus, new_stage: str) -> ParaCorpus:
-    data_dir = get_data_dir((other_para.EN, other_para.IS))
+    data_dir = _get_data_dir((other_para.EN, other_para.IS))
     return ParaCorpus(
         Corpus(data_dir,
                new_stage,
@@ -88,7 +93,7 @@ def from_para(other_para: ParaCorpus, new_stage: str) -> ParaCorpus:
     )
 
 
-def get_data_dir(corpora: Sequence[Corpus]) -> str:
+def _get_data_dir(corpora: Sequence[Corpus]) -> str:
     """ # noqa: D205
     Raises an exception if the sequence of Corpus does not have the same
     data dir otherwise returns the data_dir.
@@ -99,7 +104,7 @@ def get_data_dir(corpora: Sequence[Corpus]) -> str:
     return data_dir.pop()
 
 
-def get_lang(corpora: Sequence[Corpus]) -> Lang:
+def _get_lang(corpora: Sequence[Corpus]) -> Lang:
     """ # noqa: D205
     Raises an exception if the sequence of Corpus does not have the same
     lang otherwise returns the lang.
@@ -110,7 +115,7 @@ def get_lang(corpora: Sequence[Corpus]) -> Lang:
     return lang.pop()
 
 
-def get_stage(corpora: Sequence[Corpus]) -> str:
+def _get_stage(corpora: Sequence[Corpus]) -> str:
     """ # noqa: D205
     Raises an exception if the sequence of Corpus does not have the same
     stage otherwise returns the stage.
@@ -121,7 +126,7 @@ def get_stage(corpora: Sequence[Corpus]) -> str:
     return stage.pop()
 
 
-def load_en_is_pipeline_from_stages(data_dir: str, stages: List[str]) \
+def pipeline_load(data_dir: str, stages: List[str]) \
         -> Dict[str, Optional[ParaCorpus]]:
     """Loads the processed pipeline as a dict from a directory given stages."""
     pipeline: Dict[str, Optional[ParaCorpus]] = dict()
@@ -140,7 +145,7 @@ def load_en_is_pipeline_from_stages(data_dir: str, stages: List[str]) \
     return pipeline
 
 
-def get_line_count(filepath: str) -> int:
+def _get_line_count(filepath: str) -> int:
     """Count the number of new-lines in a file."""
     f = open(filepath, 'rb')
     lines = 0
@@ -155,7 +160,7 @@ def get_line_count(filepath: str) -> int:
     return lines
 
 
-def split_tmx(tmx_file_path: str, source: str, target: str) -> ParaCorpus:
+def tmx_split(tmx_file_path: str, source: str, target: str) -> ParaCorpus:
     """Split a tmx file to ParaCorpus."""
     # This command creates two files in the same directory with .en, .is
     command = ['python2',
@@ -175,7 +180,7 @@ def split_tmx(tmx_file_path: str, source: str, target: str) -> ParaCorpus:
     )
 
 
-def peek_corpus(corpus: Corpus, length: int = 10) -> Generator[str, None, None]:
+def corpus_peek(corpus: Corpus, length: int = 10) -> Iterable[str]:
     """Returns the first length many lines from a given corpus."""
     with open(corpus.get_filepath()) as f:
         index = 0
@@ -186,18 +191,18 @@ def peek_corpus(corpus: Corpus, length: int = 10) -> Generator[str, None, None]:
                 return
 
 
-def peek_para_corpus(corpus: ParaCorpus, length: int = 10) \
-        -> Generator[str, None, None]:
+def p_corpus_peek(corpus: ParaCorpus, length: int = 10) \
+        -> Iterable[str]:
     """ # noqa: D205
     Returns a generator of formatted strings of the first length lines of a
     ParaCorpus."""
-    en_corpus = peek_corpus(corpus.EN, length)
-    is_corpus = peek_corpus(corpus.IS, length)
+    en_corpus = corpus_peek(corpus.EN, length)
+    is_corpus = corpus_peek(corpus.IS, length)
     for en_sent, is_sent in zip(en_corpus, is_corpus):
         yield f'EN: {en_sent} IS: {is_sent}'
 
 
-def combine_corpora(corpora: List[Corpus], stage: str) -> Corpus:
+def corpus_combine(corpora: List[Corpus], stage: str) -> Corpus:
     """# noqa: D205
     Combines a collection of Corpus to a single Corpus.
 
@@ -205,8 +210,8 @@ def combine_corpora(corpora: List[Corpus], stage: str) -> Corpus:
     Ensures that all corpora are from the same directory and of the same language.
     """
     source_filepaths = (corpus.get_filepath() for corpus in corpora)
-    lang = get_lang(corpora)
-    data_dir = get_data_dir(corpora)
+    lang = _get_lang(corpora)
+    data_dir = _get_data_dir(corpora)
     target_corpus = Corpus(data_dir,
                            stage,
                            lang)
@@ -217,8 +222,35 @@ def combine_corpora(corpora: List[Corpus], stage: str) -> Corpus:
     return target_corpus
 
 
-def consolidate_lengths(corpus: ParaCorpus, stage: str,
-                        min_length: int, max_length: int) -> ParaCorpus:
+def corpus_split(corpus: Corpus,
+                 stages: Tuple[str, str],
+                 count: int) -> Tuple[Corpus, Corpus]:
+    """ # noqa: D205
+    Splits a Corpus to two Corpus with stages. The latter stage has count
+    many lines
+    """
+    first_stage = Corpus(
+        corpus.data_dir,
+        stages[0],
+        corpus.lang
+    )
+    second_stage = Corpus(
+        corpus.data_dir,
+        stages[1],
+        corpus.lang
+    )
+    with open(corpus.get_filepath()) as f_in:
+        lines = f_in.readlines()
+        with open(first_stage.get_filepath(), 'w+') as f_s1, \
+                open(second_stage.get_filepath(), 'w+') as f_s2:
+            f_s1.writelines(lines[:-count])
+            f_s2.writelines(lines[-count:])
+
+    return (first_stage, second_stage)
+
+
+def corpus_length_fix(corpus: ParaCorpus, stage: str,
+                      min_length: int, max_length: int) -> ParaCorpus:
     """ # noqa: D205
     Consolidates the lengths of a ParaCorpus to min, max lengths provided.
 
@@ -236,7 +268,7 @@ def consolidate_lengths(corpus: ParaCorpus, stage: str,
     return target_corpus
 
 
-def apply_regexp_to_str(corpus: str, regexps: List[Tuple[str, str]]) -> str:
+def sent_regexp(corpus: str, regexps: List[Tuple[str, str]]) -> str:
     """ # noqa: D205
     Applies a list of regular expressions and their substitions to a string.
     """
@@ -247,9 +279,9 @@ def apply_regexp_to_str(corpus: str, regexps: List[Tuple[str, str]]) -> str:
     return processed_line
 
 
-def apply_regexp_to_corpus(corpus: Corpus,
-                           stage: str,
-                           regexps: List[Tuple[str, str]]) -> Corpus:
+def corpus_regexp(corpus: Corpus,
+                  stage: str,
+                  regexps: List[Tuple[str, str]]) -> Corpus:
     """ # noqa: D205
     Applies a list of regular expressions and their substitions to a Corpus and
     returns the processed corpus.
@@ -264,14 +296,14 @@ def apply_regexp_to_corpus(corpus: Corpus,
         os.remove(target_corpus.get_filepath())
     except OSError:
         pass
-    for line in peek_corpus(corpus, length=0):
-        processed_line = apply_regexp_to_str(line, regexps)
+    for line in corpus_peek(corpus, length=0):
+        processed_line = sent_regexp(line, regexps)
         with open(target_corpus.get_filepath(), 'a+') as f:
             f.write(processed_line)
     return target_corpus
 
 
-def shuffle_corpus(corpus: Corpus, seed_file: str, stage: str) -> Corpus:
+def corpus_shuffle(corpus: Corpus, seed_file: str, stage: str) -> Corpus:
     """ # noqa: D205
     Shuffles a Corpus using the input as a random seed. Returns the shuffled
     Corpus.
@@ -291,7 +323,15 @@ def shuffle_corpus(corpus: Corpus, seed_file: str, stage: str) -> Corpus:
     return target_corpus
 
 
-def tokenize_corpus(corpus: Corpus, stage: str, method: str = 'pass-through') -> Corpus:
+def corpus_sample(corpus: Corpus, count: int) -> Iterable[str]:
+    """Samples count many lines from a Corpus."""
+    with open(corpus.get_filepath()) as f_in:
+        # Careful, we read the whole file...
+        lines = f_in.readlines()
+    yield from sample(lines, count)
+
+
+def corpus_tokenize(corpus: Corpus, stage: str, method: str = 'pass-through') -> Corpus:
     """ # noqa D205
     Tokenizes a Corpus using the specified method. Returns the tokenized
     Corpus.
@@ -307,15 +347,15 @@ def tokenize_corpus(corpus: Corpus, stage: str, method: str = 'pass-through') ->
     with open(corpus.get_filepath()) as f_in, \
             open(target_corpus.get_filepath(), 'w+') as f_out:
         for line in f_in:
-            tokenized_sent = tokenize_sentence(line,
-                                               corpus.lang,
-                                               method)
+            tokenized_sent = sent_tokenize(line,
+                                           corpus.lang,
+                                           method)
             # And add a newline when we write it out
             f_out.write(tokenized_sent + '\n')
     return target_corpus
 
 
-def tokenize_sentence(sentence, lang: Lang, method: str = 'pass-through'):
+def sent_tokenize(sentence, lang: Lang, method: str = 'pass-through'):
     """ # noqa D205
     Tokenizes a sentence using the specified method. Returns the tokenized
     sentence.
@@ -332,15 +372,15 @@ def tokenize_sentence(sentence, lang: Lang, method: str = 'pass-through'):
                                     handle_kludgy_ordinals=tokenizer.KLUDGY_ORDINALS_MODIFY):
         kind, txt, val = token
         if method == 'pass-through':
-            token = pass_through(kind, txt, val)
+            token = _tok_pass_through(kind, txt, val)
         elif method == 'placeholders':
-            token = tokenize_is_placeholders(kind, txt, val)
+            token = _tok_placeholders(kind, txt, val)
         if token:
             result.append(token)
     return " ".join(result)
 
 
-def pass_through(kind, txt, val):
+def _tok_pass_through(kind, txt, val):
     if kind == tokenizer.TOK.WORD:
         if val:
             return val[0][0]
@@ -354,7 +394,7 @@ def pass_through(kind, txt, val):
     return txt
 
 
-def tokenize_is_placeholders(kind, txt, val):
+def _tok_placeholders(kind, txt, val):
     if kind == tokenizer.TOK.WORD:
         if val:
             return val[0][0]
@@ -398,7 +438,7 @@ def tokenize_is_placeholders(kind, txt, val):
     return "UNKOWN"
 
 
-def train_truecase(corpus: Corpus, stage: str) -> Model:
+def corpus_truecase_train(corpus: Corpus, stage: str) -> Model:
     """Trains a truecase model on the Corpus and returns a Model."""
     target_model = Model(
         corpus.data_dir,
@@ -415,7 +455,7 @@ def train_truecase(corpus: Corpus, stage: str) -> Model:
     return target_model
 
 
-def apply_truecase(corpus: Corpus, truecase_model: Model, stage: str) -> Corpus:
+def corpus_truecase_apply(corpus: Corpus, truecase_model: Model, stage: str) -> Corpus:
     """Applies a given truecase Model to a Corpus, returns truecased Corpus."""
     target_corpus = Corpus(
         corpus.data_dir,
@@ -432,7 +472,7 @@ def apply_truecase(corpus: Corpus, truecase_model: Model, stage: str) -> Corpus:
     return target_corpus
 
 
-def truecase_sentence(sentence: str, truecase_model: Model):
+def sent_truecase(sentence: str, truecase_model: Model):
     """Truecases a given sentence. Assumes no newlines are in the sentence."""
     p1 = Popen(["echo", sentence], stdout=PIPE)
     p2 = Popen([f'{MOSESDECODER}/scripts/recaser/truecase.perl',
@@ -483,30 +523,3 @@ def kenlm_eval(model: Model, sentence: str) -> str:
     p1.stdout.close()
     output = p2.communicate()[0].decode("utf-8")
     return output
-
-
-def corpus_split(corpus: Corpus,
-                 stages: Tuple[str, str],
-                 count: int) -> Tuple[Corpus, Corpus]:
-    """ # noqa: D205
-    Splits a Corpus to two Corpus with stages. The latter stage has count
-    many lines
-    """
-    first_stage = Corpus(
-        corpus.data_dir,
-        stages[0],
-        corpus.lang
-    )
-    second_stage = Corpus(
-        corpus.data_dir,
-        stages[1],
-        corpus.lang
-    )
-    with open(corpus.get_filepath()) as f_in:
-        lines = f_in.readlines()
-        with open(first_stage.get_filepath(), 'w+') as f_s1, \
-                open(second_stage.get_filepath(), 'w+') as f_s2:
-            f_s1.writelines(lines[:-count])
-            f_s2.writelines(lines[-count:])
-
-    return (first_stage, second_stage)

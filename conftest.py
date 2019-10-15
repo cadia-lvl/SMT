@@ -1,6 +1,6 @@
 import pytest
 from glob import glob
-from corpus import load_en_is_pipeline_from_stages
+from corpus import pipeline_load
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -28,6 +28,6 @@ def get_pipeline(request):
     data_dir = request.config.getoption("--data")
 
     def load_pipeline(stages):
-        return load_en_is_pipeline_from_stages(data_dir, stages)
+        return pipeline_load(data_dir, stages)
 
     return load_pipeline

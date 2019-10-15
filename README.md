@@ -4,7 +4,7 @@ Einnig er lýst hvernig er hægt að þróa kerfið frekar á Terra-hýsingunni 
 Öll þjálfun er gerð í gegnum Jupyter notebooks.
 
 ## Uppsetning
-Leiðbeiningarnar eru unnar úr [opinberum leiðbeiningum](http://www.statmt.org/moses/?n=Development.GetStarted). Sjá þær leiðbeiningar fyrir jaðartilfelli.
+Leiðbeiningarnar eru unnar úr [opinberum leiðbeiningum Moses](http://www.statmt.org/moses/?n=Development.GetStarted). Sjá þær leiðbeiningar fyrir jaðartilfelli.
 Moses kerfið er háð því að önnur forrit séu til staðar í vinnslunni, þeirri uppsetningu er líka lýst.
 
 Best er að byrja á því að sækja þetta repo:
@@ -74,27 +74,33 @@ Best er að byrja á því að sækja þetta repo:
     conda activate jupyter
     jupyter-notebook .
 
-## Running on the Terra cluster
-First you need to get access to the cluster. Contact a cluster admin and get a username and password.
+## Keyra prófanir
+Það koma nokkrar prófanir (tests) með verkefninu. Þær vinna á prófunar gögnum sem koma ekki með kóðanum. Best er að setja einhver .tmx skjöl í skrá sem heitir 'test_data'. Allar skrárnar sem eru í þeirri skrá eru lesnar og notaðar í prófanir.
 
-- It is recommended to install Anaconda into your home directory on the cluster.
-- Install the dependencies from the setup section on the server into your home directory.
+Til þess að keyra öll testin:
+
+    pytest
+
+## Keyrsla á Terra cluster (Slurm)
+Fyrst þarf að fá aðgang á cluster. Hafðu samband við cluster admin.
+
+- Best er að setja upp Anaconda í home skrá þinni.
+- Fylgja leiðbeiningum að ofan um uppsetningu á Moses.
+
+Panta tíma á cluster fyrir jupyter-notebook með 'sbatch' sem er skilgreint í SMT repo.
     
-Schedule the jupyter-notebook server using 'sbatch' from the SMT repo.
-
     cd SMT
     sbatch run-jupyter.sbatch
 
-This will schedule the task on the cluster (should take less than 1 second). Check the status by using
+Þetta á að byrja keyrsluna á Juypter notebook. Athugaðu hvort hún keyrir.
 
     squeue
 
-When the server is running grab the token which you will use to login to the notebook server. 
+Þegar hún keyrir, sæktu token-ið til þess að logga inn á notebook.
 
     grep 'token' -m 1 server.out | awk -F '=' '{print $2}' 
 
-Establish an ssh tunnel to the server running
-Subtitude your <username> into the following command
+Setja upp SSH tunnel (svo hægt sé að opna þetta á þinni vél). Settu inn notendanafnið þitt á Terra í stað <username>.
 
     ssh -L 127.0.0.1:8080:127.0.0.1:8080 <username>@terra.hir.is -N
     

@@ -15,7 +15,6 @@ export MOSES_SUITE=/home/staff/$USER/moses/MosesSuite
 export MOSESDECODER=/home/staff/$USER/moses/mosesdecoder
 export MOSESDECODER_TOOLS=/home/staff/$USER/moses/tools
 export WORKING_DIR=/mnt/scratch/smt
-export MODEL_DIR=$PWD
 export THREADS=20
 export LC_ALL=C
 

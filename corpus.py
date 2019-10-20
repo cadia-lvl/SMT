@@ -6,11 +6,13 @@ corpora. The module is currently limted to EN and IS corpora.
 """
 import os
 import re
+from unicodedata import normalize
+from collections import Counter
 from random import sample
 from glob import glob
 from os.path import getsize
 from dataclasses import dataclass
-from typing import Tuple, Optional, List, Dict, Iterable, Sequence
+from typing import Tuple, Optional, List, Dict, Iterable, Sequence, Union
 from subprocess import run, PIPE, Popen
 from enum import Enum
 
@@ -26,8 +28,6 @@ MOSESDECODER_TOOLS = os.environ['MOSESDECODER_TOOLS']
 
 # This directory will be created and used for intermediary files.
 WORKING_DIR = os.environ['WORKING_DIR']
-# This directory will be created and used for the generated models.
-MODEL_DIR = os.environ['MODEL_DIR']
 # Some parts of the processing support threading, set the value here.
 THREADS = os.environ['THREADS']
 
@@ -46,9 +46,13 @@ class Corpus:
     lang: Lang
 
     def get_corpus_info(self) -> Tuple[str, int, int]:
-        size_MB = getsize(self.get_filepath()) >> 20
+        size_MB = getsize(self.get_filepath()) >> 10
         line_count = _get_line_count(self.get_filepath())
         return (self.get_filepath(), size_MB, line_count)
+
+    def get_corpus_info_formatted(self) -> str:
+        path, size, lines = self.get_corpus_info()
+        return f'{path:<40}{str(size)+"kB":^15}{lines:>10}'
 
     def get_filepath(self) -> str:
         return os.path.join(self.data_dir,
@@ -126,22 +130,24 @@ def _get_stage(corpora: Sequence[Corpus]) -> str:
     return stage.pop()
 
 
-def pipeline_load(data_dir: str, stages: List[str]) \
-        -> Dict[str, Optional[ParaCorpus]]:
+def pipeline_load(data_dir: str,
+                  stages: List[str],
+                  langs: List[Lang] = [Lang.EN, Lang.IS]) \
+        -> Dict[str, Union[ParaCorpus, Corpus, None]]:
     """Loads the processed pipeline as a dict from a directory given stages."""
-    pipeline: Dict[str, Optional[ParaCorpus]] = dict()
+    pipeline: Dict[str, Union[ParaCorpus, Corpus, None]] = dict()
     for stage in stages:
-        en_files = glob(f'{data_dir}/*{stage}*.{Lang.EN.value}')
-        is_files = glob(f'{data_dir}/*{stage}*.{Lang.IS.value}')
-        if len(en_files) == 1 and len(is_files) == 1:
+        files = {}
+        for lang in langs:
+            files[lang] = glob(f'{data_dir}/*{stage}*.{lang.value}')
+        if all(len(files[key]) == 1 for key in files) and len(files) == 2:
             pipeline[stage] = ParaCorpus(
                 Corpus(data_dir, stage, Lang.EN),
                 Corpus(data_dir, stage, Lang.IS))
-        elif not en_files and not is_files:
-            pipeline[stage] = None
+        elif all(len(files[key]) == 1 for key in files) and len(files) == 1:
+            pipeline[stage] = Corpus(data_dir, stage, Lang.IS)
         else:
-            raise Exception(f"Unable to gather files for stage={stage},\
-                            en={en_files}, is={is_files}")
+            pipeline[stage] = None
     return pipeline
 
 
@@ -331,6 +337,44 @@ def corpus_sample(corpus: Corpus, count: int) -> Iterable[str]:
     yield from sample(lines, count)
 
 
+def corpus_sentence_counter(corpus: Corpus) -> Counter:
+    """Returns a Counter with the sentence length as key and the count as value."""
+    with open(corpus.get_filepath()) as f_in:
+        counter: Counter = Counter()
+        for line in f_in:
+            sent_length = len(line.split(" "))
+            counter[sent_length] += 1
+    return counter
+
+
+def corpus_token_counter(corpus: Corpus) -> Counter:
+    """Returns a Counter with the token as key and the count as value."""
+    with open(corpus.get_filepath()) as f_in:
+        counter: Counter = Counter()
+        for line in f_in:
+            counter.update(line.strip('\n').split(" "))
+    return counter
+
+
+def sent_lowercase_normalize(sent: str) -> str:
+    """Applies unicode lowercase and normalize on a string."""
+    return normalize('NFKC', sent.casefold())
+
+
+def corpus_lowercase_normalize(corpus: Corpus, stage: str) -> Corpus:
+    """Applies unicode lowercase and normalize on a Corpus."""
+    target_corpus = Corpus(
+        corpus.data_dir,
+        stage,
+        corpus.lang
+    )
+    with open(corpus.get_filepath()) as f_in, \
+            open(target_corpus.get_filepath(), 'w+') as f_out:
+        for line in f_in:
+            f_out.write(sent_lowercase_normalize(line))
+    return target_corpus
+
+
 def corpus_tokenize(corpus: Corpus, stage: str, method: str = 'pass-through') -> Corpus:
     """ # noqa D205
     Tokenizes a Corpus using the specified method. Returns the tokenized
@@ -364,7 +408,7 @@ def sent_tokenize(sentence, lang: Lang, method: str = 'pass-through'):
         IS: "placeholders", uses placeholders for some NEs.
     """
     if lang == Lang.EN:
-            # We try to use a standard tokenizer for english and add a newline
+        # We use the word_tokenize NLTL tokenizer for english
         return " ".join(nltk.word_tokenize(sentence))
     # We set the option to change "1sti", ... to "1", ...
     result = []
@@ -490,12 +534,14 @@ def kenlm_create(corpus: Corpus, stage: str, order: int) -> Model:
     """Creates a KenLM language model of order. Binarizes the model."""
     tmp_model = Model(
         corpus.data_dir,
-        f'tmp-{stage}',
+        f'arpa',
         corpus.lang
     )
     command = [f'{MOSESDECODER}/bin/lmplz',
                '-o',
                str(order),
+               '-S',
+               '50%'
                ]
     with open(corpus.get_filepath()) as f_in, \
             open(tmp_model.get_filepath(), 'w+') as f_out:
@@ -506,6 +552,8 @@ def kenlm_create(corpus: Corpus, stage: str, order: int) -> Model:
         corpus.lang
     )
     command = [f'{MOSESDECODER}/bin/build_binary',
+               '-S',
+               '50%',
                tmp_model.get_filepath(),
                target_model.get_filepath()
                ]

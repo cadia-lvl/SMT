@@ -204,6 +204,7 @@ def test_tokenization_sentence():
     # assert tokenized == "H2O , CO2 , 9 %"
     print(tokenized)
 
+    # In English we do not expand abbreviations.
     test = "nr., art., 1st first, 1., 2nd"
     tokenized = c.sent_tokenize(test, c.Lang.EN)
     print(tokenized)
@@ -218,6 +219,28 @@ def test_tokenization_sentence():
     tokenized = c.sent_tokenize(test, c.Lang.EN)
     print(tokenized)
     assert tokenized == "H2O , CO2 , 9 %"
+
+    # We deal with english contractions
+    test = "It's"
+    tokenized = c.sent_tokenize(test, c.Lang.EN)
+    print(tokenized)
+    assert tokenized == "It 's"
+
+    # We deal with URLs
+    test = "http://www.malfong.is"
+    tokenized = c.sent_tokenize(test, c.Lang.IS)
+    print(tokenized)
+    assert tokenized == "http://www.malfong.is"
+    tokenized = c.sent_tokenize(test, c.Lang.EN)
+    print(tokenized)
+    # TODO: The NLTK tokenizer does not deal with URLs.
+    # assert tokenized == "http://www.malfong.is"
+
+    # How do we deal with lowercases?
+    test = "i'm couldn't"
+    tokenized = c.sent_tokenize(test, c.Lang.EN)
+    print(tokenized)
+    assert tokenized == "i 'm could n't"
 
 
 def test_true_case(get_pipeline):
@@ -288,3 +311,27 @@ def test_corpus_sample(get_pipeline):
     pipeline = get_pipeline(stages)
     sampled_lines = list(c.corpus_sample(pipeline[stages[0]].IS, 10))
     assert len(sampled_lines) == 10
+
+
+def test_corpus_token_counter(get_pipeline):
+    stages = ['truecased']
+    pipeline = get_pipeline(stages)
+    counter = c.corpus_token_counter(pipeline[stages[0]].IS)
+    # The most common token is '.'
+    assert counter.most_common(1)[0][0] == '.'
+
+
+def test_corpus_sentence_counter(get_pipeline):
+    stages = ['truecased']
+    pipeline = get_pipeline(stages)
+    counter = c.corpus_sentence_counter(pipeline[stages[0]].IS)
+    # The most common sentence length is 3
+    assert counter.most_common()[0][0] == 3
+
+
+def test_sent_lowercase_normalize():
+    test = "UppEr \u00C7" # LATIN CAPITAL LETTER C WITH CEDILLA 
+    test2 = "UppEr \u0043\u0327" # LATIN CAPITAL LETTER C and COMBINING CEDILLA
+    target = "upper \u00E7"
+    assert c.sent_lowercase_normalize(test) == target
+    assert c.sent_lowercase_normalize(test2) == target

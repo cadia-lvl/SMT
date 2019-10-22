@@ -2,7 +2,7 @@
 Parallel corpus processing.
 
 This module exposes some useful datatypes and functions to process parallel
-corpora. The module is currently limted to EN and IS corpora.
+corpora.
 """
 import os
 import re
@@ -12,24 +12,26 @@ from random import sample
 from glob import glob
 from os.path import getsize
 from dataclasses import dataclass
-from typing import Tuple, Optional, List, Dict, Iterable, Sequence, Union
+from typing import Tuple, List, Dict, Iterable, Sequence, Union
 from subprocess import run, PIPE, Popen
 from enum import Enum
 
 import tokenizer
 import nltk
+import click
+nltk.download('punkt')
 # Use full paths for ENV vars.
 # Used to process .tmx files, required for this notebook
-MOSES_SUITE = os.environ['MOSES_SUITE']
+MOSES_SUITE = os.environ.get('MOSES_SUITE', None)
 # The Moses system as pulled and built from github
-MOSESDECODER = os.environ['MOSESDECODER']
+MOSESDECODER = os.environ.get('MOSESDECODER', None)
 # Systems used by Moses (see readme.md).
-MOSESDECODER_TOOLS = os.environ['MOSESDECODER_TOOLS']
+MOSESDECODER_TOOLS = os.environ.get('MOSESDECODER_TOOLS', None)
 
 # This directory will be created and used for intermediary files.
-WORKING_DIR = os.environ['WORKING_DIR']
+WORKING_DIR = os.environ.get('WORKING_DIR', None)
 # Some parts of the processing support threading, set the value here.
-THREADS = os.environ['THREADS']
+THREADS = os.environ.get('THREADS', 4)
 
 
 class Lang(Enum):
@@ -132,9 +134,11 @@ def _get_stage(corpora: Sequence[Corpus]) -> str:
 
 def pipeline_load(data_dir: str,
                   stages: List[str],
-                  langs: List[Lang] = [Lang.EN, Lang.IS]) \
+                  langs: List[Lang]) \
         -> Dict[str, Union[ParaCorpus, Corpus, None]]:
     """Loads the processed pipeline as a dict from a directory given stages."""
+    if not langs:
+        langs = [Lang.EN, Lang.IS]
     pipeline: Dict[str, Union[ParaCorpus, Corpus, None]] = dict()
     for stage in stages:
         files = {}
@@ -274,7 +278,7 @@ def corpus_length_fix(corpus: ParaCorpus, stage: str,
     return target_corpus
 
 
-def sent_regexp(corpus: str, regexps: List[Tuple[str, str]]) -> str:
+def sent_regexp(corpus: str, regexps: List[Tuple[re.Pattern, str]]) -> str:
     """ # noqa: D205
     Applies a list of regular expressions and their substitions to a string.
     """
@@ -571,3 +575,47 @@ def kenlm_eval(model: Model, sentence: str) -> str:
     p1.stdout.close()
     output = p2.communicate()[0].decode("utf-8")
     return output
+
+
+@click.command()
+@click.argument('sent')
+@click.option(
+        '--lang',
+        default='is',
+        type=str,
+        required=True
+        )
+def sent_process(sent: str, lang: str) -> str:
+    """Applies all neccessary preprocessing steps to a sentence."""
+    l_lang: Lang = Lang(lang)
+    # u'\u007c' - |
+    pipe_reg = re.compile(r"\u007c")
+    # u'\u003c', u'\u003e' - <, >
+    lt_reg = re.compile(r"\u003c")
+    gt_reg = re.compile(r"\u003e")
+
+    # u'\u005b', u'\u005d' - [, ]
+    bracket_open_reg = re.compile(r"\u005b")
+    bracket_close_reg = re.compile(r"\u005d")
+
+    # Taken from https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url?noredirect=1&lq=1
+    uri_reg = re.compile(r"(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)")
+    empty_bracets = re.compile(r"[\[\(]\s*[\]\)]")
+    regexps = [
+        (uri_reg, '@uri@'),
+        (empty_bracets, ""),
+        (pipe_reg, '@pipe@'),
+        (lt_reg, '@lt@'),
+        (gt_reg, '@gt@'),
+        (bracket_open_reg, '@brac_open@'),
+        (bracket_close_reg, '@brac_close@')
+    ]
+    sent = sent_regexp(sent, regexps)
+    sent = sent_lowercase_normalize(sent)
+    sent = sent_tokenize(sent, l_lang)
+    click.echo(sent)
+    return sent
+
+
+if __name__ == '__main__':
+    sent_process() # pylint: disable=no-value-for-parameter

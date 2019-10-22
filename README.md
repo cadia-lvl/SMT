@@ -3,6 +3,32 @@
 Einnig er lýst hvernig er hægt að þróa kerfið frekar á Terra-hýsingunni í gegnum Slurm.
 Öll þjálfun er gerð í gegnum Jupyter notebooks.
 
+## Keyrsla
+Til þess að keyra kerfið þá þarf Docker að vera uppsett.
+
+Keyrsla (þýðing en-is) á einni setningu:
+    docker run --rm haukurp/moses-en-is /opt/moses/bin/moses -f moses.ini $(python3 corpus.py --process-sentence "Unpocessed English sentence.")
+
+Keyra Moses þýðingarþjón.
+    Vantar
+
+Keyrsla sem singularity geymir (dæmi)
+    singularity run docker://haukurp/moses-lvl:0.1
+## Þróun
+Það eru skilgreindar nokkrar Docker myndir í þessu verkefni.
+
+1. `moses-Dockerfile`. Þetta er grunn myndin sem hefur uppsett Moses þýðingarkerfið og önnur tól nauðsynleg til þess að þjálfa og keyra þýðingarkerfið. Þessi mynd er ekki til beinnar notkunar.
+1. `corpus-Dockerfile`. Þessi mynd byggir á `moses-Dockerfile` og bætir við Python 3.7 og öðrum python pökkum til þess að forvinna gögn.
+1. `en-is-Dockerfile`. Þessi mynd byggir á `corpus-Dockerfile` sem og forþjálfuðu Moses þýðingarkerfi fyrir `en-is` þýðingar.
+1. `is-en-Dockerfile`. Alveg eins og `en-is-Dockerfile` nema fyrir `is-en` þýðingar.
+
+Til þess að byggja Docker myndirnar þarf að uppfæra tag (0.1) og vísa í rétta mynd.
+Dæmi:
+    docker build -t haukurp/moses-smt:0.1 -f moses-Dockerfile .
+
+Til þess að senda myndina á DockerHub þarf aukalega að vera skráður inn í docker `docker login` og hlaða upp ný byggðri mynd.
+    docker push haukurp/moses-smt:0.1
+
 ## Uppsetning
 Leiðbeiningarnar eru unnar úr [opinberum leiðbeiningum Moses](http://www.statmt.org/moses/?n=Development.GetStarted). Sjá þær leiðbeiningar fyrir jaðartilfelli.
 Moses kerfið er háð því að önnur forrit séu til staðar í vinnslunni, þeirri uppsetningu er líka lýst.

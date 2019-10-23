@@ -19,7 +19,6 @@ from enum import Enum
 import tokenizer
 import nltk
 import click
-nltk.download('punkt')
 # Use full paths for ENV vars.
 # Used to process .tmx files, required for this notebook
 MOSES_SUITE = os.environ.get('MOSES_SUITE', None)
@@ -413,6 +412,7 @@ def sent_tokenize(sentence, lang: Lang, method: str = 'pass-through'):
     """
     if lang == Lang.EN:
         # We use the word_tokenize NLTL tokenizer for english
+        nltk.download('punkt')
         return " ".join(nltk.word_tokenize(sentence))
     # We set the option to change "1sti", ... to "1", ...
     result = []
@@ -617,5 +617,14 @@ def sent_process(sent: str, lang: str) -> str:
     return sent
 
 
+@click.command()
+@click.argument('filename', type=click.Path(exists=True))
+def test_filename(filename: str) -> str:
+    click.echo(type(filename))
+    click.echo(filename)
+    return filename
+
+
 if __name__ == '__main__':
+    test_filename() # pylint: disable=no-value-for-parameter
     sent_process() # pylint: disable=no-value-for-parameter

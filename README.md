@@ -14,6 +14,10 @@ Keyra Moses þýðingarþjón.
 
 Keyrsla sem singularity geymir (dæmi)
     singularity run docker://haukurp/moses-lvl:0.1
+
+Keyrsla á Jupyter notebooks í gegnum docker geymi
+    docker run -ti -p 8888:8888 -v $PWD:/opt/work haukurp/moses-lvl:0.3 /bin/bash -c "/opt/conda/envs/jupyter/bin/jupyter notebook --notebook-dir=/opt/work --ip='*' --port=8888 --no-browser --allow-root"
+
 ## Þróun
 Það eru skilgreindar nokkrar Docker myndir í þessu verkefni.
 

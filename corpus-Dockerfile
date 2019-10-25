@@ -20,11 +20,12 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-${MINICONDA_VERS
     echo "conda activate base" >> ~/.bashrc
 
 # Add our code
-COPY corpus.py /opt/
+COPY corpus/corpus.py /opt/
 COPY environment.yml /opt/
 
 RUN conda env create -f /opt/environment.yml && \
-    echo "conda activate jupyter" >> ~/.bashrc
+    echo "conda activate jupyter" >> ~/.bashrc && \
+    mkdir /opt/work
 
 ENV TINI_VERSION v0.16.1
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/bin/tini

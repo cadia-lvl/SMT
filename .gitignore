@@ -1,11 +1,14 @@
 # Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-.mypy_cache
+corpus/__pycache__/
+corpus/*.py[cod]
+corpus/$py.class
+corpus/.mypy_cache/
+corpus/corpus.egg-info/
 # Jupyter Notebook
 .ipynb_checkpoints
 
 # Project specific
 server.out
 data/
+corpus/test_data/*.is
+corpus/test_data/*.en

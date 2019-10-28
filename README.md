@@ -45,13 +45,12 @@ Dæmi:
 Til þess að senda myndina á DockerHub þarf aukalega að vera skráður inn í docker `docker login` og hlaða upp ný byggðri mynd.
     docker push haukurp/moses-smt:$TAG
 
-## Keyrsla á Terra cluster (Slurm)
+### Keyrsla á Terra cluster (Slurm)
 Fyrst þarf að fá aðgang á cluster. Hafðu samband við cluster admin.
 
-- Best er að setja upp Anaconda í home skrá þinni.
-- Fylgja leiðbeiningum að ofan um uppsetningu á Moses.
+Best er að sækja git repo á vélina þar sem allar keyrslu skipanir eru skilgreindar þar.
 
-Panta tíma á cluster fyrir jupyter-notebook með 'sbatch' sem er skilgreint í SMT repo.
+Panta tíma á cluster fyrir jupyter-notebook (í gegnum singularity) með 'sbatch' sem er skilgreint í SMT repo.
     
     cd SMT
     sbatch run-jupyter.sbatch
@@ -66,5 +65,6 @@ Panta tíma á cluster fyrir jupyter-notebook með 'sbatch' sem er skilgreint í
 
 Setja upp SSH tunnel (svo hægt sé að opna þetta á þinni vél). Settu inn notendanafnið þitt á Terra í stað <username>.
 
-    ssh -L 127.0.0.1:8080:127.0.0.1:8080 <username>@terra.hir.is -N
+    ssh -N -L 127.0.0.1:8888:127.0.0.1:8888 haukurpj@10.6.11.156    
+
     

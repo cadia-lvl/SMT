@@ -71,6 +71,7 @@ def test_combine_corpora(get_pipeline):
     assert is_total_length == c.corpus_info(is_cat_corpus)[2]
     assert is_total_length == en_total_length
 
+
 def test_peek_para_corpus(get_pipeline):
     stages = ['cat']
     is_pipeline = get_pipeline(stages, c.Lang.IS)
@@ -87,16 +88,20 @@ def test_remove_illegal_chars(get_pipeline):
 
     # Check that we find some of these characters in the first lines
     assert ord('\u000A') == 10
-    assert any(ord(char) == 10 for line in c.corpus_peek(is_pipeline['cat']) for char in line)
-    assert any(ord(char) == 10 for line in c.corpus_peek(en_pipeline['cat']) for char in line)
+    assert any(ord(char) == 10 for line in c.corpus_peek(
+        is_pipeline['cat']) for char in line)
+    assert any(ord(char) == 10 for line in c.corpus_peek(
+        en_pipeline['cat']) for char in line)
     is_processed_corpus = c.corpus_create_path(is_pipeline['cat'], 'regexp')
     en_processed_corpus = c.corpus_create_path(en_pipeline['cat'], 'regexp')
 
     c.corpus_regexp(is_pipeline['cat'], is_processed_corpus, patterns)
     c.corpus_regexp(en_pipeline['cat'], en_processed_corpus, patterns)
     # Now all the newlines are gone (atleast from the first lines).
-    assert all(ord(char) != 10 for line in c.corpus_peek(is_processed_corpus) for char in line)
-    assert all(ord(char) != 10 for line in c.corpus_peek(en_processed_corpus) for char in line)
+    assert all(ord(char) != 10 for line in c.corpus_peek(
+        is_processed_corpus) for char in line)
+    assert all(ord(char) != 10 for line in c.corpus_peek(
+        en_processed_corpus) for char in line)
 
     # Lets test on a string
     # u'\u0000'-u'\u001f', u'\u007f' - Non-printing characters
@@ -124,8 +129,10 @@ def test_shuffling(get_pipeline):
     is_shuffled_corpus = c.corpus_create_path(is_pipeline['cat'], 'shuf')
     en_shuffled_corpus = c.corpus_create_path(en_pipeline['cat'], 'shuf')
     # We use the same seed
-    c.corpus_shuffle(is_pipeline['cat'], is_shuffled_corpus, is_pipeline['cat'])
-    c.corpus_shuffle(en_pipeline['cat'], en_shuffled_corpus, is_pipeline['cat'])
+    c.corpus_shuffle(is_pipeline['cat'],
+                     is_shuffled_corpus, is_pipeline['cat'])
+    c.corpus_shuffle(en_pipeline['cat'],
+                     en_shuffled_corpus, is_pipeline['cat'])
 
     # Check if at least some of the lines are not the same
     corpus_different_check(is_pipeline['cat'],
@@ -142,6 +149,7 @@ def test_shuffling(get_pipeline):
     # and manually check if the alignment is ok
     print(*c.corpora_peek([is_shuffled_corpus, en_shuffled_corpus]))
 
+
 def test_tokenization_corpus(get_pipeline):
     stages = ['shuf']
     is_pipeline = get_pipeline(stages, c.Lang.IS)
@@ -151,7 +159,7 @@ def test_tokenization_corpus(get_pipeline):
     en_tok = c.corpus_create_path(en_pipeline['shuf'], 'tok')
 
     c.corpus_tokenize(is_pipeline['shuf'], is_tok)
-    c.corpus_tokenize(en_pipeline['shuf'], en_tok)
+    c.corpus_tokenize(en_pipeline['shuf'], en_tok, 'nltk')
 
     # We just check if some of the lines have changed
     corpus_different_check(is_pipeline['shuf'],
@@ -159,12 +167,12 @@ def test_tokenization_corpus(get_pipeline):
     corpus_different_check(en_pipeline['shuf'],
                            en_tok)
 
-
     # And that we have the same number of lines
     same_length_check(is_pipeline['shuf'],
                       is_tok)
     same_length_check(en_pipeline['shuf'],
                       en_tok)
+
 
 def test_tokenization_sentence():
     test = "nr., gr., 1sti fyrsti, 1., 2ja"
@@ -173,13 +181,20 @@ def test_tokenization_sentence():
 
     test = "H2O, CO2, 9%"
     tokenized = c.sent_tokenize(test, c.Lang.IS)
-    # TODO: Pending on Tokenizer patch.
+    # Miðeind tokenizer breaks up H2O to H 2O
     # assert tokenized == "H2O , CO2 , 9 %"
     print(tokenized)
 
     # In English we do not expand abbreviations.
     test = "nr., art., 1st first, 1., 2nd"
-    tokenized = c.sent_tokenize(test, c.Lang.EN)
+    tokenized = c.sent_tokenize(test, c.Lang.EN, 'nltk')
+    print(tokenized)
+    assert tokenized == "nr. , art. , 1st first , 1. , 2nd"
+    # Moses does not understand most abbreviations
+    tokenized = c.sent_tokenize(test, c.Lang.EN, 'moses')
+    print(tokenized)
+    assert tokenized == "nr . , art . , 1st first , 1 . , 2nd"
+    tokenized = c.sent_tokenize(test, c.Lang.EN, 'toktok')
     print(tokenized)
     assert tokenized == "nr. , art. , 1st first , 1. , 2nd"
 
@@ -189,31 +204,68 @@ def test_tokenization_sentence():
     assert tokenized == "Það gunnar"
 
     test = "H2O, CO2, 9%"
-    tokenized = c.sent_tokenize(test, c.Lang.EN)
+    tokenized = c.sent_tokenize(test, c.Lang.EN, 'toktok')
     print(tokenized)
     assert tokenized == "H2O , CO2 , 9 %"
 
     # We deal with english contractions
     test = "It's"
-    tokenized = c.sent_tokenize(test, c.Lang.EN)
+    tokenized = c.sent_tokenize(test, c.Lang.EN, 'moses')
     print(tokenized)
     assert tokenized == "It 's"
+    tokenized = c.sent_tokenize(test, c.Lang.EN, 'toktok')
+    print(tokenized)
+    assert tokenized == "It ' s"
 
     # We deal with URLs
     test = "http://www.malfong.is"
     tokenized = c.sent_tokenize(test, c.Lang.IS)
     print(tokenized)
     assert tokenized == "http://www.malfong.is"
-    tokenized = c.sent_tokenize(test, c.Lang.EN)
+    tokenized = c.sent_tokenize(test, c.Lang.EN, 'nltk')
     print(tokenized)
     # TODO: The NLTK tokenizer does not deal with URLs.
     # assert tokenized == "http://www.malfong.is"
+    tokenized = c.sent_tokenize(test, c.Lang.EN, 'toktok')
+    print(tokenized)
+    assert tokenized == "http://www.malfong.is"
 
-    # How do we deal with lowercases?
+    # How do we deal with more abbreviations.
     test = "i'm couldn't"
-    tokenized = c.sent_tokenize(test, c.Lang.EN)
+    tokenized = c.sent_tokenize(test, c.Lang.EN, 'nltk')
     print(tokenized)
     assert tokenized == "i 'm could n't"
+    tokenized = c.sent_tokenize(test, c.Lang.EN, 'toktok')
+    print(tokenized)
+    assert tokenized == "i ' m couldn ' t"
+    tokenized = c.sent_tokenize(test, c.Lang.EN, 'moses')
+    print(tokenized)
+    assert tokenized == "i 'm couldn 't"
+
+
+def test_single_thread_regexp(get_pipeline):
+    stages = ['cat']
+    is_pipeline = get_pipeline(stages, c.Lang.IS)
+    patterns = [(re.compile(r"[\u0000-\u001f|\u007f]"), '')]
+
+    is_processed_corpus = c.corpus_create_path(is_pipeline['cat'], 'regexp')
+
+    c.corpus_regexp(is_pipeline['cat'], is_processed_corpus, patterns)
+
+
+def test_multi_thread_regexp(get_pipeline):
+    stages = ['cat']
+    is_pipeline = get_pipeline(stages, c.Lang.IS)
+    patterns = [(re.compile(r"[\u0000-\u001f|\u007f]"), '')]
+
+    is_processed_corpus = c.corpus_create_path(is_pipeline['cat'], 'regexp')
+
+    c.parallel_process(is_pipeline['cat'],
+                        is_processed_corpus,
+                        2,
+                        c.sent_regexp,
+                        **{"regexps": patterns})
+
 
 #
 # def test_true_case(get_pipeline):
@@ -253,50 +305,54 @@ def test_tokenization_sentence():
 
 def test_corpus_split(get_pipeline):
     stages = ['shuf']
-    pipeline = get_pipeline(stages)
+    is_pipeline = get_pipeline(stages, c.Lang.IS)
+    en_pipeline = get_pipeline(stages, c.Lang.EN)
 
-    train_is, test_is = c.corpus_split(
-        pipeline[stages[0]], ('train', 'test'), 5000)
-    train_en, test_en = c.corpus_split(
-        pipeline[stages[0]].EN, ('train', 'test'), 5000)
+    is_test = c.corpus_create_path(is_pipeline['shuf'], 'test')
+    is_train = c.corpus_create_path(is_pipeline['shuf'], 'train')
+    en_test = c.corpus_create_path(en_pipeline['shuf'], 'test')
+    en_train = c.corpus_create_path(en_pipeline['shuf'], 'train')
+
+    c.corpus_split(is_pipeline[stages[0]], is_train, is_test, 5000)
+    c.corpus_split(en_pipeline[stages[0]], en_train, en_test, 5000)
 
     # Check if the combined lengths are equal to the original
-    assert pipeline[stages[0]].IS.get_corpus_info()[2] == \
-        train_is.get_corpus_info()[2] + test_is.get_corpus_info()[2]
-    assert pipeline[stages[0]].EN.get_corpus_info()[2] == \
-        train_en.get_corpus_info()[2] + test_en.get_corpus_info()[2]
+    assert c.corpus_info(is_pipeline[stages[0]])[2] == \
+        c.corpus_info(is_train)[2] + c.corpus_info(is_test)[2]
+    assert c.corpus_info(en_pipeline[stages[0]])[2] == \
+        c.corpus_info(en_train)[2] + c.corpus_info(en_test)[2]
 
     # And that the test corpus has 5000 lines
-    assert test_is.get_corpus_info()[2] == 5000
-    assert test_en.get_corpus_info()[2] == 5000
+    assert c.corpus_info(is_test)[2] == 5000
+    assert c.corpus_info(en_test)[2] == 5000
 
 
-# def test_corpus_sample(get_pipeline):
-#     stages = ['truecased']
-#     pipeline = get_pipeline(stages)
-#     sampled_lines = list(c.corpus_sample(pipeline[stages[0]].IS, 10))
-#     assert len(sampled_lines) == 10
-#
-#
-# def test_corpus_token_counter(get_pipeline):
-#     stages = ['truecased']
-#     pipeline = get_pipeline(stages)
-#     counter = c.corpus_token_counter(pipeline[stages[0]].IS)
-#     # The most common token is '.'
-#     assert counter.most_common(1)[0][0] == '.'
-#
-#
-# def test_corpus_sentence_counter(get_pipeline):
-#     stages = ['truecased']
-#     pipeline = get_pipeline(stages)
-#     counter = c.corpus_sentence_counter(pipeline[stages[0]].IS)
-#     # The most common sentence length is 3
-#     assert counter.most_common()[0][0] == 3
-#
-#
-# def test_sent_lowercase_normalize():
-#     test = "UppEr \u00C7" # LATIN CAPITAL LETTER C WITH CEDILLA
-#     test2 = "UppEr \u0043\u0327" # LATIN CAPITAL LETTER C and COMBINING CEDILLA
-#     target = "upper \u00E7"
-#     assert c.sent_lowercase_normalize(test) == target
-#     assert c.sent_lowercase_normalize(test2) == target
+def test_corpus_sample(get_pipeline):
+    stages = ['shuf']
+    pipeline = get_pipeline(stages, c.Lang.IS)
+    sampled_lines = list(c.corpus_sample(pipeline[stages[0]], 10))
+    assert len(sampled_lines) == 10
+
+
+def test_corpus_token_counter(get_pipeline):
+    stages = ['shuf']
+    pipeline = get_pipeline(stages, c.Lang.IS)
+    counter = c.corpus_token_counter(pipeline[stages[0]])
+    # The most common token, this is based on your test data
+    assert counter.most_common(1)[0][0] == 'að'
+
+
+def test_corpus_sentence_counter(get_pipeline):
+    stages = ['shuf']
+    pipeline = get_pipeline(stages, c.Lang.IS)
+    counter = c.corpus_sentence_counter(pipeline[stages[0]])
+    # The most common sentence length, this is based on your test data
+    assert counter.most_common()[0][0] == 5
+
+
+def test_sent_lowercase_normalize():
+    test = "UppEr \u00C7"  # LATIN CAPITAL LETTER C WITH CEDILLA
+    test2 = "UppEr \u0043\u0327"  # LATIN CAPITAL LETTER C and COMBINING CEDILLA
+    target = "upper \u00E7"
+    assert c.sent_lowercase_normalize(test) == target
+    assert c.sent_lowercase_normalize(test2) == target

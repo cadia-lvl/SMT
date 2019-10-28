@@ -10,15 +10,18 @@ import re
 from unicodedata import normalize
 from collections import Counter
 from random import sample
-from typing import Tuple, List, Dict, Iterable, Union
+from typing import Tuple, List, Dict, Iterable, Union, Callable
 from subprocess import run
 from enum import Enum
+from concurrent.futures import ProcessPoolExecutor
+from functools import partial
 
 import tokenizer
 import nltk
 import click
 from translate.storage.tmx import tmxfile
-
+# also: punct norm, detok and sent split
+from sacremoses import MosesTokenizer
 nltk.download('punkt')
 
 # Some parts of the processing support threading, set the value here.
@@ -146,8 +149,8 @@ def tmx_split(paths: Tuple[Path],
 
 
 def tmx_split_(paths: Tuple[Path],
-              src_lang: str,
-              tar_lang: str) -> List[Tuple[Path, Path]]:
+               src_lang: str,
+               tar_lang: str) -> List[Tuple[Path, Path]]:
     """Split a tmx file to ParaCorpus."""
     result: List[Tuple[Path, Path]] = list()
     for tmx_path in paths:
@@ -234,6 +237,23 @@ def sent_regexp(sent: str, regexps: List[Tuple[re.Pattern, str]]) -> str:
     return processed_line
 
 
+def parallel_process(path: Path,
+                      out_path: Path,
+                      threads: int,
+                      func: Callable,
+                      chunksize: int = 4000,
+                      **kwargs) -> bool:
+    with ProcessPoolExecutor(max_workers=threads) as executor:
+        with path.open() as f_in, out_path.open('w+') as f_out:
+            results = executor.map(
+                partial(func, **kwargs),
+                f_in,
+                chunksize=chunksize)
+            for result in results:
+                f_out.write(result)
+    return True
+
+
 def corpus_regexp(path: Path, out_path: Path, regexps: List[Tuple[re.Pattern, str]]) \
         -> bool:
     """ # noqa: D205
@@ -310,6 +330,31 @@ def corpus_lowercase_normalize(path: Path, out_path: Path) -> bool:
     return True
 
 
+def _get_tokenizer(lang: Lang, method: str) \
+        -> Tuple[Callable[[str], str], Dict]:
+    """ # noqa D205
+    Returns a tokenizer for a specified method and additional arguments.
+    Supported methods:
+        IS(default): "pass-through", basic tokenization.
+        IS: "placeholders", uses placeholders for some NEs.
+        EN(default): "moses", Moses tokenization, does not tackle URLs.
+        Poor abbreviation handling.
+        EN: "nltk", does not tackle URLs.
+        EN: "toktok", handles URLs, does not handle "." but at the end.
+    """
+    if lang == Lang.EN:
+        if method == "nltk":
+            # We use the word_tokenize NLTL tokenizer for english
+            return nltk.word_tokenize, {}
+        # o.w. we use Moses
+        if method == 'toktok':
+            toktok = nltk.tokenize.ToktokTokenizer()
+            return toktok.tokenize, {}
+        m_tok = MosesTokenizer(lang='en')
+        return m_tok.tokenize, {'escape': False}
+    return None
+
+
 def corpus_tokenize(path: Path,
                     out_path: Path,
                     method: str = 'pass-through') -> bool:
@@ -320,27 +365,43 @@ def corpus_tokenize(path: Path,
         IS(default): "pass-through", basic tokenization.
         IS: "placeholders", uses placeholders for some NEs.
     """
+    lang = corpus_lang(path)
+    if lang == Lang.EN:
+        tok, kwargs = _get_tokenizer(corpus_lang(path), method)
     with path.open() as f_in, out_path.open('w+') as f_out:
         for line in f_in:
-            tokenized_sent = sent_tokenize(line,
-                                           corpus_lang(path),
-                                           method)
+            if lang == Lang.EN:
+                tokenized_sent = sent_tokenizer(line,
+                                                tok,
+                                                **kwargs)
+            else:
+                tokenized_sent = sent_tokenize(line, lang, method)
+
             # And add a newline when we write it out
             f_out.write(tokenized_sent + '\n')
     return True
 
 
-def sent_tokenize(sentence, lang: Lang, method: str = 'pass-through'):
+def sent_tokenizer(sentence: str, tokenizer: Callable[[str], str], **kwargs) -> str:
+    """Applies a tokenization function to a sentence."""
+    return " ".join(tokenizer(sentence, **kwargs))
+
+
+def sent_tokenize(sentence: str, lang: Lang, method: str = 'pass-through'):
     """ # noqa D205
     Tokenizes a sentence using the specified method. Returns the tokenized
     sentence.
-    Supported methods for IS (only):
+    Supported methods:
         IS(default): "pass-through", basic tokenization.
         IS: "placeholders", uses placeholders for some NEs.
+        EN(default): "moses", Moses tokenization, does not tackle URLs.
+        Poor abbreviation handling.
+        EN: "nltk", does not tackle URLs.
+        EN: "toktok", handles URLs, does not handle "." but at the end.
     """
     if lang == Lang.EN:
-        # We use the word_tokenize NLTL tokenizer for english
-        return " ".join(nltk.word_tokenize(sentence))
+        tok, kwargs = _get_tokenizer(lang, method)
+        return sent_tokenizer(sentence, tok, **kwargs)
     # We set the option to change "1sti", ... to "1", ...
     result = []
     for token in tokenizer.tokenize(sentence,

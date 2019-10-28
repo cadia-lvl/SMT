@@ -25,7 +25,8 @@ COPY environment.yml /opt/
 
 RUN conda env create -f /opt/environment.yml && \
     echo "conda activate jupyter" >> ~/.bashrc && \
-    mkdir /opt/work
+    mkdir /project && \
+    mkdir /work
 
 ENV TINI_VERSION v0.16.1
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/bin/tini

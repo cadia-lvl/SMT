@@ -8,4 +8,8 @@
 #SBATCH --output=server.out
 #SBATCH --error=server.out
 
-SINGULARITYENV_THREADS=14 singularity exec -B /scratch/smt:/work -B $PWD:/project docker://haukurp/moses-lvl:0.4 /bin/bash -c "/opt/conda/envs/jupyter/bin/jupyter notebook --notebook-dir=/project --ip='*' --port=8888 --no-browser --allow-root"
+
+THREADS=14
+TAG=0.5
+
+SINGULARITYENV_THREADS=$THREADS singularity exec -B /scratch/smt:/work -B $PWD:/project docker://haukurp/moses-lvl:$TAG /bin/bash -c "/opt/conda/envs/jupyter/bin/jupyter notebook --notebook-dir=/project --ip='*' --port=8888 --no-browser --allow-root"

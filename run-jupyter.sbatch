@@ -10,6 +10,6 @@
 
 
 THREADS=14
-TAG=0.5
+TAG=0.6
 
 SINGULARITYENV_THREADS=$THREADS singularity exec -B /scratch/smt:/work -B $PWD:/project docker://haukurp/moses-lvl:$TAG /bin/bash -c "/opt/conda/envs/jupyter/bin/jupyter notebook --notebook-dir=/project --ip='*' --port=8888 --no-browser --allow-root"

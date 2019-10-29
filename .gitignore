@@ -4,6 +4,7 @@ corpus/*.py[cod]
 corpus/$py.class
 corpus/.mypy_cache/
 corpus/corpus.egg-info/
+.mypy_cache/
 # Jupyter Notebook
 .ipynb_checkpoints
 

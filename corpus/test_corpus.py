@@ -175,72 +175,72 @@ def test_tokenization_corpus(get_pipeline):
 
 
 def test_tokenization_sentence():
-    test = "nr., gr., 1sti fyrsti, 1., 2ja"
+    test = "nr., gr., 1sti fyrsti, 1., 2ja\n"
     tokenized = c.sent_tokenize(test, c.Lang.IS)
-    assert tokenized == "númer , grein , fyrsti fyrsti , 1. , tveggja"
+    assert tokenized == "númer , grein , fyrsti fyrsti , 1. , tveggja\n"
 
-    test = "H2O, CO2, 9%"
+    test = "H2O, CO2, 9%\n"
     tokenized = c.sent_tokenize(test, c.Lang.IS)
     # Miðeind tokenizer breaks up H2O to H 2O
-    # assert tokenized == "H2O , CO2 , 9 %"
+    # assert tokenized == "H2O , CO2 , 9 %\n"
     print(tokenized)
 
     # In English we do not expand abbreviations.
-    test = "nr., art., 1st first, 1., 2nd"
+    test = "nr., art., 1st first, 1., 2nd\n"
     tokenized = c.sent_tokenize(test, c.Lang.EN, 'nltk')
     print(tokenized)
-    assert tokenized == "nr. , art. , 1st first , 1. , 2nd"
+    assert tokenized == "nr. , art. , 1st first , 1. , 2nd\n"
     # Moses does not understand most abbreviations
     tokenized = c.sent_tokenize(test, c.Lang.EN, 'moses')
     print(tokenized)
-    assert tokenized == "nr . , art . , 1st first , 1 . , 2nd"
+    assert tokenized == "nr . , art . , 1st first , 1 . , 2nd\n"
     tokenized = c.sent_tokenize(test, c.Lang.EN, 'toktok')
     print(tokenized)
-    assert tokenized == "nr. , art. , 1st first , 1. , 2nd"
+    assert tokenized == "nr. , art. , 1st first , 1. , 2nd\n"
 
-    test = "Það gunnar"
+    test = "Það gunnar\n"
     tokenized = c.sent_tokenize(test, c.Lang.IS)
     print(tokenized)
-    assert tokenized == "Það gunnar"
+    assert tokenized == "Það gunnar\n"
 
-    test = "H2O, CO2, 9%"
+    test = "H2O, CO2, 9%\n"
     tokenized = c.sent_tokenize(test, c.Lang.EN, 'toktok')
     print(tokenized)
-    assert tokenized == "H2O , CO2 , 9 %"
+    assert tokenized == "H2O , CO2 , 9 %\n"
 
     # We deal with english contractions
-    test = "It's"
+    test = "It's\n"
     tokenized = c.sent_tokenize(test, c.Lang.EN, 'moses')
     print(tokenized)
-    assert tokenized == "It 's"
+    assert tokenized == "It 's\n"
     tokenized = c.sent_tokenize(test, c.Lang.EN, 'toktok')
     print(tokenized)
-    assert tokenized == "It ' s"
+    assert tokenized == "It ' s\n"
 
     # We deal with URLs
-    test = "http://www.malfong.is"
+    test = "http://www.malfong.is\n"
     tokenized = c.sent_tokenize(test, c.Lang.IS)
     print(tokenized)
-    assert tokenized == "http://www.malfong.is"
+    assert tokenized == "http://www.malfong.is\n"
     tokenized = c.sent_tokenize(test, c.Lang.EN, 'nltk')
     print(tokenized)
     # TODO: The NLTK tokenizer does not deal with URLs.
-    # assert tokenized == "http://www.malfong.is"
+    # assert tokenized == "http://www.malfong.is\n"
     tokenized = c.sent_tokenize(test, c.Lang.EN, 'toktok')
     print(tokenized)
-    assert tokenized == "http://www.malfong.is"
+    assert tokenized == "http://www.malfong.is\n"
 
     # How do we deal with more abbreviations.
-    test = "i'm couldn't"
+    test = "i'm couldn't\n"
     tokenized = c.sent_tokenize(test, c.Lang.EN, 'nltk')
     print(tokenized)
-    assert tokenized == "i 'm could n't"
+    assert tokenized == "i 'm could n't\n"
     tokenized = c.sent_tokenize(test, c.Lang.EN, 'toktok')
     print(tokenized)
-    assert tokenized == "i ' m couldn ' t"
+    assert tokenized == "i ' m couldn ' t\n"
     tokenized = c.sent_tokenize(test, c.Lang.EN, 'moses')
     print(tokenized)
-    assert tokenized == "i 'm couldn 't"
+    assert tokenized == "i 'm couldn 't\n"
 
 
 def test_single_thread_regexp(get_pipeline):

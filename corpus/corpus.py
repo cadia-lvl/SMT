@@ -10,7 +10,7 @@ import re
 from unicodedata import normalize
 from collections import Counter
 from random import sample
-from typing import Tuple, List, Dict, Iterable, Union, Callable
+from typing import Tuple, List, Dict, Iterable, Union, Callable, Iterator
 from subprocess import run
 from enum import Enum
 from concurrent.futures import ProcessPoolExecutor
@@ -25,7 +25,8 @@ from sacremoses import MosesTokenizer
 nltk.download('punkt')
 
 # Some parts of the processing support threading, set the value here.
-THREADS = os.environ.get('THREADS', 4)
+THREADS = int(os.environ.get('THREADS', 4))
+CHUNKSIZE = 4000
 
 
 @click.group()
@@ -171,7 +172,7 @@ def tmx_split_(paths: Tuple[Path],
     return result
 
 
-def corpus_peek(path: Path, length: int = 10) -> Iterable[str]:
+def corpus_peek(path: Path, length: int = 10) -> Iterator[str]:
     """Returns the first length many lines from a given path."""
     with path.open() as f:
         index = 0
@@ -182,7 +183,7 @@ def corpus_peek(path: Path, length: int = 10) -> Iterable[str]:
                 return
 
 
-def corpora_peek(paths: List[Path], length: int = 10) -> Iterable[str]:
+def corpora_peek(paths: List[Path], length: int = 10) -> Iterator[str]:
     """ # noqa: D205
     Returns a generator of formatted strings of the first length lines of corpora."""
     langs = [corpus_lang(path) for path in paths]
@@ -207,6 +208,23 @@ def corpora_combine(paths: Tuple[Path], out_path: Path) -> bool:
     with out_path.open('w+') as f_out:
         run(command, stdout=f_out, check=True)
 
+    return True
+
+
+def parallel_process(path: Path,
+                     out_path: Path,
+                     threads: int,
+                     func: Callable,
+                     chunksize: int = 4000,
+                     **kwargs) -> bool:
+    with ProcessPoolExecutor(max_workers=threads) as executor:
+        with path.open() as f_in, out_path.open('w+') as f_out:
+            results = executor.map(
+                partial(func, **kwargs),
+                f_in,
+                chunksize=chunksize)
+            for result in results:
+                f_out.write(result)
     return True
 
 
@@ -237,44 +255,23 @@ def sent_regexp(sent: str, regexps: List[Tuple[re.Pattern, str]]) -> str:
     return processed_line
 
 
-def parallel_process(path: Path,
-                      out_path: Path,
-                      threads: int,
-                      func: Callable,
-                      chunksize: int = 4000,
-                      **kwargs) -> bool:
-    with ProcessPoolExecutor(max_workers=threads) as executor:
-        with path.open() as f_in, out_path.open('w+') as f_out:
-            results = executor.map(
-                partial(func, **kwargs),
-                f_in,
-                chunksize=chunksize)
-            for result in results:
-                f_out.write(result)
-    return True
-
-
-def corpus_regexp(path: Path, out_path: Path, regexps: List[Tuple[re.Pattern, str]]) \
-        -> bool:
+def corpus_regexp(path: Path,
+                  out_path: Path,
+                  regexps: List[Tuple[re.Pattern, str]]) -> bool:
     """ # noqa: D205
     Applies a list of regular expressions and their substitions to a Path and
     writes the result to the out_path. returns True if successful.
     """
-    # We delete the file if it exists.
-    try:
-        out_path.unlink()
-    except FileNotFoundError:
-        pass
-    for line in corpus_peek(path, length=0):
-        processed_line = sent_regexp(line, regexps)
-        with out_path.open('a+') as f_out:
-            f_out.write(processed_line)
-    return True
+    return parallel_process(path,
+                            out_path,
+                            THREADS,
+                            partial(sent_regexp, regexps=regexps)
+                            )
 
 
 def corpus_shuffle(path: Path, out_path: Path, seed_path: Path) -> bool:
     """ # noqa: D205
-    Shuffles a Path using the seed_path as a random seed. Writes the result 
+    Shuffles a Path using the seed_path as a random seed. Writes the result
     to out_path. Returns True if successful.
     """
     command = [
@@ -319,19 +316,20 @@ def sent_lowercase_normalize(sent: str) -> str:
     return normalize('NFKC', sent.casefold())
 
 
-def corpus_lowercase_normalize(path: Path, out_path: Path) -> bool:
+def corpus_lowercase_normalize(path: Path,
+                               out_path: Path,
+                               threads: int) -> bool:
     """ # noqa: D205
     Applies unicode lowercase and normalize on a Path. Writes the
     result to out_path. Returns True if successful.
     """
-    with path.open() as f_in, out_path.open('w+') as f_out:
-        for line in f_in:
-            f_out.write(sent_lowercase_normalize(line))
-    return True
+    return parallel_process(path,
+                            out_path,
+                            threads,
+                            sent_lowercase_normalize)
 
 
-def _get_tokenizer(lang: Lang, method: str) \
-        -> Tuple[Callable[[str], str], Dict]:
+def _get_tokenizer(lang: Lang, method: str) -> Callable[[str], List[str]]:
     """ # noqa D205
     Returns a tokenizer for a specified method and additional arguments.
     Supported methods:
@@ -345,46 +343,19 @@ def _get_tokenizer(lang: Lang, method: str) \
     if lang == Lang.EN:
         if method == "nltk":
             # We use the word_tokenize NLTL tokenizer for english
-            return nltk.word_tokenize, {}
+            return nltk.word_tokenize
         # o.w. we use Moses
         if method == 'toktok':
             toktok = nltk.tokenize.ToktokTokenizer()
-            return toktok.tokenize, {}
+            return toktok.tokenize
         m_tok = MosesTokenizer(lang='en')
-        return m_tok.tokenize, {'escape': False}
-    return None
+        return partial(m_tok.tokenize, escape=False)
+    return partial(sent_is_tokenize, method=method)
 
 
-def corpus_tokenize(path: Path,
-                    out_path: Path,
-                    method: str = 'pass-through') -> bool:
-    """ # noqa D205
-    Tokenizes a Path using the specified method. Writes the output to
-    out_path. Returns True if successful.
-    Supported methods for IS (only):
-        IS(default): "pass-through", basic tokenization.
-        IS: "placeholders", uses placeholders for some NEs.
-    """
-    lang = corpus_lang(path)
-    if lang == Lang.EN:
-        tok, kwargs = _get_tokenizer(corpus_lang(path), method)
-    with path.open() as f_in, out_path.open('w+') as f_out:
-        for line in f_in:
-            if lang == Lang.EN:
-                tokenized_sent = sent_tokenizer(line,
-                                                tok,
-                                                **kwargs)
-            else:
-                tokenized_sent = sent_tokenize(line, lang, method)
-
-            # And add a newline when we write it out
-            f_out.write(tokenized_sent + '\n')
-    return True
-
-
-def sent_tokenizer(sentence: str, tokenizer: Callable[[str], str], **kwargs) -> str:
+def sent_tokenizer(sentence: str, tokenizer: Callable[[str], List[str]]) -> str:
     """Applies a tokenization function to a sentence."""
-    return " ".join(tokenizer(sentence, **kwargs))
+    return " ".join(tokenizer(sentence)) + "\n"
 
 
 def sent_tokenize(sentence: str, lang: Lang, method: str = 'pass-through'):
@@ -399,9 +370,31 @@ def sent_tokenize(sentence: str, lang: Lang, method: str = 'pass-through'):
         EN: "nltk", does not tackle URLs.
         EN: "toktok", handles URLs, does not handle "." but at the end.
     """
-    if lang == Lang.EN:
-        tok, kwargs = _get_tokenizer(lang, method)
-        return sent_tokenizer(sentence, tok, **kwargs)
+    tok = _get_tokenizer(lang, method)
+    return sent_tokenizer(sentence, tok)
+
+
+def corpus_tokenize(path: Path,
+                    out_path: Path,
+                    method: str = 'pass-through',
+                    threads: int = THREADS) -> bool:
+    """ # noqa D205
+    Tokenizes a Path using the specified method. Writes the output to
+    out_path. Returns True if successful.
+    Supported methods for IS (only):
+        IS(default): "pass-through", basic tokenization.
+        IS: "placeholders", uses placeholders for some NEs.
+    """
+    tok = _get_tokenizer(corpus_lang(path), method)
+    return parallel_process(path,
+                            out_path,
+                            threads,
+                            partial(sent_tokenizer, tokenizer=tok)
+                            )
+
+
+def sent_is_tokenize(sentence: str, method: str):
+    """Helper function. Tokenizes an Icelandic sentence."""
     # We set the option to change "1sti", ... to "1", ...
     result = []
     for token in tokenizer.tokenize(sentence,
@@ -413,7 +406,7 @@ def sent_tokenize(sentence: str, lang: Lang, method: str = 'pass-through'):
             token = _tok_placeholders(kind, txt, val)
         if token:
             result.append(token)
-    return " ".join(result)
+    return result
 
 
 def _tok_pass_through(kind, txt, val):

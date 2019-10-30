@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name='corpus',
     version='1.0',
-    py_modules=['corpus'. 'cli'],
+    py_modules=['corpus', 'cli'],
     install_requires=[
         'Click',
         'nltk',

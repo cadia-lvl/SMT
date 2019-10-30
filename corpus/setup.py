@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='corpus',
-    version='0.1',
+    version='1.0',
     py_modules=['corpus'. 'cli'],
     install_requires=[
         'Click',

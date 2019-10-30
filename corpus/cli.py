@@ -58,36 +58,8 @@ def sent_process_v1(sent: str, lang: str) -> str:
     2. Tokenize "is" with "pass-through", "en" with "toktok".
     3. Add URI placeholders for URIs and []()<>.
     """
-    l_lang: c.Lang = c.Lang(lang)
-    sent = c.sent_lowercase_normalize(sent)
-    if l_lang == c.Lang.EN:
-        sent = c.sent_tokenize(sent, l_lang, method="toktok")
-    else:
-        sent = c.sent_tokenize(sent, l_lang, method="pass-through")
-    # u'\u007c' - |
-    pipe_reg = re.compile(r"\u007c")
-    # u'\u003c', u'\u003e' - <, >
-    lt_reg = re.compile(r"\u003c")
-    gt_reg = re.compile(r"\u003e")
-
-    # u'\u005b', u'\u005d' - [, ]
-    bracket_open_reg = re.compile(r"\u005b")
-    bracket_close_reg = re.compile(r"\u005d")
-
-    # Taken from https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url?noredirect=1&lq=1
-    uri_reg = re.compile(
-        r"(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)")
-    empty_bracets = re.compile(r"[\[\(]\s*[\]\)]")
-    regexps = [
-        (uri_reg, '@uri@'),
-        (empty_bracets, ""),
-        (pipe_reg, '@pipe@'),
-        (lt_reg, '@lt@'),
-        (gt_reg, '@gt@'),
-        (bracket_open_reg, '@brac_open@'),
-        (bracket_close_reg, '@brac_close@')
-    ]
-    sent = c.sent_regexp(sent, regexps)
+    l_lang = c.Lang(lang)
+    sent = c.sent_process_v1(sent, l_lang)
     click.echo(sent)
     return sent
 

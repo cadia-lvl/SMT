@@ -422,3 +422,44 @@ def _tok_placeholders(kind, txt, val):
     if kind == tokenizer.TOK.UNKNOWN:
         return "UNKOWN"
     return "UNKOWN"
+
+
+def sent_process_v1(sent: str, lang: Lang) -> str:
+    """ # noqa: D205
+    Applies the same preprocessing steps to a sentence as used in
+    baseline Moses en-is/is-en MT system.
+
+    1. Lowercase & unicode normalize NFKC.
+    2. Tokenize "is" with "pass-through", "en" with "toktok".
+    3. Add URI placeholders for URIs and []()<>.
+    """
+    sent = sent_lowercase_normalize(sent)
+    if lang == Lang.EN:
+        sent = sent_tokenize(sent, lang, method="toktok")
+    else:
+        sent = sent_tokenize(sent, lang, method="pass-through")
+    # u'\u007c' - |
+    pipe_reg = re.compile(r"\u007c")
+    # u'\u003c', u'\u003e' - <, >
+    lt_reg = re.compile(r"\u003c")
+    gt_reg = re.compile(r"\u003e")
+
+    # u'\u005b', u'\u005d' - [, ]
+    bracket_open_reg = re.compile(r"\u005b")
+    bracket_close_reg = re.compile(r"\u005d")
+
+    # Taken from https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url?noredirect=1&lq=1
+    uri_reg = re.compile(
+        r"(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)")
+    empty_bracets = re.compile(r"[\[\(]\s*[\]\)]")
+    regexps = [
+        (uri_reg, '@uri@'),
+        (empty_bracets, ""),
+        (pipe_reg, '@pipe@'),
+        (lt_reg, '@lt@'),
+        (gt_reg, '@gt@'),
+        (bracket_open_reg, '@brac_open@'),
+        (bracket_close_reg, '@brac_close@')
+    ]
+    sent = sent_regexp(sent, regexps)
+    return sent

@@ -10,7 +10,10 @@ Hægt er að keyra forþjálfað kerfi á einstökum setningum í gegnum HTTP (�
 Til þess að keyra kerfið þá þarf `docker` eða `singularity` að vera uppsett.
 
 Keyrsla (þýðing en-is) beint á einni setningu:
-    # TODO
+    docker run -ti haukurp/moses-lvl:1.0.1-en-is /bin/bash -c "corpus sent-process-v1 'This is an English sentence.' 'en' | /opt/moses/bin/moses -f /work/moses.ini" 
+    
+Fyrir is-en:
+    docker run -ti haukurp/moses-lvl:1.0.1-is-en /bin/bash -c "corpus sent-process-v1 'Þetta er íslensk setning.' 'is' | /opt/moses/bin/moses -f /work/moses.ini"
 
 Keyra Moses þýðingarþjón.
     # TODO
@@ -26,16 +29,19 @@ Keyrsla á Jupyter notebooks í gegnum docker geymi
 
 1. `moses-Dockerfile`. Þetta er grunn myndin sem hefur uppsett Moses þýðingarkerfið og önnur tól nauðsynleg til þess að þjálfa og keyra þýðingarkerfið. Þessi mynd er ekki til beinnar notkunar.
 1. `corpus-Dockerfile`. Þessi mynd byggir á `moses-Dockerfile` og bætir við Python 3.7 og öðrum python pökkum til þess að forvinna gögn.
-1. `en-is-Dockerfile`. Þessi mynd byggir á `corpus-Dockerfile` sem og forþjálfuðu Moses þýðingarkerfi fyrir `en-is` þýðingar.
-1. `is-en-Dockerfile`. Alveg eins og `en-is-Dockerfile` nema fyrir `is-en` þýðingar.
+1. `model-Dockerfile`. Þessi mynd byggir á `corpus-Dockerfile` sem og forþjálfuðu Moses þýðingarkerfi. 
 
-Einnig fylgir með Python forrit í skránni `corpus`. Fyrir það verkefni sjá `corpus/README.md`.
+Einnig fylgir með Python forrit fyrir forvinnslu í skránni `corpus`. Fyrir það verkefni sjá `corpus/README.md`.
 
-Einnig fylgja með nokkur Jupyter vélrit (e. notebook) sem notuð voru við þróun á kerfinu. Til þess að keyra vélritin þá þarf Moses kerfið að vera aðgengilegt. Auðveldast er því að keyra vélritin í gegnum `docker` eða `singularity`, annars þarf að setja kerfisbreyturnar (environment variables) MOSESDECODER og MOSESDECODER_TOOLS og láta þær vísa á skrár sem innihalda nauðsynleg forrit.
+Einnig fylgja með nokkur Jupyter vélrit (e. notebook) sem notuð voru við þróun á kerfinu. Til þess að keyra vélritin þá þarf Moses kerfið að vera aðgengilegt. Auðveldast er því að keyra vélritin í gegnum `docker` eða `singularity`, annars þarf að setja kerfisbreyturnar (environment variables) THREADS, MOSESDECODER og MOSESDECODER_TOOLS og láta þær vísa á skrár sem innihalda nauðsynleg forrit.
 
 Til að keyra vélritin er best að nota (singularity):
     singularity exec -B $PWD:/opt/work docker://haukurp/moses-lvl:0.4 /bin/bash -c "/opt/conda/envs/jupyter/bin/jupyter notebook --notebook-dir=/opt/work --ip='*' --port=8888 --no-browser --allow-root"
 
+Einnig er hægt að keyra vélritin í gegnum SLURM.
+    sbatch run-jupyter-sbatch
+
+Þegar búið er að þjálfa nýtt líkan þá er hægt að pakka því í nýjan docker geymi. Fyrst þarf að sækja þjálfaða líkanið á vélina. Svo þarf að setja líkanið í geyminn. Sjá "Byggja myndir" fyrir skipanir. 
 ### Byggja myndir
 Til þess að byggja Docker myndirnar þarf að uppfæra tag (0.1) og vísa í rétta mynd.
 Dæmi:
@@ -45,6 +51,17 @@ Dæmi:
 Til þess að senda myndina á DockerHub þarf aukalega að vera skráður inn í docker `docker login` og hlaða upp ný byggðri mynd.
     docker push haukurp/moses-smt:$TAG
 
+Fyrir þjálfað líkan:
+    TAG=1.0.1-is-en
+    # Afrita líkanið yfir á núverandi vél í skrána sem inniheldur `model-Dockerfile`.
+    scp -r haukurpj@terra.hir.is:/scratch/smt/en-is/binarised trained_model
+    # Laga skráarendingar.
+    sed -i 's/work\/.*\/binarised/work/g' trained_model/moses.ini
+    docker build -f model-Dockerfile -t haukurp/moses-lvl:$TAG .
+    rm -rf trained_model
+    docker push haukurp/moses-lvl:$TAG
+
+Það er gott að taka það fram að staðsetningin á líkaninu í geyminum er mikilvæg, því `moses.ini` skráin inniheldur vísanir í nauðsynlegar skrár í kerfinu. Ef staðsetningunni er breytt, þá þarf líka að breyta vísuninum í `moses.ini`.
 ### Keyrsla á Terra cluster (Slurm)
 Fyrst þarf að fá aðgang á cluster. Hafðu samband við cluster admin.
 

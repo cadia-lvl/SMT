@@ -1,4 +1,3 @@
-from typing import List, Set
 import re
 import pytest
 from pathlib import Path
@@ -9,7 +8,7 @@ import corpus as c
 def test_tmx_split(glob_files):
     tmx_files = [Path(t) for t in glob_files('*.tmx')]
     number_of_files = len(tmx_files)
-    result = c.tmx_split_(tmx_files, 'EN-GB', 'IS-IS')
+    result = c.tmx_split(tmx_files, 'EN-GB', 'IS-IS')
     # Check if the split tmx works.
     assert len(result) == number_of_files, "We get equally many Tuples back"
 
@@ -242,6 +241,15 @@ def test_tokenization_sentence():
     print(tokenized)
     assert tokenized == "i 'm couldn 't\n"
 
+    test = "1.1.1.1.1. Dráttarvélargerð með tilliti til hemlabúnaðar Með\"dráttarvélargerð með tilliti til hemlabúnaðar\"er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem:"
+    tokenized = c.sent_tokenize(test, c.Lang.IS)
+    print(tokenized)
+
+    test = "o.s.frv."
+    tokenized = c.sent_tokenize(test, c.Lang.IS)
+    print(tokenized)
+    assert tokenized == "og svo framvegis .\n"
+
 
 def test_single_thread_regexp(get_pipeline):
     stages = ['cat']
@@ -356,3 +364,53 @@ def test_sent_lowercase_normalize():
     target = "upper \u00E7"
     assert c.sent_lowercase_normalize(test) == target
     assert c.sent_lowercase_normalize(test2) == target
+
+
+def test_sentence_breaking():
+    # Here are a few sentences from the text which contain "." in weird places.
+    # We do not want to cover all these cases, just the most important cases.
+    tests = [" viðauka.Skipunarstillipunktar fyrir",
+            "test (Method B.32) or",
+            "study (Method B.33)B.IV Reproductive",
+            "is deleted.Financial liabi",
+            "are added.Paragraph 43",
+            "A.LIMIT",
+            "toxicological a.nd ecotoxicological",
+            "The President H.COVENEY",
+            "Dental Science (B.Dent.Sc.),",
+            "Medicine (Vet.MB or BVet.Med.),",
+            "adopted: http://ec.europa.eu/enterprise/reach/docs/ghs/ghs_prop_vol_iii_en.pdf",
+            "ul. „V.Levski“ 281",
+            "Point XI.C.IX.5 of Annex",
+            "IASB at www.iasb.org",
+            "Te.st conditions",
+            " o.s.frv. sem starfa",
+            "„3a.GERÐARVIÐURKENNING",
+            "er minna en 15.Hægt er",
+            "i.efni sem uppfyllir",
+            "III.VIÐAUKI",
+            "skulu a.m.kkveða á um að",
+            "(Stjtíð.EB L",
+            "(4).Til",
+            "2.2.3.4.Meginregla ",
+            "ammóníakslausn (3.2.ii)) og",
+            "framkvæmdastjórnarinnar (EB) nr.416/2005 (Stjtíð.ESB L 66, 12.3.2005, bls. 10).",
+            "lýkur 31.mars 2006",
+            "asdf.Þ"
+            ]
+
+    sub = (re.compile(r'([\w\(\)\[\]\.]{2,})\.([A-ZÁÐÉÍÓÚÝÞÆÖ])') , r'\1. \2')
+    results = [c.sent_regexp(test, [sub]) for test in tests]
+    for result in results:
+        print(result)
+    # We test wether our intended transformations happen and some should not.
+    assert " viðauka. Skipunarstillipunktar fyrir" in results
+    assert "is deleted. Financial liabi" in results
+    assert "are added. Paragraph 43" in results
+    assert "„3a. GERÐARVIÐURKENNING" in results
+    assert "er minna en 15. Hægt er" in results
+    assert "(4). Til" in results
+    assert "2.2.3.4. Meginregla " in results
+    assert "asdf. Þ" in results
+    assert "adopted: http://ec.europa.eu/enterprise/reach/docs/ghs/ghs_prop_vol_iii_en.pdf" in results
+    assert " o.s.frv. sem starfa" in results

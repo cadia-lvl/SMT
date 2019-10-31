@@ -1,7 +1,43 @@
+# Corpus
+Þetta forrit sér um að forvinna gögn áður en þau eru notuð í líkanagerð.
+
+Í þessu forriti eru mörg stuðningsföll sem vinna beint á texta skrá (og nýta marga þræði) sem og beint á setningar.
+
+Það er hægt að nota forritið beint sem Python safn eða í gengum skjáhermi.
+    pip install -e git+https://github.com/cadia-lvl/SMT.git@master#egg=corpus\&subdirectory=corpus 
+
+Fyrir studd föll sjá
+    corpus --help
+
+Dæmi um forvinnslu á setningu.
+    corpus sent-process-v1 "This is a, super-duper test." "en"
+    [nltk_data] Downloading package punkt to /home/haukur/nltk_data...
+    [nltk_data]   Package punkt is already up-to-date!
+    this is a , super-duper test .
+
+Sami kóð sem Python safn.
+    >>> import corpus as c
+    >>> c.sent_process_v1("This is a super-duper test.", c.Lang.EN)
+    'this is a super-duper test .\n'
+
+Skjáhermis útgáfan styður ekki öll föllin sem eru skilgreind í Python safninu.
+
+## Leyfi
+MIT leyfi - sjá `License`.
+
 ## Þróun
-### Keyra prófanir
-Það koma nokkrar prófanir (tests) með verkefninu. Þær vinna á prófunar gögnum í skránni `test_data`.
- 
-Til þess að keyra öll testin:
+Gert er ráð fyrir að unnið sé með Conda.
+    conda env create -f ../environment.yml #við notum sama environment og er skilgreint fyrir verkefnið í heild sinni.
+    conda activate jupyter
+
+- `cli.py` skilgreinir föllin sem eru aðgengileg í skjáherminum.
+- `conftest.py` skilgreinir prófana uppsetningu.
+- `corpus.py` er kjötið - þ.e. þarna eru öll föllin skilgreind og útfærð til þess að vinna með texta.
+- `setup.py` skilgreinir hvernig á að pakka kóðanum svo hægt sé að nota `pip install`.
+- `setup.cfg` skilgreinir stillingar fyrir þróun á verkefninu.
+- `test_corpus.py` skilgreinir prófanirnar sem eru gerðar á föllum úr `corpus.py`.
+- `test_data/*.tmx` í þessa skrá er hægt að setja `.tmx` skjöl til að nota í prófanir.
+
+Keyra prófanir
     pytest
 

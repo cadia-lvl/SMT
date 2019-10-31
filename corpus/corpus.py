@@ -18,7 +18,6 @@ from functools import partial
 
 import tokenizer
 import nltk
-import click
 from translate.storage.tmx import tmxfile
 # also: punct norm, detok and sent split
 from sacremoses import MosesTokenizer
@@ -27,15 +26,6 @@ nltk.download('punkt')
 # Some parts of the processing support threading, set the value here.
 THREADS = int(os.environ.get('THREADS', 4))
 CHUNKSIZE = 4000
-
-
-@click.group()
-def cli():
-    """ # noqa: D205
-    The main entry point of the command line client.
-
-    Other commands are attached to this functions.
-    """
 
 
 class Lang(Enum):
@@ -49,26 +39,6 @@ TMX_2_LANG = {
     'EN-GB': Lang.EN,
     'IS-IS': Lang.IS
 }
-
-
-class PathParamType(click.ParamType):
-    """A type to convert strings from command line to Path."""  # noqa: D203
-
-    def convert(self, value, param, ctx):
-        try:
-            return Path(value).resolve()
-        except TypeError:
-            self.fail(
-                "expected a path for Path() conversion, got "
-                f"{value!r} of type {type(value).__name__}",
-                param,
-                ctx,
-            )
-        except ValueError:
-            self.fail(f"{value!r} is not a valid path", param, ctx)
-
-
-PathType = PathParamType()
 
 
 def corpus_lang(path: Path) -> Lang:
@@ -139,19 +109,9 @@ def _get_line_count(path: Path) -> int:
     return lines
 
 
-@cli.command()
-@click.argument('paths', nargs=-1, type=PathType)
-@click.option('--src_lang', default='EN-GB', type=str)
-@click.option('--tar_lang', default='IS-IS', type=str)
 def tmx_split(paths: Tuple[Path],
               src_lang: str,
               tar_lang: str) -> List[Tuple[Path, Path]]:
-    return tmx_split_(paths, src_lang, tar_lang)
-
-
-def tmx_split_(paths: Tuple[Path],
-               src_lang: str,
-               tar_lang: str) -> List[Tuple[Path, Path]]:
     """Split a tmx file to ParaCorpus."""
     result: List[Tuple[Path, Path]] = list()
     for tmx_path in paths:
@@ -167,7 +127,6 @@ def tmx_split_(paths: Tuple[Path],
             for node in tmx.unit_iter():
                 f_src.write(node.source + '\n')
                 f_tar.write(node.target + '\n')
-        click.echo(f'{tmx_path} -> {src_path} + {tar_path}')
         result.append((src_path, tar_path))
     return result
 
@@ -317,15 +276,14 @@ def sent_lowercase_normalize(sent: str) -> str:
 
 
 def corpus_lowercase_normalize(path: Path,
-                               out_path: Path,
-                               threads: int) -> bool:
+                               out_path: Path) -> bool:
     """ # noqa: D205
     Applies unicode lowercase and normalize on a Path. Writes the
     result to out_path. Returns True if successful.
     """
     return parallel_process(path,
                             out_path,
-                            threads,
+                            THREADS,
                             sent_lowercase_normalize)
 
 
@@ -376,8 +334,7 @@ def sent_tokenize(sentence: str, lang: Lang, method: str = 'pass-through'):
 
 def corpus_tokenize(path: Path,
                     out_path: Path,
-                    method: str = 'pass-through',
-                    threads: int = THREADS) -> bool:
+                    method: str = 'pass-through') -> bool:
     """ # noqa D205
     Tokenizes a Path using the specified method. Writes the output to
     out_path. Returns True if successful.
@@ -388,7 +345,7 @@ def corpus_tokenize(path: Path,
     tok = _get_tokenizer(corpus_lang(path), method)
     return parallel_process(path,
                             out_path,
-                            threads,
+                            THREADS,
                             partial(sent_tokenizer, tokenizer=tok)
                             )
 
@@ -467,103 +424,20 @@ def _tok_placeholders(kind, txt, val):
     return "UNKOWN"
 
 
-# def corpus_truecase_train(corpus: Corpus, stage: str) -> Model:
-#     """Trains a truecase model on the Corpus and returns a Model."""
-#     target_model = Model(
-#         corpus.data_dir,
-#         stage,
-#         corpus.lang
-#     )
-#     command = [f'{MOSESDECODER}/scripts/recaser/train-truecaser.perl',
-#                '--model',
-#                target_model.get_filepath(),
-#                '--corpus',
-#                corpus.get_filepath()
-#                ]
-#     run(command)
-#     return target_model
-#
-#
-# def corpus_truecase_apply(corpus: Corpus, truecase_model: Model, stage: str) -> Corpus:
-#     """Applies a given truecase Model to a Corpus, returns truecased Corpus."""
-#     target_corpus = Corpus(
-#         corpus.data_dir,
-#         stage,
-#         corpus.lang
-#     )
-#     command = [f'{MOSESDECODER}/scripts/recaser/truecase.perl',
-#                '--model',
-#                truecase_model.get_filepath()
-#                ]
-#     with open(corpus.get_filepath()) as f_in, \
-#             open(target_corpus.get_filepath(), 'w+') as f_out:
-#         run(command, stdout=f_out, stdin=f_in, check=True)
-#     return target_corpus
-#
-#
-# def sent_truecase(sentence: str, truecase_model: Model):
-#     """Truecases a given sentence. Assumes no newlines are in the sentence."""
-#     p1 = Popen(["echo", sentence], stdout=PIPE)
-#     p2 = Popen([f'{MOSESDECODER}/scripts/recaser/truecase.perl',
-#                 '--model',
-#                 truecase_model.get_filepath()
-#                 ],
-#                stdin=p1.stdout,
-#                stdout=PIPE)
-#     p1.stdout.close()
-#     output = p2.communicate()[0].decode("utf-8").replace('\n', '')
-#     return output
-#
-#
-# def kenlm_create(corpus: Corpus, stage: str, order: int) -> Model:
-#     """Creates a KenLM language model of order. Binarizes the model."""
-#     tmp_model = Model(
-#         corpus.data_dir,
-#         f'arpa',
-#         corpus.lang
-#     )
-#     command = [f'{MOSESDECODER}/bin/lmplz',
-#                '-o',
-#                str(order),
-#                '-S',
-#                '50%'
-#                ]
-#     with open(corpus.get_filepath()) as f_in, \
-#             open(tmp_model.get_filepath(), 'w+') as f_out:
-#         run(command, stdout=f_out, stdin=f_in, check=True)
-#     target_model = Model(
-#         corpus.data_dir,
-#         stage,
-#         corpus.lang
-#     )
-#     command = [f'{MOSESDECODER}/bin/build_binary',
-#                '-S',
-#                '50%',
-#                tmp_model.get_filepath(),
-#                target_model.get_filepath()
-#                ]
-#     run(command, check=True)
-#     return target_model
-#
-#
-# def kenlm_eval(model: Model, sentence: str) -> str:
-#     p1 = Popen(["echo", sentence], stdout=PIPE)
-#     p2 = Popen([f'{MOSESDECODER}/bin/query',
-#                 model.get_filepath()
-#                 ],
-#                stdin=p1.stdout,
-#                stdout=PIPE)
-#     p1.stdout.close()
-#     output = p2.communicate()[0].decode("utf-8")
-#     return output
+def sent_process_v1(sent: str, lang: Lang) -> str:
+    """ # noqa: D205
+    Applies the same preprocessing steps to a sentence as used in
+    baseline Moses en-is/is-en MT system.
 
-
-@cli.command()
-@click.argument('sent')
-@click.argument('lang', default='is', type=str)
-def sent_process(sent: str, lang: str) -> str:
-    """Applies all neccessary preprocessing steps to a sentence."""
-    l_lang: Lang = Lang(lang)
+    1. Lowercase & unicode normalize NFKC.
+    2. Tokenize "is" with "pass-through", "en" with "toktok".
+    3. Add URI placeholders for URIs and []()<>.
+    """
+    sent = sent_lowercase_normalize(sent)
+    if lang == Lang.EN:
+        sent = sent_tokenize(sent, lang, method="toktok")
+    else:
+        sent = sent_tokenize(sent, lang, method="pass-through")
     # u'\u007c' - |
     pipe_reg = re.compile(r"\u007c")
     # u'\u003c', u'\u003e' - <, >
@@ -588,19 +462,4 @@ def sent_process(sent: str, lang: str) -> str:
         (bracket_close_reg, '@brac_close@')
     ]
     sent = sent_regexp(sent, regexps)
-    sent = sent_lowercase_normalize(sent)
-    sent = sent_tokenize(sent, l_lang)
-    click.echo(sent)
     return sent
-
-
-@click.command()
-@click.argument('filename', type=click.Path(exists=True))
-def test_filename(filename: str) -> str:
-    click.echo(type(filename))
-    click.echo(filename)
-    return filename
-
-
-if __name__ == '__main__':
-    cli()

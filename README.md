@@ -48,6 +48,9 @@ Dæmi:
     TAG=0.1
     docker build -t haukurp/moses-smt:$TAG -f moses-Dockerfile .
 
+Byggja `moses-lvl` í einni línu
+    TAG=1.0.2; docker build -f corpus-Dockerfile -t haukurp/moses-lvl:$TAG . && docker push haukurp/moses-lvl:$TAG
+
 Til þess að senda myndina á DockerHub þarf aukalega að vera skráður inn í docker `docker login` og hlaða upp ný byggðri mynd.
     docker push haukurp/moses-smt:$TAG
 

@@ -173,6 +173,18 @@ def test_tokenization_corpus(get_pipeline):
                       en_tok)
 
 
+def test_specific_regexps():
+    test = """En heldur hefði ég kosið, að þessi ráðlegging hefði komið fram fyrr í dag, þannig að ég hefði getað nýtt þann tíma, sem farið hefur í það hjá stjórnarliðinu að semja um það, sem hér á að fara fram í dag eða á morgun, hátt í 2 klukkutíma í dag, og þá hefði ég vissulega þegið þá ábendingu að kynna mér frekar, hvað hv.
+þm.
+Sjálfstfl.
+hefðu sagt um ýmis mál hér á undanförnum vikum eða mánuðum."""
+    regexps = [
+            (re.compile(r'([\w]{1,})\.\n([a-záðéíóúýþæö])') , r'\1. \2')
+        ]
+    result = c.sent_regexp(test, regexps)
+    print(result)
+
+
 def test_tokenization_sentence():
     test = "nr., gr., 1sti fyrsti, 1., 2ja\n"
     tokenized = c.sent_tokenize(test, c.Lang.IS)
@@ -274,42 +286,6 @@ def test_multi_thread_regexp(get_pipeline):
                         c.sent_regexp,
                         **{"regexps": patterns})
 
-
-#
-# def test_true_case(get_pipeline):
-#     stages = ['tok']
-#     pipeline = get_pipeline(stages)
-#     truecase_model_is = c.corpus_truecase_train(pipeline['tok'].IS, 'truecase-model')
-#     truecase_model_en = c.corpus_truecase_train(pipeline['tok'].EN, 'truecase-model')
-#
-#     # We just run the truecase
-#     truecased_en = c.corpus_truecase_apply(
-#         pipeline['tok'].EN, truecase_model_en, 'truecased')
-#     truecased_is = c.corpus_truecase_apply(
-#         pipeline['tok'].IS, truecase_model_is, 'truecased')
-#
-#     # We just check if some of the lines have changed
-#     corpus_different_check(pipeline[stages[0]].IS,
-#                            truecased_is)
-#     corpus_different_check(pipeline[stages[0]].EN,
-#                            truecased_en)
-#
-#     # And that we have the same number of lines
-#     same_length_check(pipeline[stages[0]].IS,
-#                       truecased_is)
-#     same_length_check(pipeline[stages[0]].EN,
-#                       truecased_en)
-#
-#     # We test the truecase on specific sentences which we know are in the data.
-#     test = 'Það " gunnar "'
-#     result = c.sent_truecase(test, truecase_model_is)
-#     assert result == 'það " Gunnar "'
-#
-#     test = 'It " gunnar "'
-#     result = c.sent_truecase(test, truecase_model_is)
-#     assert result == 'it " Gunnar "'
-#
-#
 
 def test_corpus_split(get_pipeline):
     stages = ['shuf']

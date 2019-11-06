@@ -4,22 +4,24 @@ Corpus processing.
 This module exposes some useful datatypes and functions to process corpora.
 """
 from pathlib import Path
-
 import os
 import re
 from unicodedata import normalize
 from collections import Counter
 from random import sample
-from typing import Tuple, List, Dict, Iterable, Union, Callable, Iterator
+from typing import Tuple, List, Dict, Iterable, Union, Callable, \
+    Sequence, Iterator
 from subprocess import run
 from enum import Enum
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
+from xml.etree import ElementTree as ET
 
 import tokenizer
 import nltk
+from tqdm import tqdm
 from translate.storage.tmx import tmxfile
-# also: punct norm, detok and sent split
+# also in sacremoses: punct norm, detok and sent split
 from sacremoses import MosesTokenizer
 nltk.download('punkt')
 
@@ -38,6 +40,34 @@ class Lang(Enum):
 TMX_2_LANG = {
     'EN-GB': Lang.EN,
     'IS-IS': Lang.IS
+}
+
+REGEXP_SUB: Dict[str, Tuple[re.Pattern, str]] = {
+    # Taken from https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url?noredirect=1&lq=1
+    'URI-OLD': (re.compile(r'(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)'),
+                '@uri@'),
+    'IS-COMBINE-NEWLINE': (re.compile(r'([\w]+)\.\n([a-záðéíóúýþæö])'),
+                           r'\1. \2'),
+    'IS-SPLIT-NEWLINE': (re.compile(r'([\w\(\)\[\]\.]{2,})\.([A-ZÁÐÉÍÓÚÝÞÆÖ])'),
+                         r'\1. \2'),
+    'URI': (re.compile(r"(((http(s)?:\/\/)?(www)|([-a-zA-Z0-9:%_\+.~#?&/=]+?)@)[-a-zA-Z0-9@:%_\+.~#?&/=]+?(?=\.?\s)|([-a-zA-Z0-9@:%_\+.~#?&/=]+?(\.is|\.com)))"), '@uri@'),
+    'EMPTY-BRACKETS': (re.compile(r"[\[\(]\s*[\]\)]"), ""),
+    # u'\u007c' - |
+    'PIPE': (re.compile(r"\u007c"), '@pipe@'),
+    # u'\u003c', u'\u003e' - <, >
+    'LT': (re.compile(r"\u003c"), '@lt@'),
+    'GT': (re.compile(r"\u003e"), '@gt@'),
+    # u'\u005b', u'\u005d' - [, ]
+    'BRACKET-OPEN': (re.compile(r"\u005b"), '@brac_open@'),
+    'BRACKET-CLOSE': (re.compile(r"\u005d"), '@brac_close@'),
+    'FIX-URI': (re.compile(r"@ uri @"), '@uri@'),
+    'CRYLLIC':
+        (re.compile(r'.*[\u0400-\u04FF\u0500-\u052F\u2DE0-\u2DFF\uA640-\uA69F]+.*'),
+            ''),
+        'GREEK':
+        (re.compile(r'.*[\u0370-\u03bb\u03bd-\u03FF\u1F00-\u1FFF]+.*'), ''),
+        'UNKNOWN-CHARS': (re.compile(r'.*[žčšè¿ğūįł]+.*'), ''),
+        'NOT-WORDS': (re.compile(r'.*[\d();.:,•-=].*'), '')
 }
 
 
@@ -129,6 +159,46 @@ def tmx_split(paths: Tuple[Path],
                 f_tar.write(node.target + '\n')
         result.append((src_path, tar_path))
     return result
+
+
+def tei_read_file(path: Path) -> Sequence[str]:
+    """ # noqa: D205
+    Reads a tei file. Returns a list of sentences, newline at end.
+
+    Adjusted code from xml_tools.py from Róbert Kjaran <robert@kjaran.com>
+    """
+    NS = {'a': 'http://www.tei-c.org/ns/1.0'}
+    root = ET.parse(str(path)).getroot()
+    sentences = []
+    # We gather all the paragraphs from the body, avoiding the divs
+    for paragraph_node in root.findall('.//a:body//a:p', NS):
+        for sentence_node in paragraph_node.findall('.//a:s', NS):
+            tokens = [(token_node.text, token_node.attrib['type'])
+                      for token_node in sentence_node.findall('./*')]
+            sentence: List[str] = []
+            tokens_len = len(tokens)
+            for i, token in enumerate(tokens):
+                if token[0] is None:
+                    continue
+                sentence.append(token[0])
+                if (i != tokens_len - 1 and (tokens[i+1][1] != 'punctuation')):
+                    sentence.append(' ')
+            sentences.append(''.join(sentence) + '\n')
+    return sentences
+
+
+def tei_read(paths: Sequence[Path], out_path: Path) -> bool:
+    """Reads a sequence of Path of TEI files from RMH and writes to a single file."""
+    with out_path.open('w+') as f_out:
+        with ProcessPoolExecutor(max_workers=14) as executor:
+            results = list(tqdm(executor.map(
+                tei_read_file,
+                paths,
+                chunksize=100),
+                total=len(paths)))
+            for result in results:
+                f_out.write(''.join(result))
+    return True
 
 
 def corpus_peek(path: Path, length: int = 10) -> Iterator[str]:
@@ -424,6 +494,79 @@ def _tok_placeholders(kind, txt, val):
     return "UNKOWN"
 
 
+def sent_token_known(sentence: str, known_tokens: Sequence[str]) -> float:
+    """ # noqa: D205
+    Returns the fraction of known words in the (tokenized) sentence.
+
+    Gives better results if the sentence has been normalized to only words."""
+    sent_tokens = sentence.split()
+    known = 0
+    token_count = len(sent_tokens)
+    for token in sent_tokens:
+        if token in known_tokens:
+            known += 1
+    return known/token_count
+
+
+def sent_contains_regexp(sentence: str, regexp: re.Pattern) -> bool:
+    """Returns true if the sentence contains the regexp."""
+    if re.match(regexp, sentence) is None:
+        return False
+    return True
+
+
+def sent_as_words(sentence: str) -> str:
+    """Returns the (tokenized) sentence without punctuation, numbers and other symbols."""
+    result = []
+    tokens = sentence.split()
+    for token in tokens:
+        if not sent_contains_regexp(token, REGEXP_SUB['NOT-WORDS'][0]):
+            result.append(token)
+    return " ".join(result)
+
+
+def corpus_get_skip_lines(path: Path,
+                          regexps: Sequence[re.Pattern],
+                          known_tokens: Sequence[str],
+                          keep_ratio=0.5) -> List[Tuple[int, str]]:
+    """ # noqa: D205
+    Returns a list of line number and line which should be skipped.
+
+    Criteria: Sentence matches one of the regexp or the fraction of known words
+    is below the the given ratio."""
+    skip_line: List[Tuple[int, str]] = []
+    with path.open() as f_in:
+        skip_count = 0
+        count = 0
+        for index, line in enumerate(f_in):
+            count = index + 1
+            skip = False
+            for regexp in regexps:
+                if skip:
+                    continue
+                if sent_contains_regexp(line, regexp):
+                    skip_count += 1
+                    skip_line.append((count, line))
+                    continue
+            if skip:
+                continue
+            # We normalize the tokens in the sentence, by only considering words
+            normalized_line = sent_as_words(line)
+            if not normalized_line:
+                skip_count += 1
+                skip_line.append((count, line))
+                continue
+            fraction = sent_token_known(normalized_line, known_tokens)
+            # We skip lines which have a low fraction and longer than 1 token.
+            if fraction < keep_ratio and len(line.split()) > 1:
+                skip_count += 1
+                skip_line.append((count, line))
+    print(f'Skip lines: total={count}, \
+            skipped={skip_count}, \
+            fraction skipped={skip_count/count}')
+    return skip_line
+
+
 def sent_process_v1(sent: str, lang: Lang) -> str:
     """ # noqa: D205
     Applies the same preprocessing steps to a sentence as used in
@@ -438,28 +581,14 @@ def sent_process_v1(sent: str, lang: Lang) -> str:
         sent = sent_tokenize(sent, lang, method="toktok")
     else:
         sent = sent_tokenize(sent, lang, method="pass-through")
-    # u'\u007c' - |
-    pipe_reg = re.compile(r"\u007c")
-    # u'\u003c', u'\u003e' - <, >
-    lt_reg = re.compile(r"\u003c")
-    gt_reg = re.compile(r"\u003e")
-
-    # u'\u005b', u'\u005d' - [, ]
-    bracket_open_reg = re.compile(r"\u005b")
-    bracket_close_reg = re.compile(r"\u005d")
-
-    # Taken from https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url?noredirect=1&lq=1
-    uri_reg = re.compile(
-        r"(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)")
-    empty_bracets = re.compile(r"[\[\(]\s*[\]\)]")
     regexps = [
-        (uri_reg, '@uri@'),
-        (empty_bracets, ""),
-        (pipe_reg, '@pipe@'),
-        (lt_reg, '@lt@'),
-        (gt_reg, '@gt@'),
-        (bracket_open_reg, '@brac_open@'),
-        (bracket_close_reg, '@brac_close@')
+        REGEXP_SUB['URI-OLD'],
+        REGEXP_SUB['EMPTY-BRACKETS'],
+        REGEXP_SUB['PIPE'],
+        REGEXP_SUB['LT'],
+        REGEXP_SUB['GT'],
+        REGEXP_SUB['BRACKET-CLOSE'],
+        REGEXP_SUB['BRACKET-OPEN']
     ]
     sent = sent_regexp(sent, regexps)
     return sent

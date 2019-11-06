@@ -27,8 +27,8 @@ Keyrsla á Jupyter notebooks í gegnum docker geymi
 ## Þróun
 Það eru skilgreindar nokkrar Docker myndir í þessu verkefni.
 
-1. `moses-Dockerfile`. Þetta er grunn myndin sem hefur uppsett Moses þýðingarkerfið og önnur tól nauðsynleg til þess að þjálfa og keyra þýðingarkerfið. Þessi mynd er ekki til beinnar notkunar.
-1. `corpus-Dockerfile`. Þessi mynd byggir á `moses-Dockerfile` og bætir við Python 3.7 og öðrum python pökkum til þess að forvinna gögn.
+1. [`moses-Dockerfile`](https://hub.docker.com/r/haukurp/moses-smt). Þetta er grunn myndin sem hefur uppsett Moses þýðingarkerfið og önnur tól nauðsynleg til þess að þjálfa og keyra þýðingarkerfið. Þessi mynd er ekki til beinnar notkunar.
+1. [`corpus-Dockerfile`](https://hub.docker.com/r/haukurp/moses-lvl). Þessi mynd byggir á `moses-Dockerfile` og bætir við Python 3.7 og öðrum python pökkum til þess að forvinna gögn.
 1. `model-Dockerfile`. Þessi mynd byggir á `corpus-Dockerfile` sem og forþjálfuðu Moses þýðingarkerfi. 
 
 Einnig fylgir með Python forrit fyrir forvinnslu í skránni `corpus`. Fyrir það verkefni sjá `corpus/README.md`.

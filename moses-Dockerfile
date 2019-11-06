@@ -1,7 +1,6 @@
 FROM ubuntu:18.04
 MAINTAINER haukurpalljonsson@gmail.com
 
-ENV MOSES_SUITE=/opt/MosesSuite
 ENV MOSESDECODER=/opt/moses
 ENV MOSESDECODER_TOOLS=/opt/moses_tools
 
@@ -34,6 +33,5 @@ RUN apt-get update && apt-get install -q -y ${PACKAGES} \
     && cp bin/* scripts/merge_alignment.py ${MOSESDECODER_TOOLS} \
     && cd - \
     && rm -rf mgiza \
-    && git clone --branch patch-1 https://github.com/k4r573n/MosesSuite.git \
     && apt-get remove -q -y ${PACKAGES} \
     && apt-get autoremove -q -y

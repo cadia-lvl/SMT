@@ -567,6 +567,16 @@ def corpus_get_skip_lines(path: Path,
     return skip_line
 
 
+def corpus_skip_lines(path: Path, out_path, lines: List[int]) -> bool:
+    """Writes the path to out_path, skipping the lines given."""
+    with path.open() as f_in, out_path.open('w+') as f_out:
+        for index, line in enumerate(f_in):
+            if index + 1 == lines[0]:
+                del lines[0]
+                f_out.write(line)
+    return True
+
+
 def sent_process_v1(sent: str, lang: Lang) -> str:
     """ # noqa: D205
     Applies the same preprocessing steps to a sentence as used in

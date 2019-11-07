@@ -390,3 +390,14 @@ def test_sentence_breaking():
     assert "asdf. Þ" in results
     assert "adopted: http://ec.europa.eu/enterprise/reach/docs/ghs/ghs_prop_vol_iii_en.pdf" in results
     assert " o.s.frv. sem starfa" in results
+
+def test_sent_process_v1():
+    test = "Þetta er íslensk setning, með [ ] () www.mbl.is o.s.frv. <geggjað>!"
+    result = c.sent_process_v1(test, c.Lang.IS)
+    print(result)
+    assert result == "þetta er íslensk setning , með @uri@ og svo framvegis @lt@ geggjað @gt@ !\n"
+    test = "This is an English sentence, with [ ] () www.mbl.is i.e. <awsome>"
+    result = c.sent_process_v1(test, c.Lang.EN)
+    print(result)
+    assert result == "this is an english sentence , with @uri@ i.e. @lt@awsome@gt@\n"
+

@@ -41,3 +41,21 @@ Gert er ráð fyrir að unnið sé með Conda.
 Keyra prófanir
     pytest
 
+### Útgáfa
+Leiðbeiningar til þess að gefa út nýja útgáfu af `corpus`.
+1. Keyra prófanir. Útgefin föll eiga að hafa prófanir og öll próf eiga að fara í gegn.
+1. Uppfæra `setup.py` útgáfunúmer.
+1. Uppfæra `README.md` með breytingum fyrir útgáfunúmer og leiðbeiningar.
+1. Vista breytingar `git commit`.
+1. Merkja (`git tag $VERSION`) kóða með útgáfunúmeri.
+1. Ýta breytingum (`git push --tag`).
+
+
+### Útgáfur
+Hér er listi yfir breytingar á milli útgáfa.
+
+### 1.0.2
+`sent_process_v1` breytt til þess að styðja breytt grunnlíkan.
+
+#### 1.0.1
+Laga villur frá 1.0.0

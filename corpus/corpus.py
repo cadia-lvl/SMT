@@ -61,13 +61,11 @@ REGEXP_SUB: Dict[str, Tuple[re.Pattern, str]] = {
     'BRACKET-OPEN': (re.compile(r"\u005b"), '@brac_open@'),
     'BRACKET-CLOSE': (re.compile(r"\u005d"), '@brac_close@'),
     'FIX-URI': (re.compile(r"@ uri @"), '@uri@'),
-    'CRYLLIC':
-        (re.compile(r'.*[\u0400-\u04FF\u0500-\u052F\u2DE0-\u2DFF\uA640-\uA69F]+.*'),
+    'CRYLLIC': (re.compile(r'.*[\u0400-\u04FF\u0500-\u052F\u2DE0-\u2DFF\uA640-\uA69F]+.*'),
             ''),
-        'GREEK':
-        (re.compile(r'.*[\u0370-\u03bb\u03bd-\u03FF\u1F00-\u1FFF]+.*'), ''),
-        'UNKNOWN-CHARS': (re.compile(r'.*[žčšè¿ğūįł]+.*'), ''),
-        'NOT-WORDS': (re.compile(r'.*[\d();.:,•-=].*'), '')
+    'GREEK': (re.compile(r'.*[\u0370-\u03bb\u03bd-\u03FF\u1F00-\u1FFF]+.*'), ''),
+    'UNKNOWN-CHARS': (re.compile(r'.*[žčšè¿ğūįł]+.*'), ''),
+    'NOT-WORDS': (re.compile(r'.*[\d();.:,•\-=].*'), '')
 }
 
 
@@ -583,22 +581,28 @@ def sent_process_v1(sent: str, lang: Lang) -> str:
     baseline Moses en-is/is-en MT system.
 
     1. Lowercase & unicode normalize NFKC.
-    2. Tokenize "is" with "pass-through", "en" with "toktok".
-    3. Add URI placeholders for URIs and []()<>.
+    2. Add URI placeholders.
+    3. Tokenize "is" with "pass-through", "en" with "toktok".
+    4. Fix URI placeholders and add more placeholders []()<>.
     """
     sent = sent_lowercase_normalize(sent)
+    regexps = [
+        REGEXP_SUB['URI'],
+        REGEXP_SUB['EMPTY-BRACKETS']
+    ]
+    sent = sent_regexp(sent, regexps)
     if lang == Lang.EN:
         sent = sent_tokenize(sent, lang, method="toktok")
     else:
         sent = sent_tokenize(sent, lang, method="pass-through")
     regexps = [
-        REGEXP_SUB['URI-OLD'],
-        REGEXP_SUB['EMPTY-BRACKETS'],
         REGEXP_SUB['PIPE'],
+        REGEXP_SUB['FIX-URI'],
         REGEXP_SUB['LT'],
         REGEXP_SUB['GT'],
-        REGEXP_SUB['BRACKET-CLOSE'],
-        REGEXP_SUB['BRACKET-OPEN']
+        REGEXP_SUB['BRACKET-OPEN'],
+        REGEXP_SUB['BRACKET-CLOSE']
     ]
     sent = sent_regexp(sent, regexps)
+
     return sent

@@ -47,9 +47,8 @@ Leiðbeiningar til þess að gefa út nýja útgáfu af `corpus`.
 1. Uppfæra `setup.py` útgáfunúmer.
 1. Uppfæra `README.md` með breytingum fyrir útgáfunúmer og leiðbeiningar.
 1. Vista breytingar `git commit`.
-1. Merkja (`git tag $VERSION`) kóða með útgáfunúmeri.
+1. Merkja (`git tag v1.0.2`) kóða með útgáfunúmeri.
 1. Ýta breytingum (`git push --tag`).
-
 
 ### Útgáfur
 Hér er listi yfir breytingar á milli útgáfa.

@@ -401,3 +401,142 @@ def test_sent_process_v1():
     print(result)
     assert result == "this is an english sentence , with @uri@ i.e. @lt@awsome@gt@\n"
 
+def test_tei_read(glob_files):
+    tei_files = [Path(t) for t in glob_files('*.xml')]
+    out_file = tei_files[0].with_name('rmh.is')
+    # we just test if there is no exception
+    c.tei_read(tei_files, out_file)
+
+def test_sent_as_words():
+    # all "non-words" should not be present in the sentence.
+    test = "these are not words 4.00 3,1415 ? ! - = _ + 1 , : . @ ; ( ) and should be removed"
+    result = c.sent_as_words(test)
+    assert result == "these are not words and should be removed"
+
+def test_sent_contains_regexp():
+    test = ["дейност", "είδοσ", "εγκατάστασησ", "казеин", "приложение", "ž",
+            "č", "š", "лицата", "12052"]
+    results = [c.sent_contains_regexp(word, c.REGEXP_SUB["CRYLLIC"][0]) for word in test]
+    assert results == [True, False, False, True, True, False,
+            False, False, True, False]
+    results = [c.sent_contains_regexp(word, c.REGEXP_SUB["GREEK"][0]) for word in test]
+    assert results == [False, True, True, False, False, False,
+            False, False, False, False]
+    results = [c.sent_contains_regexp(word, c.REGEXP_SUB["UNKNOWN-CHARS"][0]) for word in test]
+    assert results == [False, False, False, False, False, True,
+            True, True, False, False]
+
+def test_sent_token_known():
+    # First we test whether we count correctly without normalizing.
+    test = "these are not words 4.00 3,1415 ? ! - = _ + 1 , : . @ ; ( ) and should be removed"
+    result = c.sent_token_known(test, set(["these", "are", "known", "words", "."]))
+    test_len = len(test.split())
+    known_words_count_in_sent = 4
+    assert result == known_words_count_in_sent/test_len
+    # Then we test with normalization.
+    test = c.sent_as_words(test)
+    result = c.sent_token_known(test, set(["these", "are", "known", "words", "."]))
+    test_len = 8
+    known_words_count_in_sent = 3
+    assert result == known_words_count_in_sent/test_len
+
+
+def test_corpus_get_skip_lines(get_pipeline):
+    stage = 'shuf'
+    stages = [stage]
+    pipe_is = get_pipeline(stages, c.Lang.IS)
+    # to begin with, we test the edge cases. All should be skipped.
+    known_words = set()
+    regexps = []
+    result = c.corpus_get_skip_lines(pipe_is[stage],
+            regexps,
+            known_words,
+            1.0,
+            normalize=False,
+            keep_sent_length=0)
+    original_length = c.corpus_info(pipe_is[stage])[2]
+    assert len(result) == original_length
+    # Set the ratio to the bottom, we skip none.
+    result = c.corpus_get_skip_lines(pipe_is[stage],
+            regexps,
+            known_words,
+            0.0,
+            normalize=False,
+            keep_sent_length=0)
+    assert len(result) == 0
+    # Set the ratio to the bottom and normalize, we skip lines which contain
+    # non-word chars (\d\W_).
+    result = c.corpus_get_skip_lines(pipe_is[stage],
+            regexps,
+            known_words,
+            0.0,
+            normalize=True,
+            keep_sent_length=0)
+    assert len(result) == 93
+    # There are a few one-word sentences
+    result = c.corpus_get_skip_lines(pipe_is[stage],
+            regexps,
+            known_words,
+            1.0,
+            normalize=False)
+    assert len(result) == 10369
+    # We now normalize. We expect a few more sentences skipped since the
+    # sentences which contain only contain non-words are skipped.
+    result = c.corpus_get_skip_lines(pipe_is[stage],
+            regexps,
+            known_words,
+            1.0)
+    assert len(result) == 10107
+    # We only skip sentences which contain non-word words 
+    result = c.corpus_get_skip_lines(pipe_is[stage],
+            regexps,
+            known_words,
+            0.0)
+    assert len(result) == 93
+    # Increasing above 0 should be equal to 1.0 with no known words
+    result = c.corpus_get_skip_lines(pipe_is[stage],
+            regexps,
+            known_words,
+            0.5)
+    assert len(result) == 10107
+    # we add a few known words and expect to skip fewer.
+    known_words = set(["Ég", "skil", "bækurnar", "eftir"])
+    result = c.corpus_get_skip_lines(pipe_is[stage],
+            regexps,
+            known_words,
+            0.5)
+    assert len(result) == 9979
+    # Adding a regexp we expect to remove more sentences
+    known_words = set()
+    regexps = [re.compile(r'Ég')]
+    result = c.corpus_get_skip_lines(pipe_is[stage],
+            regexps,
+            known_words,
+            0.5)
+    assert len(result) == 10113
+
+    # And now we remove some of the sentences we added with the regexp
+    regexps = [re.compile(r'Ég')]
+    known_words = set(["Ég", "skil", "bækurnar", "eftir"])
+    result = c.corpus_get_skip_lines(pipe_is[stage],
+            regexps,
+            known_words,
+            0.5)
+    assert len(result) > 9979 and len(result) < 10113
+
+
+def test_corpus_skip_lines(get_pipeline):
+    stage = 'shuf'
+    stages = [stage]
+    pipe_is = get_pipeline(stages, c.Lang.IS)
+    regexps = [re.compile(r'Ég')]
+    known_words = set(["Ég", "skil", "bækurnar", "eftir"])
+    result = c.corpus_get_skip_lines(pipe_is[stage],
+            regexps,
+            known_words,
+            0.5)
+    assert len(result) == 10112
+    lines = [number for number, fraction, line in result]
+    out_path = c.corpus_create_path(pipe_is[stage], 'skip')
+    c.corpus_skip_lines(pipe_is[stage], out_path, lines)
+    assert c.corpus_info(out_path)[2] == c.corpus_info(pipe_is[stage])[2] - len(result)

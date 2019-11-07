@@ -62,10 +62,11 @@ REGEXP_SUB: Dict[str, Tuple[re.Pattern, str]] = {
     'BRACKET-CLOSE': (re.compile(r"\u005d"), '@brac_close@'),
     'FIX-URI': (re.compile(r"@ uri @"), '@uri@'),
     'CRYLLIC': (re.compile(r'.*[\u0400-\u04FF\u0500-\u052F\u2DE0-\u2DFF\uA640-\uA69F]+.*'),
-            ''),
+                ''),
     'GREEK': (re.compile(r'.*[\u0370-\u03bb\u03bd-\u03FF\u1F00-\u1FFF]+.*'), ''),
     'UNKNOWN-CHARS': (re.compile(r'.*[žčšè¿ğūįł]+.*'), ''),
-    'NOT-WORDS': (re.compile(r'.*[\d();.:,•\-=].*'), '')
+    'NOT-WORDS': (re.compile(r'.*[\W\d_].*'), ''),
+    'NOT-WORDS-OLD': (re.compile(r'.*[\d();.:,•\-=?!_+@].*'), '')
 }
 
 
@@ -523,46 +524,74 @@ def sent_as_words(sentence: str) -> str:
     return " ".join(result)
 
 
-def corpus_get_skip_lines(path: Path,
+def corpus_get_skip_lines(path: Path,  # pylint: disable=too-many-arguments
                           regexps: Sequence[re.Pattern],
                           known_tokens: Sequence[str],
-                          keep_ratio=0.5) -> List[Tuple[int, str]]:
+                          keep_ratio=0.5,
+                          normalize=True,
+                          keep_sent_length=1) -> List[Tuple[int, float, str]]:
     """ # noqa: D205
-    Returns a list of line number and line which should be skipped.
+    Returns a list of line number and lines which should be skipped.
 
-    Criteria: Sentence matches one of the regexp or the fraction of known words
-    is below the the given ratio."""
-    skip_line: List[Tuple[int, str]] = []
-    with path.open() as f_in:
-        skip_count = 0
-        count = 0
-        for index, line in enumerate(f_in):
-            count = index + 1
-            skip = False
-            for regexp in regexps:
+    If normalized=True all non-words (\d\W_) are removed from the sentence.
+    If the remaining sentence contains any of the regexps it is SKIPPED.
+    If the remaining sentence has length less than or equal to keep_sent_length
+    is it KEPT.
+    If the keep_ratio is smaller or equal to the fraction of known_tokens in
+    sentence it is KEPT.
+    """
+    skip_lines: List[Tuple[int, float, str]] = []
+    with ProcessPoolExecutor(max_workers=THREADS) as executor:
+        with path.open() as f_in:
+            results = executor.map(
+                partial(sent_skip_line,
+                        regexps=regexps,
+                        known_tokens=known_tokens,
+                        keep_ratio=keep_ratio,
+                        normalize=normalize,
+                        keep_sent_length=keep_sent_length),
+                f_in,
+                chunksize=CHUNKSIZE)
+            for index, result in enumerate(results):
+                skip, fraction, line = result
                 if skip:
-                    continue
-                if sent_contains_regexp(line, regexp):
-                    skip_count += 1
-                    skip_line.append((count, line))
-                    continue
-            if skip:
-                continue
-            # We normalize the tokens in the sentence, by only considering words
-            normalized_line = sent_as_words(line)
-            if not normalized_line:
-                skip_count += 1
-                skip_line.append((count, line))
-                continue
-            fraction = sent_token_known(normalized_line, known_tokens)
-            # We skip lines which have a low fraction and longer than 1 token.
-            if fraction < keep_ratio and len(line.split()) > 1:
-                skip_count += 1
-                skip_line.append((count, line))
-    print(f'Skip lines: total={count}, \
-            skipped={skip_count}, \
-            fraction skipped={skip_count/count}')
-    return skip_line
+                    skip_lines.append((index + 1, fraction, line))
+    return skip_lines
+
+
+def sent_skip_line(line: str,  # pylint: disable=too-many-arguments
+                   regexps: Sequence[re.Pattern],
+                   known_tokens: Sequence[str],
+                   keep_ratio=0.5,
+                   normalize=True,
+                   keep_sent_length=1) -> Tuple[bool, float, str]:
+    """ # noqa: D205
+    Returns True and the line if line should be skipped, o.w. False and line.
+
+    If normalized=True all non-words (\d\W_) are removed from the sentence.
+    If the remaining sentence contains any of the regexps it is SKIPPED.
+    If the remaining sentence has length less than or equal to keep_sent_length
+    is it KEPT.
+    If the keep_ratio is smaller or equal to the fraction of known_tokens in
+    sentence it is KEPT.
+    """
+    normalized_line = line
+    if normalize:
+        # We normalize the tokens in the sentence, by only considering words
+        normalized_line = sent_as_words(line)
+    if not normalized_line:
+        return (True, 0.0, line)
+    for regexp in regexps:
+        if sent_contains_regexp(normalized_line, regexp):
+            return (True, 0.0, line)
+    # we want sentences which have a minimum length
+    if len(normalized_line.split()) <= keep_sent_length:
+        return (False, 1.0, line)
+    fraction = sent_token_known(normalized_line, known_tokens)
+    # We keep lines which have a high fraction
+    if keep_ratio <= fraction:
+        return (False, fraction, line)
+    return (True, fraction, line)
 
 
 def corpus_skip_lines(path: Path, out_path, lines: List[int]) -> bool:
@@ -571,6 +600,7 @@ def corpus_skip_lines(path: Path, out_path, lines: List[int]) -> bool:
         for index, line in enumerate(f_in):
             if index + 1 == lines[0]:
                 del lines[0]
+            else:
                 f_out.write(line)
     return True
 

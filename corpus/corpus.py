@@ -247,10 +247,13 @@ def parallel_process(path: Path,
                      **kwargs) -> bool:
     with ProcessPoolExecutor(max_workers=threads) as executor:
         with path.open() as f_in, out_path.open('w+') as f_out:
-            results = executor.map(
+            # get the list now since executor.map will read everyting to mem.
+            f_list = f_in.readlines()
+            results = tqdm(executor.map(
                 partial(func, **kwargs),
-                f_in,
-                chunksize=chunksize)
+                f_list,
+                chunksize=chunksize),
+                total=len(f_list))
             for result in results:
                 f_out.write(result)
     return True
@@ -524,7 +527,7 @@ def sent_as_words(sentence: str) -> str:
     return " ".join(result)
 
 
-def corpus_get_skip_lines(path: Path,  # pylint: disable=too-many-arguments
+def corpus_get_skip_lines(path: Path,  # pylint: disable=too-many-arguments,too-many-locals
                           regexps: Sequence[re.Pattern],
                           known_tokens: Sequence[str],
                           keep_ratio=0.5,
@@ -543,17 +546,19 @@ def corpus_get_skip_lines(path: Path,  # pylint: disable=too-many-arguments
     skip_lines: List[Tuple[int, float, str]] = []
     with ProcessPoolExecutor(max_workers=THREADS) as executor:
         with path.open() as f_in:
-            results = executor.map(
+            f_list = f_in.readlines()
+            results = tqdm(executor.map(
                 partial(sent_skip_line,
                         regexps=regexps,
                         known_tokens=known_tokens,
                         keep_ratio=keep_ratio,
                         normalize=normalize,
                         keep_sent_length=keep_sent_length),
-                f_in,
-                chunksize=CHUNKSIZE)
+                f_list,
+                chunksize=CHUNKSIZE),
+                total=len(f_list))
             for index, result in enumerate(results):
-                skip, fraction, line = result
+                skip, fraction, line=result
                 if skip:
                     skip_lines.append((index + 1, fraction, line))
     return skip_lines
@@ -575,10 +580,10 @@ def sent_skip_line(line: str,  # pylint: disable=too-many-arguments
     If the keep_ratio is smaller or equal to the fraction of known_tokens in
     sentence it is KEPT.
     """
-    normalized_line = line
+    normalized_line=line
     if normalize:
         # We normalize the tokens in the sentence, by only considering words
-        normalized_line = sent_as_words(line)
+        normalized_line=sent_as_words(line)
     if not normalized_line:
         return (True, 0.0, line)
     for regexp in regexps:
@@ -587,7 +592,7 @@ def sent_skip_line(line: str,  # pylint: disable=too-many-arguments
     # we want sentences which have a minimum length
     if len(normalized_line.split()) <= keep_sent_length:
         return (False, 1.0, line)
-    fraction = sent_token_known(normalized_line, known_tokens)
+    fraction=sent_token_known(normalized_line, known_tokens)
     # We keep lines which have a high fraction
     if keep_ratio <= fraction:
         return (False, fraction, line)
@@ -615,17 +620,17 @@ def sent_process_v1(sent: str, lang: Lang) -> str:
     3. Tokenize "is" with "pass-through", "en" with "toktok".
     4. Fix URI placeholders and add more placeholders []()<>.
     """
-    sent = sent_lowercase_normalize(sent)
-    regexps = [
+    sent=sent_lowercase_normalize(sent)
+    regexps=[
         REGEXP_SUB['URI'],
         REGEXP_SUB['EMPTY-BRACKETS']
     ]
-    sent = sent_regexp(sent, regexps)
+    sent=sent_regexp(sent, regexps)
     if lang == Lang.EN:
-        sent = sent_tokenize(sent, lang, method="toktok")
+        sent=sent_tokenize(sent, lang, method="toktok")
     else:
-        sent = sent_tokenize(sent, lang, method="pass-through")
-    regexps = [
+        sent=sent_tokenize(sent, lang, method="pass-through")
+    regexps=[
         REGEXP_SUB['PIPE'],
         REGEXP_SUB['FIX-URI'],
         REGEXP_SUB['LT'],
@@ -633,6 +638,6 @@ def sent_process_v1(sent: str, lang: Lang) -> str:
         REGEXP_SUB['BRACKET-OPEN'],
         REGEXP_SUB['BRACKET-CLOSE']
     ]
-    sent = sent_regexp(sent, regexps)
+    sent=sent_regexp(sent, regexps)
 
     return sent

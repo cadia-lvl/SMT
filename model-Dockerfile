@@ -1,4 +1,4 @@
-FROM haukurp/moses-lvl:1.0.1
+FROM haukurp/moses-lvl:1.0.2
 MAINTAINER haukurpalljonsson@gmail.com
 
 COPY trained_model /work

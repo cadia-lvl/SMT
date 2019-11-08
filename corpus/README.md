@@ -41,3 +41,30 @@ Gert er ráð fyrir að unnið sé með Conda.
 Keyra prófanir
     pytest
 
+### Útgáfa
+Leiðbeiningar til þess að gefa út nýja útgáfu af `corpus`.
+1. Keyra prófanir. Útgefin föll eiga að hafa prófanir og öll próf eiga að fara í gegn.
+1. Uppfæra `setup.py` útgáfunúmer.
+1. Uppfæra `README.md` með breytingum fyrir útgáfunúmer og leiðbeiningar.
+1. Vista breytingar `git commit`.
+1. Merkja (`git tag v1.0.2`) kóða með útgáfunúmeri.
+1. Ýta breytingum (`git push --tag`).
+
+### Útgáfur
+Hér er listi yfir breytingar á milli útgáfa.
+
+#### 1.1.0
+Allar regexp settar í safn.
+Bætt við föllum.
+- `tei_read`. Les `TEI` skjöl og skrifar í eitt skjal.
+- `sent_token_known`. Reiknar hlutfall þekktra orða í setningu.
+- `sent_contains_regexp`. Skilar `True` ef setning inniheldur regexp.
+- `sent_as_words`. Einfaldar setningu með því að fella út öll orð sem innihalda aðra stafi en bókstafi.
+- `corpus_get_skip_lines`. Skilar línum sem ætti að sleppa miðað við þekkt orð og bannaðar regexp.
+- `corpus_skip_lines`. Fellir út númer gefinna lína.
+
+#### 1.0.2
+`sent_process_v1` breytt til þess að styðja breytt grunnlíkan.
+
+#### 1.0.1
+Laga villur frá 1.0.0

@@ -599,8 +599,9 @@ def sent_skip_line(line: str,  # pylint: disable=too-many-arguments
     return (True, fraction, line)
 
 
-def corpus_skip_lines(path: Path, out_path, lines: List[int]) -> bool:
+def corpus_skip_lines(path: Path, out_path, lines_in: List[int]) -> bool:
     """Writes the path to out_path, skipping the lines given."""
+    lines = list(lines_in)
     with path.open() as f_in, out_path.open('w+') as f_out:
         next_skip = -1
         if lines:

@@ -603,7 +603,7 @@ def corpus_skip_lines(path: Path, out_path, lines: List[int]) -> bool:
     """Writes the path to out_path, skipping the lines given."""
     with path.open() as f_in, out_path.open('w+') as f_out:
         for index, line in enumerate(f_in):
-            if index + 1 == lines[0]:
+            if lines and index + 1 == lines[0]:
                 del lines[0]
             else:
                 f_out.write(line)

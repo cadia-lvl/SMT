@@ -53,6 +53,9 @@ Leiðbeiningar til þess að gefa út nýja útgáfu af `corpus`.
 ### Útgáfur
 Hér er listi yfir breytingar á milli útgáfa.
 
+#### 1.1.1
+Villur úr 1.1.0 lagaðar.
+
 #### 1.1.0
 Allar regexp settar í safn.
 Bætt við föllum.

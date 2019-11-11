@@ -28,7 +28,7 @@ RUN conda env create -f /opt/environment.yml && \
     mkdir /work
 
 # To be sure that the package is installed into the Jupyter environment.
-RUN /bin/bash -c "pip install -e git+https://github.com/cadia-lvl/SMT.git@v1.1.0#egg=corpus\&subdirectory=corpus" && \
+RUN /bin/bash -c "pip install -e git+https://github.com/cadia-lvl/SMT.git@v1.1.1#egg=corpus\&subdirectory=corpus" && \
     python -c "import nltk;nltk.download('punkt')"
 
 ENV TINI_VERSION v0.16.1

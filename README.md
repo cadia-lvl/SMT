@@ -17,9 +17,10 @@ Fyrir is-en:
 ```
 docker run -ti haukurp/moses-lvl:1.0.1-is-en /bin/bash -c "corpus sent-process-v1 'Þetta er íslensk setning.' 'is' | /opt/moses/bin/moses -f /work/moses.ini"
 ```
-Keyra Moses þýðingarþjón.
-    # TODO
-
+Keyra Moses þýðingarþjón. Hann er svo aðgengilegur undir `http://127.0.0.1:80/RPC2`. Bæta við `-p 80:8080` í `docker` skipun og `--server` í `moses` skipun:
+```
+docker run -p 80:8080 haukurp/moses-lvl:1.0.2-en-is /bin/bash -c "/opt/moses/bin/moses -f /work/moses.ini --server"
+```
 Keyrsla sem singularity geymir (dæmi):
 ```
 singularity run docker://haukurp/moses-lvl:0.1

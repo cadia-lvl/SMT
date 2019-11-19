@@ -541,3 +541,31 @@ def test_corpus_skip_lines(data_dir):
     lines = [number for number, fraction, line in result]
     c.skip_lines(in_corpus, out_corpus, lines)
     assert c.corpus_info(out_corpus)[2] == c.corpus_info(in_corpus)[2] - len(result)
+
+
+def test_regexps():
+    tests_uri = [
+        "www.visir.is",
+        "https://circabc.europa.eu/w/browse/d4fbf23d-0da7-47fd-a954-0ada9ca",
+        "http://www.mvep.hr/sankcije",
+        "www.mbl.is",
+        "http://malfong.is",
+        "http://www.malfong.is"
+        "http://www.malfong.is/"
+    ]
+    tests_uri_simple = [
+        "visir.is",
+    ]
+    tests_uri_not = [
+        "not.a.uri",
+        "o.s.frv."
+    ]
+    for test in tests_uri:
+        print(c.sent_regexp(test, [c.REGEXP_SUB["URI"]]))
+        assert c.sent_regexp(test, [c.REGEXP_SUB["URI"]]) == "@uri@"
+    for test in tests_uri_simple:
+        print(c.sent_regexp(test, [c.REGEXP_SUB["URI-SIMPLE"]]))
+        assert c.sent_regexp(test, [c.REGEXP_SUB["URI-SIMPLE"]]) == "@uri@"
+    for test in tests_uri_not:
+        print(c.sent_regexp(test, [c.REGEXP_SUB["URI"], c.REGEXP_SUB["URI-SIMPLE"]]))
+        assert c.sent_regexp(test, [c.REGEXP_SUB["URI"], c.REGEXP_SUB["URI-SIMPLE"]]) != "@uri@"

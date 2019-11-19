@@ -53,8 +53,9 @@ REGEXP_SUB: Dict[str, Tuple[re.Pattern, str]] = {
     'IS-SPLIT-NEWLINE': (re.compile(r'([\w\(\)\[\]\.]{2,})\.([A-ZÁÐÉÍÓÚÝÞÆÖ])'),
                          r'\1. \2'),
     'URI': (re.compile(
-        r"(((http(s)?:\/\/)?(www)|([-a-zA-Z0-9:%_\+.~#?&/=]+?)@)[-a-zA-Z0-9@:%_\+.~#?&/=]+?(?=\.?\s)|([-a-zA-Z0-9@:%_\+.~#?&/=]+?(\.is|\.com)))"),
+        r"((http(s)?:\/\/)|(www)|([-a-zA-Z0-9:%_\+.~#?&/=]+?@))+([-a-zA-Z0-9@:%_\+.~#?&/=]+)"),
             '@uri@'),
+    'URI-SIMPLE': (re.compile(r"([-a-zA-Z0-9@:%_\+.~#?&/=]+?)(\.is|\.com)"), "@uri@"),
     'EMPTY-BRACKETS': (re.compile(r"[\[\(]\s*[\]\)]"), ""),
     # u'\u007c' - |
     'PIPE': (re.compile(r"\u007c"), '@pipe@'),

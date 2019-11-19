@@ -6,7 +6,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='corpus',
-    version='1.1.1',
+    version='1.2.0',
     author='Haukur Páll Jónsson',
     author_email='haukurpalljonsson@gmail.com',
     url='https://github.com/cadia-lvl/SMT/tree/master/corpus',

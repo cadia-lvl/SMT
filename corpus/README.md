@@ -53,6 +53,15 @@ Leiðbeiningar til þess að gefa út nýja útgáfu af `corpus`.
 ### Útgáfur
 Hér er listi yfir breytingar á milli útgáfa.
 
+#### 1.2.0
+Ný föll til að auðvelda vinnslu.
+- `read(dir, lang, modifiers)` fá `Path` í sérstaka skrá sem er til.
+- `write(dir, lang, modifiers)` fá `Path` í sérstaka skrá sem er ekki til.
+- `list_dir(dir, lang, modifiers)` fá `List[Path]` í skrár með `modifiers`.
+- Prófanir fyrir `Moses` tilreiðara.
+- URI leppir betrumbættir.
+- `SentencePiece` bætt við í umhverfi.
+
 #### 1.1.1
 Villur úr 1.1.0 lagaðar.
 

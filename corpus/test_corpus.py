@@ -214,9 +214,18 @@ def test_is_sent_tok():
     print(tokenized)
     assert tokenized == "ég mun setja @ uri @ og @ lt @ .\n"
 
-    test = "1.1.1.1.1. Dráttarvélargerð með tilliti til hemlabúnaðar Með\"dráttarvélargerð með tilliti til hemlabúnaðar\"er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem:"
-    tokenized = c.sent_tokenize(test, c.Lang.IS)
+    # Miðeind handles sections (almost) almost correctly and translates " correctly to “
+    test = "1.1.1.1.1. Dráttarvélargerð með tilliti til hemlabúnaðar Með\"dráttarvélargerð með tilliti til \
+hemlabúnaðar\"er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem:"
+    tokenized = c.sent_tokenize(test, c.Lang.IS, method="pass-through")
     print(tokenized)
+    assert tokenized == "1.1.1.1.1 . Dráttarvélargerð með tilliti til hemlabúnaðar Með “ dráttarvélargerð með \
+tilliti til hemlabúnaðar “ er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem :\n"
+    # Moses handle sections the same way and does not translate "
+    tokenized = c.sent_tokenize(test, c.Lang.IS, method="moses")
+    print(tokenized)
+    assert tokenized == "1.1.1.1.1 . Dráttarvélargerð með tilliti til hemlabúnaðar Með \" dráttarvélargerð með \
+tilliti til hemlabúnaðar \" er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem :\n"
 
 
 def test_en_sent_tok():

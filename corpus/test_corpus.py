@@ -21,9 +21,9 @@ def test_tmx_split(glob_files):
     assert c.Lang.EN.value == 'en'
 
     for corp in en_corpora:
-        assert c.corpus_lang(corp) == c.Lang.EN
+        assert c._lang(corp) == c.Lang.EN
     for corp in is_corpora:
-        assert c.corpus_lang(corp) == c.Lang.IS
+        assert c._lang(corp) == c.Lang.IS
 
     # Check if some line counts are ok.
     all_corpora = en_corpora + is_corpora
@@ -32,75 +32,68 @@ def test_tmx_split(glob_files):
             assert c.corpus_info(corpus)[2] == 8263
 
 
-def test_load_pipeline(get_pipeline):
+def test_load_pipeline(list_data_dir):
     stages = [
         'tatoeba',
         'hagstofan'
     ]
-    raw_pipeline = get_pipeline(stages, c.Lang.IS)
     # All should be found
     for stage in stages:
-        assert isinstance(raw_pipeline[stage], Path)
-    raw_pipeline = get_pipeline(stages, c.Lang.EN)
-    # All should be found
-    for stage in stages:
-        assert isinstance(raw_pipeline[stage], Path)
+        raw_pipeline = list_data_dir([c.Lang.IS], stage)
+        assert len(raw_pipeline) == 1
+        assert isinstance(raw_pipeline[0], Path)
+    # Now we test if we can filter
+    raw_pipeline = list(filter(
+        (lambda path: any([stage in str(path) for stage in stages])),
+        list_data_dir([c.Lang.IS])))
+    assert len(raw_pipeline) == 2
 
 
-def test_combine_corpora(get_pipeline):
+def test_combine_corpora(list_data_dir, data_dir):
     stages = [
-        'hagstofan',
-        'tatoeba'
+        'tatoeba',
+        'hagstofan'
     ]
-    is_corpora = [corpus for name, corpus in get_pipeline(stages,
-                                                          c.Lang.IS).items()]
-    en_corpora = [corpus for name, corpus in get_pipeline(stages,
-                                                          c.Lang.EN).items()]
+    is_corpora = list(filter(
+        (lambda path: any([stage in str(path) for stage in stages])),
+        list_data_dir([c.Lang.IS])))
+    en_corpora = list(filter(
+        (lambda path: any([stage in str(path) for stage in stages])),
+        list_data_dir([c.Lang.EN])))
 
     en_total_length = sum(c.corpus_info(corp)[2] for corp in en_corpora)
     is_total_length = sum(c.corpus_info(corp)[2] for corp in is_corpora)
 
-    en_cat_corpus = c.corpora_create_path(en_corpora, 'cat')
-    c.corpora_combine(en_corpora, en_cat_corpus)
+    c.combine(en_corpora, c.write(data_dir, c.Lang.EN, 'cat'))
+    c.combine(is_corpora, c.write(data_dir, c.Lang.IS, 'cat'))
 
-    is_cat_corpus = c.corpora_create_path(is_corpora, 'cat')
-    c.corpora_combine(is_corpora, is_cat_corpus)
-
-    assert en_total_length == c.corpus_info(en_cat_corpus)[2]
-    assert is_total_length == c.corpus_info(is_cat_corpus)[2]
+    assert en_total_length == c.corpus_info(c.read(data_dir, c.Lang.EN, 'cat'))[2]
+    assert is_total_length == c.corpus_info(c.read(data_dir, c.Lang.IS, 'cat'))[2]
     assert is_total_length == en_total_length
 
 
-def test_peek_para_corpus(get_pipeline):
-    stages = ['cat']
-    is_pipeline = get_pipeline(stages, c.Lang.IS)
-    en_pipeline = get_pipeline(stages, c.Lang.EN)
-    print(*c.corpora_peek([is_pipeline['cat'], en_pipeline['cat']]))
+def test_peek_para_corpus(data_dir):
+    stage = 'cat'
+    print(*c.corpora_peek([c.read(data_dir, c.Lang.EN, stage), c.read(data_dir, c.Lang.IS, stage)]))
 
 
-def test_remove_illegal_chars(get_pipeline):
-    stages = ['cat']
-    is_pipeline = get_pipeline(stages, c.Lang.IS)
-    en_pipeline = get_pipeline(stages, c.Lang.EN)
+def test_remove_illegal_chars(data_dir):
+    in_stage = 'cat'
+    out_stage = 'regexp'
+    in_corpus = c.read(data_dir, c.Lang.IS, in_stage)
+    out_corpus = c.write(data_dir, c.Lang.IS, out_stage)
     # u'\u0000'-u'\u001f', u'\u007f' - Non-printing characters
     patterns = [(re.compile(r"[\u0000-\u001f|\u007f]"), '')]
 
     # Check that we find some of these characters in the first lines
     assert ord('\u000A') == 10
-    assert any(ord(char) == 10 for line in c.corpus_peek(
-        is_pipeline['cat']) for char in line)
-    assert any(ord(char) == 10 for line in c.corpus_peek(
-        en_pipeline['cat']) for char in line)
-    is_processed_corpus = c.corpus_create_path(is_pipeline['cat'], 'regexp')
-    en_processed_corpus = c.corpus_create_path(en_pipeline['cat'], 'regexp')
+    assert any(ord(char) == 10 for line in c.peek(
+        in_corpus) for char in line)
 
-    c.corpus_regexp(is_pipeline['cat'], is_processed_corpus, patterns)
-    c.corpus_regexp(en_pipeline['cat'], en_processed_corpus, patterns)
+    c.regexp(in_corpus, out_corpus, patterns)
     # Now all the newlines are gone (atleast from the first lines).
-    assert all(ord(char) != 10 for line in c.corpus_peek(
-        is_processed_corpus) for char in line)
-    assert all(ord(char) != 10 for line in c.corpus_peek(
-        en_processed_corpus) for char in line)
+    assert all(ord(char) != 10 for line in c.peek(
+        out_corpus) for char in line)
 
     # Lets test on a string
     # u'\u0000'-u'\u001f', u'\u007f' - Non-printing characters
@@ -116,79 +109,78 @@ def same_length_check(path: Path, other_path: Path) -> None:
 
 def corpus_different_check(path: Path, other_path: Path) -> None:
     assert any(line1 != line2 for line1, line2 in
-               zip(c.corpus_peek(path),
-                   c.corpus_peek(other_path)))
+               zip(c.peek(path),
+                   c.peek(other_path)))
 
 
-def test_shuffling(get_pipeline):
-    stages = ['cat']
-    is_pipeline = get_pipeline(stages, c.Lang.IS)
-    en_pipeline = get_pipeline(stages, c.Lang.EN)
+def test_shuffling(data_dir):
+    in_stage = 'cat'
+    out_stage = 'shuf'
+    in_corpus = c.read(data_dir, c.Lang.IS, in_stage)
+    out_corpus = c.write(data_dir, c.Lang.IS, out_stage)
+    in_corpus_2 = c.read(data_dir, c.Lang.EN, in_stage)
+    out_corpus_2 = c.write(data_dir, c.Lang.EN, out_stage)
 
-    is_shuffled_corpus = c.corpus_create_path(is_pipeline['cat'], 'shuf')
-    en_shuffled_corpus = c.corpus_create_path(en_pipeline['cat'], 'shuf')
     # We use the same seed
-    c.corpus_shuffle(is_pipeline['cat'],
-                     is_shuffled_corpus, is_pipeline['cat'])
-    c.corpus_shuffle(en_pipeline['cat'],
-                     en_shuffled_corpus, is_pipeline['cat'])
+    c.shuffle(in_corpus, out_corpus, in_corpus)
+    c.shuffle(in_corpus_2, out_corpus_2, in_corpus)
 
     # Check if at least some of the lines are not the same
-    corpus_different_check(is_pipeline['cat'],
-                           is_shuffled_corpus)
-    corpus_different_check(en_pipeline['cat'],
-                           en_shuffled_corpus)
+    corpus_different_check(in_corpus, out_corpus)
+    corpus_different_check(in_corpus_2, out_corpus_2)
 
     # And that we have the same number of lines
-    same_length_check(is_pipeline['cat'],
-                      is_shuffled_corpus)
-    same_length_check(en_pipeline['cat'],
-                      en_shuffled_corpus)
+    same_length_check(in_corpus, out_corpus)
+    same_length_check(in_corpus_2, out_corpus_2)
 
     # and manually check if the alignment is ok
-    print(*c.corpora_peek([is_shuffled_corpus, en_shuffled_corpus]))
+    print(*c.corpora_peek([out_corpus, out_corpus_2]))
 
 
-def test_tokenization_corpus(get_pipeline):
-    stages = ['shuf']
-    is_pipeline = get_pipeline(stages, c.Lang.IS)
-    en_pipeline = get_pipeline(stages, c.Lang.EN)
+def test_tokenization_corpus(data_dir):
+    in_stage = 'shuf'
+    out_stage = 'tok'
+    in_corpus = c.read(data_dir, c.Lang.IS, in_stage)
+    out_corpus = c.write(data_dir, c.Lang.IS, out_stage)
+    in_corpus_2 = c.read(data_dir, c.Lang.EN, in_stage)
+    out_corpus_2 = c.write(data_dir, c.Lang.EN, out_stage)
 
-    is_tok = c.corpus_create_path(is_pipeline['shuf'], 'tok')
-    en_tok = c.corpus_create_path(en_pipeline['shuf'], 'tok')
+    c.tokenize(in_corpus, out_corpus)
+    c.tokenize(in_corpus_2, out_corpus_2, 'nltk')
 
-    c.corpus_tokenize(is_pipeline['shuf'], is_tok)
-    c.corpus_tokenize(en_pipeline['shuf'], en_tok, 'nltk')
-
-    # We just check if some of the lines have changed
-    corpus_different_check(is_pipeline['shuf'],
-                           is_tok)
-    corpus_different_check(en_pipeline['shuf'],
-                           en_tok)
+    # Check if at least some of the lines are not the same
+    corpus_different_check(in_corpus, out_corpus)
+    corpus_different_check(in_corpus_2, out_corpus_2)
 
     # And that we have the same number of lines
-    same_length_check(is_pipeline['shuf'],
-                      is_tok)
-    same_length_check(en_pipeline['shuf'],
-                      en_tok)
+    same_length_check(in_corpus, out_corpus)
+    same_length_check(in_corpus_2, out_corpus_2)
 
 
 def test_specific_regexps():
-    test = """En heldur hefði ég kosið, að þessi ráðlegging hefði komið fram fyrr í dag, þannig að ég hefði getað nýtt þann tíma, sem farið hefur í það hjá stjórnarliðinu að semja um það, sem hér á að fara fram í dag eða á morgun, hátt í 2 klukkutíma í dag, og þá hefði ég vissulega þegið þá ábendingu að kynna mér frekar, hvað hv.
-þm.
-Sjálfstfl.
-hefðu sagt um ýmis mál hér á undanförnum vikum eða mánuðum."""
+    test = "En heldur hefði ég kosið, að þessi ráðlegging hefði komið fram fyrr í dag, þannig að ég hefði getað \
+nýtt þann tíma, sem farið hefur í það hjá stjórnarliðinu að semja um það, sem hér á að fara fram í dag eða á \
+morgun, hátt í 2 klukkutíma í dag, og þá hefði ég vissulega þegið þá ábendingu að kynna mér frekar, hvað hv.\n\
+þm.\nSjálfstfl.\nhefðu sagt um ýmis mál hér á undanförnum vikum eða mánuðum. "
     regexps = [
-            (re.compile(r'([\w]{1,})\.\n([a-záðéíóúýþæö])') , r'\1. \2')
-        ]
+        c.REGEXP_SUB["IS-COMBINE-NEWLINE"]
+    ]
     result = c.sent_regexp(test, regexps)
+    print(test)
     print(result)
+    assert len(re.findall(r"\n", test)) == 3
+    assert len(re.findall(r"\n", result)) == 1
 
 
-def test_tokenization_sentence():
-    test = "nr., gr., 1sti fyrsti, 1., 2ja\n"
+def test_is_sent_tok():
+    # Miðeind expands some abbreviations
+    test = "nr., gr., 1sti fyrsti, 1., 2ja, o.s.frv.\n"
     tokenized = c.sent_tokenize(test, c.Lang.IS)
-    assert tokenized == "númer , grein , fyrsti fyrsti , 1. , tveggja\n"
+    assert tokenized == "númer , grein , fyrsti fyrsti , 1. , tveggja , og svo framvegis .\n"
+
+    # Moses only understands gr. and o.s.frv. but does not expand
+    tokenized = c.sent_tokenize(test, c.Lang.IS, method='moses')
+    assert tokenized == "nr . , gr. , 1sti fyrsti , 1 . , 2ja , o.s.frv.\n"
 
     test = "H2O, CO2, 9%\n"
     tokenized = c.sent_tokenize(test, c.Lang.IS)
@@ -196,6 +188,38 @@ def test_tokenization_sentence():
     # assert tokenized == "H2O , CO2 , 9 %\n"
     print(tokenized)
 
+    # Moses treats compounds correctly
+    tokenized = c.sent_tokenize(test, c.Lang.IS, method='moses')
+    assert tokenized == "H2O , CO2 , 9 %\n"
+    print(tokenized)
+
+    # Miðeind deals with URLs
+    test = "http://www.malfong.is\n"
+    tokenized = c.sent_tokenize(test, c.Lang.IS)
+    print(tokenized)
+    assert tokenized == "http://www.malfong.is\n"
+
+    # Moses does not
+    tokenized = c.sent_tokenize(test, c.Lang.IS, method='moses')
+    print(tokenized)
+    assert tokenized == "http : / / www.malfong.is\n"
+
+    # Both will mess-up our placeholders
+    test = "ég mun setja @uri@ og @lt@."
+    tokenized = c.sent_tokenize(test, c.Lang.IS)
+    print(tokenized)
+    assert tokenized == "ég mun setja @ uri @ og @ lt @ .\n"
+
+    tokenized = c.sent_tokenize(test, c.Lang.IS, method='moses')
+    print(tokenized)
+    assert tokenized == "ég mun setja @ uri @ og @ lt @ .\n"
+
+    test = "1.1.1.1.1. Dráttarvélargerð með tilliti til hemlabúnaðar Með\"dráttarvélargerð með tilliti til hemlabúnaðar\"er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem:"
+    tokenized = c.sent_tokenize(test, c.Lang.IS)
+    print(tokenized)
+
+
+def test_en_sent_tok():
     # In English we do not expand abbreviations.
     test = "nr., art., 1st first, 1., 2nd\n"
     tokenized = c.sent_tokenize(test, c.Lang.EN, 'nltk')
@@ -205,34 +229,31 @@ def test_tokenization_sentence():
     tokenized = c.sent_tokenize(test, c.Lang.EN, 'moses')
     print(tokenized)
     assert tokenized == "nr . , art . , 1st first , 1 . , 2nd\n"
+    # TokTok understands better.
     tokenized = c.sent_tokenize(test, c.Lang.EN, 'toktok')
     print(tokenized)
     assert tokenized == "nr. , art. , 1st first , 1. , 2nd\n"
 
-    test = "Það gunnar\n"
-    tokenized = c.sent_tokenize(test, c.Lang.IS)
-    print(tokenized)
-    assert tokenized == "Það gunnar\n"
-
+    # TokTok understands compounds, we also know that Moses does.
     test = "H2O, CO2, 9%\n"
     tokenized = c.sent_tokenize(test, c.Lang.EN, 'toktok')
     print(tokenized)
     assert tokenized == "H2O , CO2 , 9 %\n"
 
-    # We deal with english contractions
-    test = "It's\n"
+    # Each tokenizer deals with contractions differently
+    test = "It's i'm couldn't\n"
+    tokenized = c.sent_tokenize(test, c.Lang.EN, 'nltk')
+    print(tokenized)
+    assert tokenized == "It 's i 'm could n't\n"
     tokenized = c.sent_tokenize(test, c.Lang.EN, 'moses')
     print(tokenized)
-    assert tokenized == "It 's\n"
+    assert tokenized == "It 's i 'm couldn 't\n"
+    # TokTok kind-of messes them up
     tokenized = c.sent_tokenize(test, c.Lang.EN, 'toktok')
     print(tokenized)
-    assert tokenized == "It ' s\n"
+    assert tokenized == "It ' s i ' m couldn ' t\n"
 
-    # We deal with URLs
     test = "http://www.malfong.is\n"
-    tokenized = c.sent_tokenize(test, c.Lang.IS)
-    print(tokenized)
-    assert tokenized == "http://www.malfong.is\n"
     tokenized = c.sent_tokenize(test, c.Lang.EN, 'nltk')
     print(tokenized)
     # TODO: The NLTK tokenizer does not deal with URLs.
@@ -241,95 +262,71 @@ def test_tokenization_sentence():
     print(tokenized)
     assert tokenized == "http://www.malfong.is\n"
 
-    # How do we deal with more abbreviations.
-    test = "i'm couldn't\n"
+    # Only TokTok will not mess-up the placeholders
+    test = "I will place @uri@ and @lt@."
     tokenized = c.sent_tokenize(test, c.Lang.EN, 'nltk')
     print(tokenized)
-    assert tokenized == "i 'm could n't\n"
-    tokenized = c.sent_tokenize(test, c.Lang.EN, 'toktok')
-    print(tokenized)
-    assert tokenized == "i ' m couldn ' t\n"
-    tokenized = c.sent_tokenize(test, c.Lang.EN, 'moses')
-    print(tokenized)
-    assert tokenized == "i 'm couldn 't\n"
+    assert tokenized == "I will place @ uri @ and @ lt @ .\n"
 
-    test = "1.1.1.1.1. Dráttarvélargerð með tilliti til hemlabúnaðar Með\"dráttarvélargerð með tilliti til hemlabúnaðar\"er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem:"
-    tokenized = c.sent_tokenize(test, c.Lang.IS)
+    tokenized = c.sent_tokenize(test, c.Lang.EN, method='toktok')
     print(tokenized)
+    assert tokenized == "I will place @uri@ and @lt@ .\n"
 
-    test = "o.s.frv."
-    tokenized = c.sent_tokenize(test, c.Lang.IS)
+    tokenized = c.sent_tokenize(test, c.Lang.EN, method='moses')
     print(tokenized)
-    assert tokenized == "og svo framvegis .\n"
+    assert tokenized == "I will place @ uri @ and @ lt @ .\n"
 
 
-def test_single_thread_regexp(get_pipeline):
-    stages = ['cat']
-    is_pipeline = get_pipeline(stages, c.Lang.IS)
+def test_in_parallel(data_dir):
+    in_stage = 'shuf'
+    out_stage = 'regexp'
+    in_corpus = c.read(data_dir, c.Lang.IS, in_stage)
+    out_corpus = c.write(data_dir, c.Lang.IS, out_stage)
     patterns = [(re.compile(r"[\u0000-\u001f|\u007f]"), '')]
 
-    is_processed_corpus = c.corpus_create_path(is_pipeline['cat'], 'regexp')
-
-    c.corpus_regexp(is_pipeline['cat'], is_processed_corpus, patterns)
-
-
-def test_multi_thread_regexp(get_pipeline):
-    stages = ['cat']
-    is_pipeline = get_pipeline(stages, c.Lang.IS)
-    patterns = [(re.compile(r"[\u0000-\u001f|\u007f]"), '')]
-
-    is_processed_corpus = c.corpus_create_path(is_pipeline['cat'], 'regexp')
-
-    c.parallel_process(is_pipeline['cat'],
-                        is_processed_corpus,
-                        2,
-                        c.sent_regexp,
-                        **{"regexps": patterns})
+    c.in_parallel(in_corpus,
+                  out_corpus,
+                  2,
+                  c.sent_regexp,
+                  **{"regexps": patterns})
 
 
-def test_corpus_split(get_pipeline):
-    stages = ['shuf']
-    is_pipeline = get_pipeline(stages, c.Lang.IS)
-    en_pipeline = get_pipeline(stages, c.Lang.EN)
+def test_corpus_split(data_dir):
+    in_stage = 'shuf'
+    out_stage = 'test'
+    in_corpus = c.read(data_dir, c.Lang.IS, in_stage)
+    out_corpus = c.write(data_dir, c.Lang.IS, out_stage)
+    out_stage_2 = 'train'
+    out_corpus_2 = c.write(data_dir, c.Lang.IS, out_stage_2)
 
-    is_test = c.corpus_create_path(is_pipeline['shuf'], 'test')
-    is_train = c.corpus_create_path(is_pipeline['shuf'], 'train')
-    en_test = c.corpus_create_path(en_pipeline['shuf'], 'test')
-    en_train = c.corpus_create_path(en_pipeline['shuf'], 'train')
-
-    c.corpus_split(is_pipeline[stages[0]], is_train, is_test, 5000)
-    c.corpus_split(en_pipeline[stages[0]], en_train, en_test, 5000)
+    c.split(in_corpus, out_corpus_2, out_corpus, 5000)
 
     # Check if the combined lengths are equal to the original
-    assert c.corpus_info(is_pipeline[stages[0]])[2] == \
-        c.corpus_info(is_train)[2] + c.corpus_info(is_test)[2]
-    assert c.corpus_info(en_pipeline[stages[0]])[2] == \
-        c.corpus_info(en_train)[2] + c.corpus_info(en_test)[2]
+    assert c.corpus_info(in_corpus)[2] == c.corpus_info(out_corpus)[2] + c.corpus_info(out_corpus_2)[2]
 
     # And that the test corpus has 5000 lines
-    assert c.corpus_info(is_test)[2] == 5000
-    assert c.corpus_info(en_test)[2] == 5000
+    assert c.corpus_info(out_corpus)[2] == 5000
 
 
-def test_corpus_sample(get_pipeline):
-    stages = ['shuf']
-    pipeline = get_pipeline(stages, c.Lang.IS)
-    sampled_lines = list(c.corpus_sample(pipeline[stages[0]], 10))
+def test_corpus_sample(data_dir):
+    in_stage = 'shuf'
+    in_corpus = c.read(data_dir, c.Lang.IS, in_stage)
+    sampled_lines = list(c.sample(in_corpus, 10))
     assert len(sampled_lines) == 10
 
 
-def test_corpus_token_counter(get_pipeline):
-    stages = ['shuf']
-    pipeline = get_pipeline(stages, c.Lang.IS)
-    counter = c.corpus_token_counter(pipeline[stages[0]])
+def test_corpus_token_counter(data_dir):
+    in_stage = 'shuf'
+    in_corpus = c.read(data_dir, c.Lang.IS, in_stage)
+    counter = c.token_counter(in_corpus)
     # The most common token, this is based on your test data
     assert counter.most_common(1)[0][0] == 'að'
 
 
-def test_corpus_sentence_counter(get_pipeline):
-    stages = ['shuf']
-    pipeline = get_pipeline(stages, c.Lang.IS)
-    counter = c.corpus_sentence_counter(pipeline[stages[0]])
+def test_corpus_sentence_counter(data_dir):
+    in_stage = 'shuf'
+    in_corpus = c.read(data_dir, c.Lang.IS, in_stage)
+    counter = c.sentence_counter(in_corpus)
     # The most common sentence length, this is based on your test data
     assert counter.most_common()[0][0] == 5
 
@@ -346,37 +343,36 @@ def test_sentence_breaking():
     # Here are a few sentences from the text which contain "." in weird places.
     # We do not want to cover all these cases, just the most important cases.
     tests = [" viðauka.Skipunarstillipunktar fyrir",
-            "test (Method B.32) or",
-            "study (Method B.33)B.IV Reproductive",
-            "is deleted.Financial liabi",
-            "are added.Paragraph 43",
-            "A.LIMIT",
-            "toxicological a.nd ecotoxicological",
-            "The President H.COVENEY",
-            "Dental Science (B.Dent.Sc.),",
-            "Medicine (Vet.MB or BVet.Med.),",
-            "adopted: http://ec.europa.eu/enterprise/reach/docs/ghs/ghs_prop_vol_iii_en.pdf",
-            "ul. „V.Levski“ 281",
-            "Point XI.C.IX.5 of Annex",
-            "IASB at www.iasb.org",
-            "Te.st conditions",
-            " o.s.frv. sem starfa",
-            "„3a.GERÐARVIÐURKENNING",
-            "er minna en 15.Hægt er",
-            "i.efni sem uppfyllir",
-            "III.VIÐAUKI",
-            "skulu a.m.kkveða á um að",
-            "(Stjtíð.EB L",
-            "(4).Til",
-            "2.2.3.4.Meginregla ",
-            "ammóníakslausn (3.2.ii)) og",
-            "framkvæmdastjórnarinnar (EB) nr.416/2005 (Stjtíð.ESB L 66, 12.3.2005, bls. 10).",
-            "lýkur 31.mars 2006",
-            "asdf.Þ"
-            ]
+             "test (Method B.32) or",
+             "study (Method B.33)B.IV Reproductive",
+             "is deleted.Financial liabi",
+             "are added.Paragraph 43",
+             "A.LIMIT",
+             "toxicological a.nd ecotoxicological",
+             "The President H.COVENEY",
+             "Dental Science (B.Dent.Sc.),",
+             "Medicine (Vet.MB or BVet.Med.),",
+             "adopted: http://ec.europa.eu/enterprise/reach/docs/ghs/ghs_prop_vol_iii_en.pdf",
+             "ul. „V.Levski“ 281",
+             "Point XI.C.IX.5 of Annex",
+             "IASB at www.iasb.org",
+             "Te.st conditions",
+             " o.s.frv. sem starfa",
+             "„3a.GERÐARVIÐURKENNING",
+             "er minna en 15.Hægt er",
+             "i.efni sem uppfyllir",
+             "III.VIÐAUKI",
+             "skulu a.m.kkveða á um að",
+             "(Stjtíð.EB L",
+             "(4).Til",
+             "2.2.3.4.Meginregla ",
+             "ammóníakslausn (3.2.ii)) og",
+             "framkvæmdastjórnarinnar (EB) nr.416/2005 (Stjtíð.ESB L 66, 12.3.2005, bls. 10).",
+             "lýkur 31.mars 2006",
+             "asdf.Þ"
+             ]
 
-    sub = (re.compile(r'([\w\(\)\[\]\.]{2,})\.([A-ZÁÐÉÍÓÚÝÞÆÖ])') , r'\1. \2')
-    results = [c.sent_regexp(test, [sub]) for test in tests]
+    results = [c.sent_regexp(test, [c.REGEXP_SUB["IS-SPLIT-NEWLINE"]]) for test in tests]
     for result in results:
         print(result)
     # We test wether our intended transformations happen and some should not.
@@ -391,6 +387,7 @@ def test_sentence_breaking():
     assert "adopted: http://ec.europa.eu/enterprise/reach/docs/ghs/ghs_prop_vol_iii_en.pdf" in results
     assert " o.s.frv. sem starfa" in results
 
+
 def test_sent_process_v1():
     test = "Þetta er íslensk setning, með [ ] () www.mbl.is o.s.frv. <geggjað>!"
     result = c.sent_process_v1(test, c.Lang.IS)
@@ -401,11 +398,13 @@ def test_sent_process_v1():
     print(result)
     assert result == "this is an english sentence , with @uri@ i.e. @lt@awsome@gt@\n"
 
+
 def test_tei_read(glob_files):
     tei_files = [Path(t) for t in glob_files('*.xml')]
     out_file = tei_files[0].with_name('rmh.is')
     # we just test if there is no exception
     c.tei_read(tei_files, out_file)
+
 
 def test_sent_as_words():
     # all "non-words" should not be present in the sentence.
@@ -413,18 +412,20 @@ def test_sent_as_words():
     result = c.sent_as_words(test)
     assert result == "these are not words and should be removed"
 
+
 def test_sent_contains_regexp():
     test = ["дейност", "είδοσ", "εγκατάστασησ", "казеин", "приложение", "ž",
             "č", "š", "лицата", "12052"]
     results = [c.sent_contains_regexp(word, c.REGEXP_SUB["CRYLLIC"][0]) for word in test]
     assert results == [True, False, False, True, True, False,
-            False, False, True, False]
+                       False, False, True, False]
     results = [c.sent_contains_regexp(word, c.REGEXP_SUB["GREEK"][0]) for word in test]
     assert results == [False, True, True, False, False, False,
-            False, False, False, False]
+                       False, False, False, False]
     results = [c.sent_contains_regexp(word, c.REGEXP_SUB["UNKNOWN-CHARS"][0]) for word in test]
     assert results == [False, False, False, False, False, True,
-            True, True, False, False]
+                       True, True, False, False]
+
 
 def test_sent_token_known():
     # First we test whether we count correctly without normalizing.
@@ -432,111 +433,111 @@ def test_sent_token_known():
     result = c.sent_token_known(test, set(["these", "are", "known", "words", "."]))
     test_len = len(test.split())
     known_words_count_in_sent = 4
-    assert result == known_words_count_in_sent/test_len
+    assert result == known_words_count_in_sent / test_len
     # Then we test with normalization.
     test = c.sent_as_words(test)
     result = c.sent_token_known(test, set(["these", "are", "known", "words", "."]))
     test_len = 8
     known_words_count_in_sent = 3
-    assert result == known_words_count_in_sent/test_len
+    assert result == known_words_count_in_sent / test_len
 
 
-def test_corpus_get_skip_lines(get_pipeline):
+def test_corpus_get_skip_lines(data_dir):
+    in_stage = 'shuf'
+    in_corpus = c.read(data_dir, c.Lang.IS, in_stage)
     stage = 'shuf'
-    stages = [stage]
-    pipe_is = get_pipeline(stages, c.Lang.IS)
     # to begin with, we test the edge cases. All should be skipped.
     known_words = set()
     regexps = []
-    result = c.corpus_get_skip_lines(pipe_is[stage],
-            regexps,
-            known_words,
-            1.0,
-            normalize=False,
-            keep_sent_length=0)
-    original_length = c.corpus_info(pipe_is[stage])[2]
+    result = c.get_skip_lines(in_corpus,
+                              regexps,
+                              known_words,
+                              1.0,
+                              normalize=False,
+                              keep_sent_length=0)
+    original_length = c.corpus_info(in_corpus)[2]
     assert len(result) == original_length
     # Set the ratio to the bottom, we skip none.
-    result = c.corpus_get_skip_lines(pipe_is[stage],
-            regexps,
-            known_words,
-            0.0,
-            normalize=False,
-            keep_sent_length=0)
+    result = c.get_skip_lines(in_corpus,
+                              regexps,
+                              known_words,
+                              0.0,
+                              normalize=False,
+                              keep_sent_length=0)
     assert len(result) == 0
     # Set the ratio to the bottom and normalize, we skip lines which contain
     # non-word chars (\d\W_).
-    result = c.corpus_get_skip_lines(pipe_is[stage],
-            regexps,
-            known_words,
-            0.0,
-            normalize=True,
-            keep_sent_length=0)
+    result = c.get_skip_lines(in_corpus,
+                              regexps,
+                              known_words,
+                              0.0,
+                              normalize=True,
+                              keep_sent_length=0)
     assert len(result) == 93
     # There are a few one-word sentences
-    result = c.corpus_get_skip_lines(pipe_is[stage],
-            regexps,
-            known_words,
-            1.0,
-            normalize=False)
+    result = c.get_skip_lines(in_corpus,
+                              regexps,
+                              known_words,
+                              1.0,
+                              normalize=False)
     assert len(result) == 10369
     # We now normalize. We expect a few more sentences skipped since the
     # sentences which contain only contain non-words are skipped.
-    result = c.corpus_get_skip_lines(pipe_is[stage],
-            regexps,
-            known_words,
-            1.0)
+    result = c.get_skip_lines(in_corpus,
+                              regexps,
+                              known_words,
+                              1.0)
     assert len(result) == 10107
     # We only skip sentences which contain non-word words 
-    result = c.corpus_get_skip_lines(pipe_is[stage],
-            regexps,
-            known_words,
-            0.0)
+    result = c.get_skip_lines(in_corpus,
+                              regexps,
+                              known_words,
+                              0.0)
     assert len(result) == 93
     # Increasing above 0 should be equal to 1.0 with no known words
-    result = c.corpus_get_skip_lines(pipe_is[stage],
-            regexps,
-            known_words,
-            0.5)
+    result = c.get_skip_lines(in_corpus,
+                              regexps,
+                              known_words,
+                              0.5)
     assert len(result) == 10107
     # we add a few known words and expect to skip fewer.
-    known_words = set(["Ég", "skil", "bækurnar", "eftir"])
-    result = c.corpus_get_skip_lines(pipe_is[stage],
-            regexps,
-            known_words,
-            0.5)
+    known_words = {"Ég", "skil", "bækurnar", "eftir"}
+    result = c.get_skip_lines(in_corpus,
+                              regexps,
+                              known_words,
+                              0.5)
     assert len(result) == 9979
     # Adding a regexp we expect to remove more sentences
     known_words = set()
     regexps = [re.compile(r'Ég')]
-    result = c.corpus_get_skip_lines(pipe_is[stage],
-            regexps,
-            known_words,
-            0.5)
+    result = c.get_skip_lines(in_corpus,
+                              regexps,
+                              known_words,
+                              0.5)
     assert len(result) == 10113
 
     # And now we remove some of the sentences we added with the regexp
     regexps = [re.compile(r'Ég')]
-    known_words = set(["Ég", "skil", "bækurnar", "eftir"])
-    result = c.corpus_get_skip_lines(pipe_is[stage],
-            regexps,
-            known_words,
-            0.5)
+    known_words = {"Ég", "skil", "bækurnar", "eftir"}
+    result = c.get_skip_lines(in_corpus,
+                              regexps,
+                              known_words,
+                              0.5)
     assert len(result) > 9979 and len(result) < 10113
 
 
-def test_corpus_skip_lines(get_pipeline):
-    stage = 'shuf'
-    stages = [stage]
-    pipe_is = get_pipeline(stages, c.Lang.IS)
+def test_corpus_skip_lines(data_dir):
+    in_stage = 'shuf'
+    out_stage = 'skip'
+    in_corpus = c.read(data_dir, c.Lang.IS, in_stage)
+    out_corpus = c.write(data_dir, c.Lang.IS, out_stage)
     regexps = [re.compile(r'Ég')]
-    known_words = set(["Ég", "skil", "bækurnar", "eftir"])
-    result = c.corpus_get_skip_lines(pipe_is[stage],
-            regexps,
-            known_words,
-            0.5)
+    known_words = {"Ég", "skil", "bækurnar", "eftir"}
+    result = c.get_skip_lines(in_corpus,
+                              regexps,
+                              known_words,
+                              0.5)
     assert len(result) == 10112
     lines = [number for number, fraction, line in result]
-    out_path = c.corpus_create_path(pipe_is[stage], 'skip')
-    c.corpus_skip_lines(pipe_is[stage], out_path, lines)
-    assert c.corpus_info(out_path)[2] == c.corpus_info(pipe_is[stage])[2] - len(result)
+    c.skip_lines(in_corpus, out_corpus, lines)
+    assert c.corpus_info(out_corpus)[2] == c.corpus_info(in_corpus)[2] - len(result)

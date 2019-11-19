@@ -39,7 +39,7 @@ Gert er ráð fyrir að unnið sé með Conda.
 - `test_data/*.tmx` í þessa skrá er hægt að setja `.tmx` skjöl til að nota í prófanir.
 
 Keyra prófanir
-    pytest
+    pytest -s --data=./test_data
 
 ### Útgáfa
 Leiðbeiningar til þess að gefa út nýja útgáfu af `corpus`.

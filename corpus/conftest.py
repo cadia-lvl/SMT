@@ -1,7 +1,7 @@
 from pathlib import Path
 import pytest
 from glob import glob
-from corpus import pipeline_load
+from corpus import list_dir
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -11,7 +11,7 @@ def pytest_addoption(parser):
 
 @pytest.fixture
 def data_dir(request):
-    return request.config.getoption("--data")
+    return Path(request.config.getoption("--data"))
 
 
 @pytest.fixture
@@ -25,10 +25,12 @@ def glob_files(request):
 
 
 @pytest.fixture
-def get_pipeline(request):
+def list_data_dir(request):
     data_dir = request.config.getoption("--data")
 
-    def load_pipeline(stages, lang):
-        return pipeline_load(Path(data_dir), stages, lang)
+    def load_pipeline(langs, stages=None):
+        if stages:
+            return list_dir(Path(data_dir), langs, stages)
+        return list_dir(Path(data_dir), langs)
 
     return load_pipeline

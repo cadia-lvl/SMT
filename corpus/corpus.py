@@ -8,9 +8,9 @@ import os
 import re
 from unicodedata import normalize
 from collections import Counter
-from random import sample
+from random import sample as r_sample
 from typing import Tuple, List, Dict, Iterable, Union, Callable, \
-    Sequence, Iterator
+    Sequence, Iterator, Optional
 from subprocess import run
 from enum import Enum
 from concurrent.futures import ProcessPoolExecutor
@@ -23,6 +23,7 @@ from tqdm import tqdm
 from translate.storage.tmx import tmxfile
 # also in sacremoses: punct norm, detok and sent split
 from sacremoses import MosesTokenizer
+
 nltk.download('punkt')
 
 # Some parts of the processing support threading, set the value here.
@@ -37,20 +38,24 @@ class Lang(Enum):
 
 
 # A dict to map between "ISO 639-1-ISO 3166-1" to ISO 639-1 (two letter language code)
-TMX_2_LANG = {
+TMX_2_LANG: Dict[str, Lang] = {
     'EN-GB': Lang.EN,
     'IS-IS': Lang.IS
 }
 
 REGEXP_SUB: Dict[str, Tuple[re.Pattern, str]] = {
     # Taken from https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url?noredirect=1&lq=1
-    'URI-OLD': (re.compile(r'(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)'),
-                '@uri@'),
+    'URI-OLD': (
+    re.compile(r'(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)'),
+    '@uri@'),
     'IS-COMBINE-NEWLINE': (re.compile(r'([\w]+)\.\n([a-záðéíóúýþæö])'),
                            r'\1. \2'),
     'IS-SPLIT-NEWLINE': (re.compile(r'([\w\(\)\[\]\.]{2,})\.([A-ZÁÐÉÍÓÚÝÞÆÖ])'),
                          r'\1. \2'),
-    'URI': (re.compile(r"(((http(s)?:\/\/)?(www)|([-a-zA-Z0-9:%_\+.~#?&/=]+?)@)[-a-zA-Z0-9@:%_\+.~#?&/=]+?(?=\.?\s)|([-a-zA-Z0-9@:%_\+.~#?&/=]+?(\.is|\.com)))"), '@uri@'),
+    'URI': (re.compile(
+        r"((http(s)?:\/\/)|(www)|([-a-zA-Z0-9:%_\+.~#?&/=]+?@))+([-a-zA-Z0-9@:%_\+.~#?&/=]+)"),
+            '@uri@'),
+    'URI-SIMPLE': (re.compile(r"([-a-zA-Z0-9@:%_\+.~#?&/=]+?)(\.is|\.com)"), "@uri@"),
     'EMPTY-BRACKETS': (re.compile(r"[\[\(]\s*[\]\)]"), ""),
     # u'\u007c' - |
     'PIPE': (re.compile(r"\u007c"), '@pipe@'),
@@ -70,57 +75,12 @@ REGEXP_SUB: Dict[str, Tuple[re.Pattern, str]] = {
 }
 
 
-def corpus_lang(path: Path) -> Lang:
-    # The first part of the suffix is '.', omit it.
-    return Lang(path.suffix[1:])
-
-
 def _sizeof_fmt(num: float, suffix: str = 'B') -> str:
     for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
         if abs(num) < 1024.0:
             return "%3.1f%s%s" % (num, unit, suffix)
         num /= 1024.0
     return "%.1f%s%s" % (num, 'Yi', suffix)
-
-
-def corpus_info(path: Path) -> Tuple[str, str, int]:
-    """Returns the path, size and line count of a Path."""
-    size = _sizeof_fmt(path.stat().st_size)
-    line_count = _get_line_count(path.resolve())
-    return (str(path.resolve()), size, line_count)
-
-
-def corpus_info_formatted(path: Path) -> str:
-    """Returns the formatted path, size and line count of a Path."""
-    path_s, size, lines = corpus_info(path)
-    return f'{path_s:<40}{size:^15}{lines:>10}'
-
-
-def corpus_create_path(path: Path, new_name: str) -> Path:
-    """Creates a new Path in same dir as path. Keeps the same language."""
-    return path.with_name(f'{new_name}.{corpus_lang(path).value}')
-
-
-def corpora_create_path(paths: List[Path], new_name: str) -> Path:
-    """Creates a new Path in same dir as first path. Keeps the same language."""
-    for path in paths:
-        return corpus_create_path(path, new_name)
-    raise ValueError("No paths given.")
-
-
-def pipeline_load(data_dir: Path,
-                  stages: List[str],
-                  lang: Lang = Lang.IS) \
-        -> Dict[str, Union[Path, None]]:
-    """Loads the processed pipeline as a dict from a directory given stages."""
-    pipeline: Dict[str, Union[Path, None]] = dict()
-    for stage in stages:
-        files = list(data_dir.glob(f'{stage}.{lang.value}'))
-        if len(files) == 1:
-            pipeline[stage] = files[0]
-        else:
-            pipeline[stage] = None
-    return pipeline
 
 
 def _get_line_count(path: Path) -> int:
@@ -136,6 +96,80 @@ def _get_line_count(path: Path) -> int:
             buf = read_f(buf_size)
 
     return lines
+
+
+def corpus_info(path: Path) -> Tuple[str, str, int]:
+    """Returns the path, size and line count of a Path."""
+    size = _sizeof_fmt(path.stat().st_size)
+    line_count = _get_line_count(path.resolve())
+    return str(path.resolve()), size, line_count
+
+
+def corpus_info_formatted(path: Path) -> str:
+    """Returns the formatted path, size and line count of a Path."""
+    path_s, size, lines = corpus_info(path)
+    return f'{path_s:<40}{size:^15}{lines:>10}'
+
+
+def read(directory: Path, lang: Lang, *modifiers) -> Optional[Path]:
+    """
+    Returns the path to a file in dir with given language and all modifiers.
+
+    Assumes the naming convention: modifier-modifier.lang
+    :param directory: The directory to read from.
+    :param lang: The Lang to read.
+    :param modifiers: A sequence of modifiers to search for.
+    :return: If exists, a Path pointing to the file, o.w. error.
+    """
+    path = Path(directory.joinpath("-".join(modifiers)).with_suffix(f".{lang.value}"))
+    if path.exists():
+        return path
+    raise FileNotFoundError(f"{path} does not exist")
+
+
+def write(directory: Path, lang: Lang, *modifiers, overwrite=True) -> Optional[Path]:
+    """
+    Returns the path to a file in dir with given language and all modifiers.
+
+    Assumes the naming convention: modifier-modifier.lang
+    :param directory: The directory to write to.
+    :param lang: The Lang to write.
+    :param modifiers: A sequence of modifiers.
+    :param overwrite: If set True, will not raise error if exists.
+    :return: A Path pointing to the file.
+    """
+    path = Path(directory.joinpath("-".join(modifiers)).with_suffix(f".{lang.value}"))
+    if path.exists() and not overwrite:
+        raise FileExistsError(f"{path} exists")
+    return path
+
+
+def list_dir(directory: Path, langs: Sequence[Lang], *modifiers, print_info=True) -> List[Path]:
+    """
+    Returns the paths in dir with given languages and contain all modifiers.
+
+    Assumes the naming convention: modifier-modifier.lang
+    :param directory: The directory to list.
+    :param langs: The Langs to list.
+    :param modifiers: A sequence of modifiers.
+    :param print_info: If set True, will print_info of files.
+    :return: A List[Path] pointing to the files.
+    """
+    results = []
+    for lang in langs:
+        results.extend(directory.glob(f"*.{lang.value}"))
+    if modifiers:
+        results = [result for result in results for modifier in modifiers if modifier in str(result)]
+    results.sort()
+    if print_info:
+        for result in results:
+            print(corpus_info_formatted(result))
+    return results
+
+
+def _lang(path: Path) -> Lang:
+    # The first part of the suffix is '.', omit it.
+    return Lang(path.suffix[1:])
 
 
 def tmx_split(paths: Tuple[Path],
@@ -180,7 +214,7 @@ def tei_read_file(path: Path) -> Sequence[str]:
                 if token[0] is None:
                     continue
                 sentence.append(token[0])
-                if (i != tokens_len - 1 and (tokens[i+1][1] != 'punctuation')):
+                if i != tokens_len - 1 and (tokens[i + 1][1] != 'punctuation'):
                     sentence.append(' ')
             sentences.append(''.join(sentence) + '\n')
     return sentences
@@ -200,7 +234,7 @@ def tei_read(paths: Sequence[Path], out_path: Path) -> bool:
     return True
 
 
-def corpus_peek(path: Path, length: int = 10) -> Iterator[str]:
+def peek(path: Path, length: int = 10) -> Iterator[str]:
     """Returns the first length many lines from a given path."""
     with path.open() as f:
         index = 0
@@ -214,8 +248,8 @@ def corpus_peek(path: Path, length: int = 10) -> Iterator[str]:
 def corpora_peek(paths: List[Path], length: int = 10) -> Iterator[str]:
     """ # noqa: D205
     Returns a generator of formatted strings of the first length lines of corpora."""
-    langs = [corpus_lang(path) for path in paths]
-    generators = [corpus_peek(path, length) for path in paths]
+    langs = [_lang(path) for path in paths]
+    generators = [peek(path, length) for path in paths]
     remaining = True
     while remaining:
         for index, lang in enumerate(langs):
@@ -226,7 +260,7 @@ def corpora_peek(paths: List[Path], length: int = 10) -> Iterator[str]:
                 return
 
 
-def corpora_combine(paths: Tuple[Path], out_path: Path) -> bool:
+def combine(paths: Sequence[Path], out_path: Path) -> bool:
     """# noqa: D205
     Combines a collection of Paths to a single Path.
 
@@ -239,12 +273,12 @@ def corpora_combine(paths: Tuple[Path], out_path: Path) -> bool:
     return True
 
 
-def parallel_process(path: Path,
-                     out_path: Path,
-                     threads: int,
-                     func: Callable,
-                     chunksize: int = 4000,
-                     **kwargs) -> bool:
+def in_parallel(path: Path,
+                out_path: Path,
+                threads: int,
+                func: Callable,
+                chunksize: int = 4000,
+                **kwargs) -> bool:
     with ProcessPoolExecutor(max_workers=threads) as executor:
         with path.open() as f_in, out_path.open('w+') as f_out:
             # get the list now since executor.map will read everyting to mem.
@@ -259,7 +293,7 @@ def parallel_process(path: Path,
     return True
 
 
-def corpus_split(path: Path, out_path_1: Path, out_path_2: Path, count) -> bool:
+def split(path: Path, out_path_1: Path, out_path_2: Path, count) -> bool:
     """ # noqa: D205
     Splits a Path to two Path with stages. The latter stage has count
     many lines
@@ -286,21 +320,21 @@ def sent_regexp(sent: str, regexps: List[Tuple[re.Pattern, str]]) -> str:
     return processed_line
 
 
-def corpus_regexp(path: Path,
-                  out_path: Path,
-                  regexps: List[Tuple[re.Pattern, str]]) -> bool:
+def regexp(path: Path,
+           out_path: Path,
+           regexps: List[Tuple[re.Pattern, str]]) -> bool:
     """ # noqa: D205
     Applies a list of regular expressions and their substitions to a Path and
     writes the result to the out_path. returns True if successful.
     """
-    return parallel_process(path,
-                            out_path,
-                            THREADS,
-                            partial(sent_regexp, regexps=regexps)
-                            )
+    return in_parallel(path,
+                       out_path,
+                       THREADS,
+                       partial(sent_regexp, regexps=regexps)
+                       )
 
 
-def corpus_shuffle(path: Path, out_path: Path, seed_path: Path) -> bool:
+def shuffle(path: Path, out_path: Path, seed_path: Path) -> bool:
     """ # noqa: D205
     Shuffles a Path using the seed_path as a random seed. Writes the result
     to out_path. Returns True if successful.
@@ -315,15 +349,15 @@ def corpus_shuffle(path: Path, out_path: Path, seed_path: Path) -> bool:
     return True
 
 
-def corpus_sample(path: Path, count: int) -> Iterable[str]:
+def sample(path: Path, count: int) -> Iterable[str]:
     """Samples count many lines from a Path."""
     with path.open() as f_in:
         # Careful, we read the whole file...
         lines = f_in.readlines()
-    yield from sample(lines, count)
+    yield from r_sample(lines, count)
 
 
-def corpus_sentence_counter(path: Path) -> Counter:
+def sentence_counter(path: Path) -> Counter:
     """Returns a Counter with the sentence length as key and the count as value."""
     with path.open() as f_in:
         counter: Counter = Counter()
@@ -333,7 +367,7 @@ def corpus_sentence_counter(path: Path) -> Counter:
     return counter
 
 
-def corpus_token_counter(path: Path) -> Counter:
+def token_counter(path: Path) -> Counter:
     """Returns a Counter with the token as key and the count as value."""
     with path.open() as f_in:
         counter: Counter = Counter()
@@ -347,16 +381,16 @@ def sent_lowercase_normalize(sent: str) -> str:
     return normalize('NFKC', sent.casefold())
 
 
-def corpus_lowercase_normalize(path: Path,
-                               out_path: Path) -> bool:
+def lowercase_normalize(path: Path,
+                        out_path: Path) -> bool:
     """ # noqa: D205
     Applies unicode lowercase and normalize on a Path. Writes the
     result to out_path. Returns True if successful.
     """
-    return parallel_process(path,
-                            out_path,
-                            THREADS,
-                            sent_lowercase_normalize)
+    return in_parallel(path,
+                       out_path,
+                       THREADS,
+                       sent_lowercase_normalize)
 
 
 def _get_tokenizer(lang: Lang, method: str) -> Callable[[str], List[str]]:
@@ -379,6 +413,10 @@ def _get_tokenizer(lang: Lang, method: str) -> Callable[[str], List[str]]:
             toktok = nltk.tokenize.ToktokTokenizer()
             return toktok.tokenize
         m_tok = MosesTokenizer(lang='en')
+        return partial(m_tok.tokenize, escape=False)
+    # Moses for 'is'
+    if method == 'moses':
+        m_tok = MosesTokenizer(lang='is')
         return partial(m_tok.tokenize, escape=False)
     return partial(sent_is_tokenize, method=method)
 
@@ -404,9 +442,9 @@ def sent_tokenize(sentence: str, lang: Lang, method: str = 'pass-through'):
     return sent_tokenizer(sentence, tok)
 
 
-def corpus_tokenize(path: Path,
-                    out_path: Path,
-                    method: str = 'pass-through') -> bool:
+def tokenize(path: Path,
+             out_path: Path,
+             method: str = 'pass-through') -> bool:
     """ # noqa D205
     Tokenizes a Path using the specified method. Writes the output to
     out_path. Returns True if successful.
@@ -414,12 +452,12 @@ def corpus_tokenize(path: Path,
         IS(default): "pass-through", basic tokenization.
         IS: "placeholders", uses placeholders for some NEs.
     """
-    tok = _get_tokenizer(corpus_lang(path), method)
-    return parallel_process(path,
-                            out_path,
-                            THREADS,
-                            partial(sent_tokenizer, tokenizer=tok)
-                            )
+    tok = _get_tokenizer(_lang(path), method)
+    return in_parallel(path,
+                       out_path,
+                       THREADS,
+                       partial(sent_tokenizer, tokenizer=tok)
+                       )
 
 
 def sent_is_tokenize(sentence: str, method: str):
@@ -507,7 +545,7 @@ def sent_token_known(sentence: str, known_tokens: Sequence[str]) -> float:
     for token in sent_tokens:
         if token in known_tokens:
             known += 1
-    return known/token_count
+    return known / token_count
 
 
 def sent_contains_regexp(sentence: str, regexp: re.Pattern) -> bool:
@@ -527,12 +565,12 @@ def sent_as_words(sentence: str) -> str:
     return " ".join(result)
 
 
-def corpus_get_skip_lines(path: Path,  # pylint: disable=too-many-arguments,too-many-locals
-                          regexps: Sequence[re.Pattern],
-                          known_tokens: Sequence[str],
-                          keep_ratio=0.5,
-                          normalize=True,
-                          keep_sent_length=1) -> List[Tuple[int, float, str]]:
+def get_skip_lines(path: Path,  # pylint: disable=too-many-arguments,too-many-locals
+                   regexps: Sequence[re.Pattern],
+                   known_tokens: Sequence[str],
+                   keep_ratio=0.5,
+                   normalize=True,
+                   keep_sent_length=1) -> List[Tuple[int, float, str]]:
     """ # noqa: D205
     Returns a list of line number and lines which should be skipped.
 
@@ -558,7 +596,7 @@ def corpus_get_skip_lines(path: Path,  # pylint: disable=too-many-arguments,too-
                 chunksize=CHUNKSIZE),
                 total=len(f_list))
             for index, result in enumerate(results):
-                skip, fraction, line=result
+                skip, fraction, line = result
                 if skip:
                     skip_lines.append((index + 1, fraction, line))
     return skip_lines
@@ -580,26 +618,26 @@ def sent_skip_line(line: str,  # pylint: disable=too-many-arguments
     If the keep_ratio is smaller or equal to the fraction of known_tokens in
     sentence it is KEPT.
     """
-    normalized_line=line
+    normalized_line = line
     if normalize:
         # We normalize the tokens in the sentence, by only considering words
-        normalized_line=sent_as_words(line)
+        normalized_line = sent_as_words(line)
     if not normalized_line:
-        return (True, 0.0, line)
+        return True, 0.0, line
     for regexp in regexps:
         if sent_contains_regexp(normalized_line, regexp):
-            return (True, 0.0, line)
+            return True, 0.0, line
     # we want sentences which have a minimum length
     if len(normalized_line.split()) <= keep_sent_length:
-        return (False, 1.0, line)
-    fraction=sent_token_known(normalized_line, known_tokens)
+        return False, 1.0, line
+    fraction = sent_token_known(normalized_line, known_tokens)
     # We keep lines which have a high fraction
     if keep_ratio <= fraction:
-        return (False, fraction, line)
-    return (True, fraction, line)
+        return False, fraction, line
+    return True, fraction, line
 
 
-def corpus_skip_lines(path: Path, out_path, lines_in: List[int]) -> bool:
+def skip_lines(path: Path, out_path, lines_in: List[int]) -> bool:
     """Writes the path to out_path, skipping the lines given."""
     lines = list(lines_in)
     with path.open() as f_in, out_path.open('w+') as f_out:
@@ -625,17 +663,17 @@ def sent_process_v1(sent: str, lang: Lang) -> str:
     3. Tokenize "is" with "pass-through", "en" with "toktok".
     4. Fix URI placeholders and add more placeholders []()<>.
     """
-    sent=sent_lowercase_normalize(sent)
-    regexps=[
+    sent = sent_lowercase_normalize(sent)
+    regexps = [
         REGEXP_SUB['URI'],
         REGEXP_SUB['EMPTY-BRACKETS']
     ]
-    sent=sent_regexp(sent, regexps)
+    sent = sent_regexp(sent, regexps)
     if lang == Lang.EN:
-        sent=sent_tokenize(sent, lang, method="toktok")
+        sent = sent_tokenize(sent, lang, method="toktok")
     else:
-        sent=sent_tokenize(sent, lang, method="pass-through")
-    regexps=[
+        sent = sent_tokenize(sent, lang, method="pass-through")
+    regexps = [
         REGEXP_SUB['PIPE'],
         REGEXP_SUB['FIX-URI'],
         REGEXP_SUB['LT'],
@@ -643,6 +681,6 @@ def sent_process_v1(sent: str, lang: Lang) -> str:
         REGEXP_SUB['BRACKET-OPEN'],
         REGEXP_SUB['BRACKET-CLOSE']
     ]
-    sent=sent_regexp(sent, regexps)
+    sent = sent_regexp(sent, regexps)
 
     return sent

@@ -2,6 +2,7 @@ FROM haukurp/moses-smt:1.0.0
 MAINTAINER haukurpalljonsson@gmail.com
 
 ARG MINICONDA_VERSION="4.7.12"
+ARG CORPUS_VERSION="v1.2.0"
 
 # Install miniconda (adjusted from https://hub.docker.com/r/continuumio/miniconda3/dockerfile)
 ENV PATH /opt/conda/bin:$PATH
@@ -28,7 +29,7 @@ RUN conda env create -f /opt/environment.yml && \
     mkdir /work
 
 # To be sure that the package is installed into the Jupyter environment.
-RUN /bin/bash -c "pip install -e git+https://github.com/cadia-lvl/SMT.git@v1.1.1#egg=corpus\&subdirectory=corpus" && \
+RUN /bin/bash -c "pip install -e git+https://github.com/cadia-lvl/SMT.git@${CORPUS_VERSION}#egg=corpus\&subdirectory=corpus" && \
     python -c "import nltk;nltk.download('punkt')"
 
 ENV TINI_VERSION v0.16.1

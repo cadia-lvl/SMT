@@ -559,8 +559,9 @@ def test_regexps():
         "http://www.mvep.hr/sankcije",
         "www.mbl.is",
         "http://malfong.is",
-        "http://www.malfong.is"
-        "http://www.malfong.is/"
+        "http://www.malfong.is",
+        "http://www.malfong.is/",
+        "www.garn.is."
     ]
     tests_uri_simple = [
         "visir.is",
@@ -570,11 +571,15 @@ def test_regexps():
         "o.s.frv."
     ]
     for test in tests_uri:
-        print(c.sent_regexp(test, [c.REGEXP_SUB["URI"]]))
+        print(test, c.sent_regexp(test, [c.REGEXP_SUB["URI"]]))
         assert c.sent_regexp(test, [c.REGEXP_SUB["URI"]]) == "@uri@"
     for test in tests_uri_simple:
-        print(c.sent_regexp(test, [c.REGEXP_SUB["URI-SIMPLE"]]))
+        print(test, c.sent_regexp(test, [c.REGEXP_SUB["URI-SIMPLE"]]))
         assert c.sent_regexp(test, [c.REGEXP_SUB["URI-SIMPLE"]]) == "@uri@"
+    for test in tests_uri + tests_uri_simple:
+        result = c.sent_regexp(test, [c.REGEXP_SUB["URI"], c.REGEXP_SUB["URI-SIMPLE"]])
+        print(test, result)
+        assert result == "@uri@"
     for test in tests_uri_not:
         print(c.sent_regexp(test, [c.REGEXP_SUB["URI"], c.REGEXP_SUB["URI-SIMPLE"]]))
         assert c.sent_regexp(test, [c.REGEXP_SUB["URI"], c.REGEXP_SUB["URI-SIMPLE"]]) != "@uri@"

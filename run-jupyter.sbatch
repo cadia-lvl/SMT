@@ -9,7 +9,12 @@
 #SBATCH --error=server.out
 
 PORT=8889
-THREADS=15
 TAG=1.2.0
 
-SINGULARITYENV_THREADS=$THREADS singularity exec -B /work/haukurpj:/work -B $PWD:/project docker://haukurp/moses-lvl:$TAG /bin/bash -c "/opt/conda/envs/jupyter/bin/jupyter notebook --notebook-dir=/project --ip='*' --port=$PORT --no-browser --allow-root"
+export SINGULARITYENV_THREADS=$SLURM_CPUS_PER_TASK
+export SINGULARITYENV_MEMORY=$SLURM_MEM_PER_NODE
+singularity exec \
+	-B /work/haukurpj:/work \
+	-B $PWD:/project \
+	docker://haukurp/moses-lvl:$TAG \
+	/bin/bash -c "/opt/conda/envs/jupyter/bin/jupyter notebook --notebook-dir=/project --ip='*' --port=$PORT --no-browser --allow-root"

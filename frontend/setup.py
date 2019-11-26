@@ -1,21 +1,21 @@
-from setuptools import setup
+import setuptools
 from os import path
 this_directory = path.abspath(path.dirname(__file__))
 with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
-setup(
-    name='corpus',
+setuptools.setup(
+    name='frontend',
     version='1.2.0',
     author='Haukur Páll Jónsson',
     author_email='haukurpalljonsson@gmail.com',
-    url='https://github.com/cadia-lvl/SMT/tree/master/corpus',
-    description='A library to process corpora.',
+    url='https://github.com/cadia-lvl/SMT/tree/master/frontend',
+    description='A frontend to Moses SMT and a collection of tools to process text.',
     license='MIT',
     python_requires='>=3.7.*',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    py_modules=['corpus', 'cli'],
+    packages=setuptools.find_packages(),
     include_package_data=True,
     install_requires=[
         'Click',
@@ -23,10 +23,12 @@ setup(
         'sacremoses',
         'tokenizer',
         'translate-toolkit',
-        'lxml'
+        'lxml',
+        'tqdm',
+        'aiohttp-xmlrpc'
     ],
     entry_points='''
         [console_scripts]
-        corpus=cli:cli
+        frontend=frontend.cli:cli
     ''',
 )

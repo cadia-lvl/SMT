@@ -1,9 +1,9 @@
 # Byte-compiled / optimized / DLL files
-corpus/__pycache__/
+frontend/__pycache__/
 corpus/*.py[cod]
-corpus/$py.class
-corpus/.mypy_cache/
-corpus/corpus.egg-info/
+frontend/$py.class
+frontend/.mypy_cache/
+frontend/corpus.egg-info/
 .mypy_cache/
 # Jupyter Notebook
 .ipynb_checkpoints

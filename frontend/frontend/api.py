@@ -24,6 +24,7 @@ def to_lang(lang: str) -> c.Lang:
         return c.Lang.EN
     raise ValueError("Invalid language specified. Only 'is' and 'en' allowed.")
 
+
 def preprocess(sent: str, lang: c.Lang, version: str) -> str:
     """ # noqa: D205
     Applies the same preprocessing steps to a sentence as specified by the version.

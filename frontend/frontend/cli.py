@@ -1,12 +1,9 @@
-from typing import Tuple, List
 from pathlib import Path
 
 import click
 
 import frontend.api as api
-import frontend.bulk as b
-import frontend.core as c
-
+import frontend.server as s
 
 @click.group()
 def cli():
@@ -38,28 +35,24 @@ PathType = PathParamType()
 
 
 @cli.command()
-@click.argument('paths', nargs=-1, type=PathType)
-@click.option('--src_lang', default='EN-GB', type=str)
-@click.option('--tar_lang', default='IS-IS', type=str)
-def tmx_split(paths: Tuple[Path],
-              src_lang: str,
-              tar_lang: str) -> List[Tuple[Path, Path]]:
-    return b.tmx_split(paths, src_lang, tar_lang)
-
-
-@cli.command()
 @click.argument('sent')
 @click.argument('lang', default='is', type=str)
 @click.argument('version', default='v2', type=str)
-def sent_preprocess(sent: str, lang: str, version: str) -> str:
+def preprocess(sent: str, lang: str, version: str) -> str:
     """ # noqa: D205
     Applies the same preprocessing steps to a sentence as specified by the version.
     See api.py for preprocessing step details.
     """
-    l_lang = c.Lang(lang)
+    l_lang = api.to_lang(lang)
     sent = api.preprocess(sent, l_lang, version)
     click.echo(sent)
     return sent
+
+
+@cli.command()
+@click.option('debug', is_flag=True)
+def server(debug: bool) -> None:
+    s.app.run(debug=debug)
 
 
 if __name__ == '__main__':

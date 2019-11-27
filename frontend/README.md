@@ -1,28 +1,33 @@
-# Corpus
-Þetta forrit sér um að forvinna gögn áður en þau eru notuð í líkanagerð.
+# Moses Frontend
+Þessi Python pakki inniheldur:
+1. Þýðingarþjón (`server.py`) sem sendir setningar á keyrandi og þjálfað Moses kerfi (XMLRPC).
+1. Safn Python falla til þess að forvinna stakar setningar (`core.py`).
+1. Safn Python falla til þess að vinna skjöl og nýtir marga þræði (`bulk.py`).
+1. Einfaldað viðmót til þess að þýða og forvinna setningar (`api.py`)
+1. Python pakka til þess að forvinna stakar setningar og skjöl (setning í línu) fyrir líkanagerð.
 
-Í þessu forriti eru mörg stuðningsföll sem vinna beint á texta skrá (og nýta marga þræði) sem og beint á setningar.
+```
+pip install -e git+https://github.com/cadia-lvl/SMT.git@master#egg=frontend\&subdirectory=frontend
+```
 
-Það er hægt að nota forritið beint sem Python safn eða í gengum skjáhermi.
-    pip install -e git+https://github.com/cadia-lvl/SMT.git@master#egg=corpus\&subdirectory=corpus 
+Notkun sem skjárhermir.
+```shell script
+# Forvinna eina íslenska setningu, með útgáfu v2:
+frontend preprocess "Þetta er setning." "is" "v2"
+```
+Dæmi um notkun sem Python safn.
+```python
+import frontend.api as a
+a.preprocess("Þetta er setning.", a.to_lang("is"), "v2")
+# 'þetta er setning .\n'
+```
 
-Fyrir studd föll sjá
-    corpus --help
-
-Dæmi um forvinnslu á setningu.
-    corpus sent-process-v1 "This is a, super-duper test." "en"
-    [nltk_data] Downloading package punkt to /home/haukur/nltk_data...
-    [nltk_data]   Package punkt is already up-to-date!
-    this is a , super-duper test .
-
-Sami kóð sem Python safn.
-    >>> import corpus as c
-    >>> c.sent_process_v1("This is a super-duper test.", c.Lang.EN)
-    'this is a super-duper test .\n'
-
-Skjáhermis útgáfan styður ekki öll föllin sem eru skilgreind í Python safninu.
-
-## Þjónn
+## Þýðingarþjónn
+```shell script
+# Keyra þýðingarþjón í aflúsunarham.
+frontend server --debug
+```
+Ef keyrandi
 `curl http://127.0.0.1:5000/`
 
 

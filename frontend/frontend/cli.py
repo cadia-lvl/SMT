@@ -50,7 +50,7 @@ def preprocess(sent: str, lang: str, version: str) -> str:
 
 
 @cli.command()
-@click.option('debug', is_flag=True)
+@click.option('--debug', is_flag=True)
 def server(debug: bool) -> None:
     s.app.run(debug=debug)
 

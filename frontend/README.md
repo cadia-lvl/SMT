@@ -22,6 +22,10 @@ Sami kóð sem Python safn.
 
 Skjáhermis útgáfan styður ekki öll föllin sem eru skilgreind í Python safninu.
 
+## Þjónn
+`curl http://127.0.0.1:5000/`
+
+
 ## Leyfi
 MIT leyfi - sjá `License`.
 
@@ -69,9 +73,9 @@ Villur úr 1.1.0 lagaðar.
 Allar regexp settar í safn.
 Bætt við föllum.
 - `tei_read`. Les `TEI` skjöl og skrifar í eitt skjal.
-- `sent_token_known`. Reiknar hlutfall þekktra orða í setningu.
-- `sent_contains_regexp`. Skilar `True` ef setning inniheldur regexp.
-- `sent_as_words`. Einfaldar setningu með því að fella út öll orð sem innihalda aðra stafi en bókstafi.
+- `known_tok_fraction`. Reiknar hlutfall þekktra orða í setningu.
+- `contains_regexp`. Skilar `True` ef setning inniheldur regexp.
+- `remove_non_words`. Einfaldar setningu með því að fella út öll orð sem innihalda aðra stafi en bókstafi.
 - `corpus_get_skip_lines`. Skilar línum sem ætti að sleppa miðað við þekkt orð og bannaðar regexp.
 - `corpus_skip_lines`. Fellir út númer gefinna lína.
 

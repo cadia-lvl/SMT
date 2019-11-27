@@ -1,7 +1,9 @@
 from pathlib import Path
 import pytest
 from glob import glob
-from corpus import list_dir
+
+from frontend.bulk import list_dir
+
 
 def pytest_addoption(parser):
     parser.addoption(

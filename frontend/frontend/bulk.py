@@ -1,78 +1,32 @@
-""" # noqa: D213
-Corpus processing.
-
-This module exposes some useful datatypes and functions to process corpora.
 """
-from pathlib import Path
-import os
+Bulk processing of sentences. Uses functions defined in core.py and supports multiprocessing.
+"""
 import re
-from unicodedata import normalize
 from collections import Counter
-from random import sample as r_sample
-from typing import Tuple, List, Dict, Iterable, Union, Callable, \
-    Sequence, Iterator, Optional
-from subprocess import run
-from enum import Enum
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
+from pathlib import Path
+from random import sample as r_sample
+from subprocess import run
+from typing import Dict, Tuple, Optional, Sequence, List, Iterator, Callable, Iterable
+import os
 from xml.etree import ElementTree as ET
 
-import tokenizer
-import nltk
 from tqdm import tqdm
 from translate.storage.tmx import tmxfile
-# also in sacremoses: punct norm, detok and sent split
-from sacremoses import MosesTokenizer
 
-nltk.download('punkt')
-
-# Some parts of the processing support threading, set the value here.
-THREADS = int(os.environ.get('THREADS', 4))
-CHUNKSIZE = 4000
-
-
-class Lang(Enum):
-    """An enum for supported ISO 639-1 language codes. String based"""  # noqa: D203
-    EN = 'en'
-    IS = 'is'
-
-
+from frontend.core import Lang, get_tokenizer, apply_tokenizer, should_drop
+from frontend.core import regexp as c_regexp, lowercase_normalize as c_lower_norm
 # A dict to map between "ISO 639-1-ISO 3166-1" to ISO 639-1 (two letter language code)
+
 TMX_2_LANG: Dict[str, Lang] = {
     'EN-GB': Lang.EN,
     'IS-IS': Lang.IS
 }
 
-REGEXP_SUB: Dict[str, Tuple[re.Pattern, str]] = {
-    # Taken from https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url?noredirect=1&lq=1
-    'URI-OLD': (
-    re.compile(r'(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)'),
-    '@uri@'),
-    'IS-COMBINE-NEWLINE': (re.compile(r'([\w]+)\.\n([a-záðéíóúýþæö])'),
-                           r'\1. \2'),
-    'IS-SPLIT-NEWLINE': (re.compile(r'([\w\(\)\[\]\.]{2,})\.([A-ZÁÐÉÍÓÚÝÞÆÖ])'),
-                         r'\1. \2'),
-    'URI': (re.compile(
-        r"((http(s)?:\/\/)|(www)|([-a-zA-Z0-9:%_\+.~#?&/=]+?@))+([-a-zA-Z0-9@:%_\+.~#?&/=]+)"),
-            '@uri@'),
-    'URI-SIMPLE': (re.compile(r"([-a-zA-Z0-9@:%_\+.~#?&/=]+?)(\.is|\.com)"), "@uri@"),
-    'EMPTY-BRACKETS': (re.compile(r"[\[\(]\s*[\]\)]"), ""),
-    # u'\u007c' - |
-    'PIPE': (re.compile(r"\u007c"), '@pipe@'),
-    # u'\u003c', u'\u003e' - <, >
-    'LT': (re.compile(r"\u003c"), '@lt@'),
-    'GT': (re.compile(r"\u003e"), '@gt@'),
-    # u'\u005b', u'\u005d' - [, ]
-    'BRACKET-OPEN': (re.compile(r"\u005b"), '@brac_open@'),
-    'BRACKET-CLOSE': (re.compile(r"\u005d"), '@brac_close@'),
-    'FIX-URI': (re.compile(r"@ uri @"), '@uri@'),
-    'CRYLLIC': (re.compile(r'.*[\u0400-\u04FF\u0500-\u052F\u2DE0-\u2DFF\uA640-\uA69F]+.*'),
-                ''),
-    'GREEK': (re.compile(r'.*[\u0370-\u03bb\u03bd-\u03FF\u1F00-\u1FFF]+.*'), ''),
-    'UNKNOWN-CHARS': (re.compile(r'.*[žčšè¿ğūįł]+.*'), ''),
-    'NOT-WORDS': (re.compile(r'.*[\W\d_].*'), ''),
-    'NOT-WORDS-OLD': (re.compile(r'.*[\d();.:,•\-=?!_+@].*'), '')
-}
+# Some parts of the processing support threading, set the value here.
+THREADS = int(os.environ.get('THREADS', 4))
+CHUNKSIZE = 4000
 
 
 def _sizeof_fmt(num: float, suffix: str = 'B') -> str:
@@ -98,16 +52,16 @@ def _get_line_count(path: Path) -> int:
     return lines
 
 
-def corpus_info(path: Path) -> Tuple[str, str, int]:
+def info(path: Path) -> Tuple[str, str, int]:
     """Returns the path, size and line count of a Path."""
     size = _sizeof_fmt(path.stat().st_size)
     line_count = _get_line_count(path.resolve())
     return str(path.resolve()), size, line_count
 
 
-def corpus_info_formatted(path: Path) -> str:
+def info_formatted(path: Path) -> str:
     """Returns the formatted path, size and line count of a Path."""
-    path_s, size, lines = corpus_info(path)
+    path_s, size, lines = info(path)
     return f'{path_s:<40}{size:^15}{lines:>10}'
 
 
@@ -163,7 +117,7 @@ def list_dir(directory: Path, langs: Sequence[Lang], *modifiers, print_info=True
     results.sort()
     if print_info:
         for result in results:
-            print(corpus_info_formatted(result))
+            print(info_formatted(result))
     return results
 
 
@@ -245,7 +199,7 @@ def peek(path: Path, length: int = 10) -> Iterator[str]:
                 return
 
 
-def corpora_peek(paths: List[Path], length: int = 10) -> Iterator[str]:
+def peeks(paths: List[Path], length: int = 10) -> Iterator[str]:
     """ # noqa: D205
     Returns a generator of formatted strings of the first length lines of corpora."""
     langs = [_lang(path) for path in paths]
@@ -309,17 +263,6 @@ def split(path: Path, out_path_1: Path, out_path_2: Path, count) -> bool:
     return True
 
 
-def sent_regexp(sent: str, regexps: List[Tuple[re.Pattern, str]]) -> str:
-    """ # noqa: D205
-    Applies a list of regular expressions and their substitions to a string.
-    """
-    processed_line = sent
-    for regular_expression, sub_string in regexps:
-        processed_line = re.sub(
-            regular_expression, sub_string, processed_line)
-    return processed_line
-
-
 def regexp(path: Path,
            out_path: Path,
            regexps: List[Tuple[re.Pattern, str]]) -> bool:
@@ -330,7 +273,7 @@ def regexp(path: Path,
     return in_parallel(path,
                        out_path,
                        THREADS,
-                       partial(sent_regexp, regexps=regexps)
+                       partial(c_regexp, regexps=regexps)
                        )
 
 
@@ -376,11 +319,6 @@ def token_counter(path: Path) -> Counter:
     return counter
 
 
-def sent_lowercase_normalize(sent: str) -> str:
-    """Applies unicode lowercase and normalize on a string."""
-    return normalize('NFKC', sent.casefold())
-
-
 def lowercase_normalize(path: Path,
                         out_path: Path) -> bool:
     """ # noqa: D205
@@ -390,56 +328,7 @@ def lowercase_normalize(path: Path,
     return in_parallel(path,
                        out_path,
                        THREADS,
-                       sent_lowercase_normalize)
-
-
-def _get_tokenizer(lang: Lang, method: str) -> Callable[[str], List[str]]:
-    """ # noqa D205
-    Returns a tokenizer for a specified method and additional arguments.
-    Supported methods:
-        IS(default): "pass-through", basic tokenization.
-        IS: "placeholders", uses placeholders for some NEs.
-        EN(default): "moses", Moses tokenization, does not tackle URLs.
-        Poor abbreviation handling.
-        EN: "nltk", does not tackle URLs.
-        EN: "toktok", handles URLs, does not handle "." but at the end.
-    """
-    if lang == Lang.EN:
-        if method == "nltk":
-            # We use the word_tokenize NLTL tokenizer for english
-            return nltk.word_tokenize
-        # o.w. we use Moses
-        if method == 'toktok':
-            toktok = nltk.tokenize.ToktokTokenizer()
-            return toktok.tokenize
-        m_tok = MosesTokenizer(lang='en')
-        return partial(m_tok.tokenize, escape=False)
-    # Moses for 'is'
-    if method == 'moses':
-        m_tok = MosesTokenizer(lang='is')
-        return partial(m_tok.tokenize, escape=False)
-    return partial(sent_is_tokenize, method=method)
-
-
-def sent_tokenizer(sentence: str, tokenizer: Callable[[str], List[str]]) -> str:
-    """Applies a tokenization function to a sentence."""
-    return " ".join(tokenizer(sentence)) + "\n"
-
-
-def sent_tokenize(sentence: str, lang: Lang, method: str = 'pass-through'):
-    """ # noqa D205
-    Tokenizes a sentence using the specified method. Returns the tokenized
-    sentence.
-    Supported methods:
-        IS(default): "pass-through", basic tokenization.
-        IS: "placeholders", uses placeholders for some NEs.
-        EN(default): "moses", Moses tokenization, does not tackle URLs.
-        Poor abbreviation handling.
-        EN: "nltk", does not tackle URLs.
-        EN: "toktok", handles URLs, does not handle "." but at the end.
-    """
-    tok = _get_tokenizer(lang, method)
-    return sent_tokenizer(sentence, tok)
+                       c_lower_norm)
 
 
 def tokenize(path: Path,
@@ -452,141 +341,36 @@ def tokenize(path: Path,
         IS(default): "pass-through", basic tokenization.
         IS: "placeholders", uses placeholders for some NEs.
     """
-    tok = _get_tokenizer(_lang(path), method)
+    tok = get_tokenizer(_lang(path), method)
     return in_parallel(path,
                        out_path,
                        THREADS,
-                       partial(sent_tokenizer, tokenizer=tok)
+                       partial(apply_tokenizer, tokenizer=tok)
                        )
 
 
-def sent_is_tokenize(sentence: str, method: str):
-    """Helper function. Tokenizes an Icelandic sentence."""
-    # We set the option to change "1sti", ... to "1", ...
-    result = []
-    for token in tokenizer.tokenize(sentence,
-                                    handle_kludgy_ordinals=tokenizer.KLUDGY_ORDINALS_MODIFY):
-        kind, txt, val = token
-        if method == 'pass-through':
-            token = _tok_pass_through(kind, txt, val)
-        elif method == 'placeholders':
-            token = _tok_placeholders(kind, txt, val)
-        if token:
-            result.append(token)
-    return result
-
-
-def _tok_pass_through(kind, txt, val):
-    if kind == tokenizer.TOK.WORD:
-        if val:
-            return val[0][0]
-        return txt
-    if kind == tokenizer.TOK.PERCENT:
-        return f'{val[0]} %'
-    if kind == tokenizer.TOK.S_BEGIN:
-        return None
-    if kind == tokenizer.TOK.S_END:
-        return None
-    return txt
-
-
-def _tok_placeholders(kind, txt, val):
-    if kind == tokenizer.TOK.WORD:
-        if val:
-            return val[0][0]
-        return txt
-    if kind == tokenizer.TOK.ORDINAL:
-        return "TALA"
-    if kind == tokenizer.TOK.NUMBER:
-        return "NÚMER"
-    if kind == tokenizer.TOK.PUNCTUATION:
-        return txt
-    if kind == tokenizer.TOK.YEAR:
-        return "ÁR"
-    if kind == tokenizer.TOK.S_BEGIN:
-        pass
-    if kind == tokenizer.TOK.S_END:
-        pass
-    if kind == tokenizer.TOK.DATEABS:
-        return "DAGSETNING"
-    if kind == tokenizer.TOK.DATEREL:
-        return "DAGSETNING"
-    if kind == tokenizer.TOK.MEASUREMENT:
-        return "MÆLING"
-    if kind == tokenizer.TOK.NUMWLETTER:
-        return "GILDI"
-    if kind == tokenizer.TOK.DOMAIN:
-        return "LÉN"
-    if kind == tokenizer.TOK.HASHTAG:
-        return "HASHTAG"
-    if kind == tokenizer.TOK.TELNO:
-        return "SÍMANÚMER"
-    if kind == tokenizer.TOK.PERCENT:
-        return "PRÓSENTA"
-    if kind == tokenizer.TOK.URL:
-        return "VEFFANG"
-    if kind == tokenizer.TOK.AMOUNT:
-        return "UPPHÆÐ"
-    if kind == tokenizer.TOK.EMAIL:
-        return "TÖLVUPÓSTUR"
-    if kind == tokenizer.TOK.UNKNOWN:
-        return "UNKOWN"
-    return "UNKOWN"
-
-
-def sent_token_known(sentence: str, known_tokens: Sequence[str]) -> float:
-    """ # noqa: D205
-    Returns the fraction of known words in the (tokenized) sentence.
-
-    Gives better results if the sentence has been normalized to only words."""
-    sent_tokens = sentence.split()
-    known = 0
-    token_count = len(sent_tokens)
-    for token in sent_tokens:
-        if token in known_tokens:
-            known += 1
-    return known / token_count
-
-
-def sent_contains_regexp(sentence: str, regexp: re.Pattern) -> bool:
-    """Returns true if the sentence contains the regexp."""
-    if re.match(regexp, sentence) is None:
-        return False
-    return True
-
-
-def sent_as_words(sentence: str) -> str:
-    """Returns the (tokenized) sentence without punctuation, numbers and other symbols."""
-    result = []
-    tokens = sentence.split()
-    for token in tokens:
-        if not sent_contains_regexp(token, REGEXP_SUB['NOT-WORDS'][0]):
-            result.append(token)
-    return " ".join(result)
-
-
-def get_skip_lines(path: Path,  # pylint: disable=too-many-arguments,too-many-locals
+def get_drop_lines(path: Path,  # pylint: disable=too-many-arguments,too-many-locals
                    regexps: Sequence[re.Pattern],
                    known_tokens: Sequence[str],
                    keep_ratio=0.5,
                    normalize=True,
                    keep_sent_length=1) -> List[Tuple[int, float, str]]:
     """ # noqa: D205
-    Returns a list of line number and lines which should be skipped.
+    Returns a list of line number and lines which should be dropped.
 
     If normalized=True all non-words (\d\W_) are removed from the sentence.
-    If the remaining sentence contains any of the regexps it is SKIPPED.
+    If the remaining sentence contains any of the regexps it is DROPPED.
     If the remaining sentence has length less than or equal to keep_sent_length
     is it KEPT.
     If the keep_ratio is smaller or equal to the fraction of known_tokens in
     sentence it is KEPT.
     """
-    skip_lines: List[Tuple[int, float, str]] = []
+    drop_lines: List[Tuple[int, float, str]] = []
     with ProcessPoolExecutor(max_workers=THREADS) as executor:
         with path.open() as f_in:
             f_list = f_in.readlines()
             results = tqdm(executor.map(
-                partial(sent_skip_line,
+                partial(should_drop,
                         regexps=regexps,
                         known_tokens=known_tokens,
                         keep_ratio=keep_ratio,
@@ -598,46 +382,11 @@ def get_skip_lines(path: Path,  # pylint: disable=too-many-arguments,too-many-lo
             for index, result in enumerate(results):
                 skip, fraction, line = result
                 if skip:
-                    skip_lines.append((index + 1, fraction, line))
-    return skip_lines
+                    drop_lines.append((index + 1, fraction, line))
+    return drop_lines
 
 
-def sent_skip_line(line: str,  # pylint: disable=too-many-arguments
-                   regexps: Sequence[re.Pattern],
-                   known_tokens: Sequence[str],
-                   keep_ratio=0.5,
-                   normalize=True,
-                   keep_sent_length=1) -> Tuple[bool, float, str]:
-    """ # noqa: D205
-    Returns True and the line if line should be skipped, o.w. False and line.
-
-    If normalized=True all non-words (\d\W_) are removed from the sentence.
-    If the remaining sentence contains any of the regexps it is SKIPPED.
-    If the remaining sentence has length less than or equal to keep_sent_length
-    is it KEPT.
-    If the keep_ratio is smaller or equal to the fraction of known_tokens in
-    sentence it is KEPT.
-    """
-    normalized_line = line
-    if normalize:
-        # We normalize the tokens in the sentence, by only considering words
-        normalized_line = sent_as_words(line)
-    if not normalized_line:
-        return True, 0.0, line
-    for regexp in regexps:
-        if sent_contains_regexp(normalized_line, regexp):
-            return True, 0.0, line
-    # we want sentences which have a minimum length
-    if len(normalized_line.split()) <= keep_sent_length:
-        return False, 1.0, line
-    fraction = sent_token_known(normalized_line, known_tokens)
-    # We keep lines which have a high fraction
-    if keep_ratio <= fraction:
-        return False, fraction, line
-    return True, fraction, line
-
-
-def skip_lines(path: Path, out_path, lines_in: List[int]) -> bool:
+def drop_lines(path: Path, out_path, lines_in: List[int]) -> bool:
     """Writes the path to out_path, skipping the lines given."""
     lines = list(lines_in)
     with path.open() as f_in, out_path.open('w+') as f_out:
@@ -651,36 +400,3 @@ def skip_lines(path: Path, out_path, lines_in: List[int]) -> bool:
             else:
                 f_out.write(line)
     return True
-
-
-def sent_process_v1(sent: str, lang: Lang) -> str:
-    """ # noqa: D205
-    Applies the same preprocessing steps to a sentence as used in
-    baseline Moses en-is/is-en MT system.
-
-    1. Lowercase & unicode normalize NFKC.
-    2. Add URI placeholders.
-    3. Tokenize "is" with "pass-through", "en" with "toktok".
-    4. Fix URI placeholders and add more placeholders []()<>.
-    """
-    sent = sent_lowercase_normalize(sent)
-    regexps = [
-        REGEXP_SUB['URI'],
-        REGEXP_SUB['EMPTY-BRACKETS']
-    ]
-    sent = sent_regexp(sent, regexps)
-    if lang == Lang.EN:
-        sent = sent_tokenize(sent, lang, method="toktok")
-    else:
-        sent = sent_tokenize(sent, lang, method="pass-through")
-    regexps = [
-        REGEXP_SUB['PIPE'],
-        REGEXP_SUB['FIX-URI'],
-        REGEXP_SUB['LT'],
-        REGEXP_SUB['GT'],
-        REGEXP_SUB['BRACKET-OPEN'],
-        REGEXP_SUB['BRACKET-CLOSE']
-    ]
-    sent = sent_regexp(sent, regexps)
-
-    return sent

@@ -1,10 +1,11 @@
 from typing import Tuple, List
 from pathlib import Path
-import re
 
 import click
 
-import corpus as c
+import frontend.api as api
+import frontend.bulk as b
+import frontend.core as c
 
 
 @click.group()
@@ -43,23 +44,20 @@ PathType = PathParamType()
 def tmx_split(paths: Tuple[Path],
               src_lang: str,
               tar_lang: str) -> List[Tuple[Path, Path]]:
-    return c.tmx_split(paths, src_lang, tar_lang)
+    return b.tmx_split(paths, src_lang, tar_lang)
 
 
 @cli.command()
 @click.argument('sent')
 @click.argument('lang', default='is', type=str)
-def sent_process_v1(sent: str, lang: str) -> str:
+@click.argument('version', default='v2', type=str)
+def sent_preprocess(sent: str, lang: str, version: str) -> str:
     """ # noqa: D205
-    Applies the same preprocessing steps to a sentence as used in
-    baseline Moses en-is/is-en MT system.
-
-    1. Lowercase & unicode normalize NFKC.
-    2. Tokenize "is" with "pass-through", "en" with "toktok".
-    3. Add URI placeholders for URIs and []()<>.
+    Applies the same preprocessing steps to a sentence as specified by the version.
+    See api.py for preprocessing step details.
     """
     l_lang = c.Lang(lang)
-    sent = c.sent_process_v1(sent, l_lang)
+    sent = api.preprocess(sent, l_lang, version)
     click.echo(sent)
     return sent
 

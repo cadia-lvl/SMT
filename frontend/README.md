@@ -63,11 +63,13 @@ pytest -s --data=./tests/test_data
 ### Útgáfa
 Leiðbeiningar til þess að gefa út nýja útgáfu af `frontend`.
 1. Keyra prófanir. Útgefin föll eiga að hafa prófanir og öll próf eiga að fara í gegn.
+1. Skilgreina útgáfunúmer: `VERSION=2.0.0`
 1. Uppfæra `setup.py` útgáfunúmer.
 1. Uppfæra `README.md` með breytingum fyrir útgáfunúmer og leiðbeiningar.
 1. Vista breytingar `git commit`.
-1. Merkja (`git tag v1.0.2`) kóða með útgáfunúmeri.
+1. Merkja (`git tag v$VERSION`) kóða með útgáfunúmeri.
 1. Ýta breytingum (`git push --tag`).
+1. Byggja og hlaða upp Docker geymi: `bash docker-build.sh $VERSION`
 
 ### Útgáfur
 Hér er listi yfir breytingar á milli útgáfa.

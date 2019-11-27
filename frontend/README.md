@@ -27,31 +27,41 @@ a.preprocess("Þetta er setning.", a.to_lang("is"), "v2")
 # Keyra þýðingarþjón í aflúsunarham.
 frontend server --debug
 ```
-Ef keyrandi
-`curl http://127.0.0.1:5000/`
-
+Athuga hvort þjónn sé keyrandi
+```shell script
+curl http://127.0.0.1:5000/
+# "pong"
+```
+Þýða setningu:
+```shell script
+curl -d '{"contents":["A sentence"],"sourceLanguageCode":"en","targetLanguageCode":"is","model":"baseline"}' -H "Content-Type: application/json" http://127.0.0.1:5000/translateText -v
+```
 
 ## Leyfi
 MIT leyfi - sjá `License`.
 
 ## Þróun
 Gert er ráð fyrir að unnið sé með Conda.
-    conda env create -f ../environment.yml #við notum sama environment og er skilgreint fyrir verkefnið í heild sinni.
-    conda activate jupyter
-
-- `cli.py` skilgreinir föllin sem eru aðgengileg í skjáherminum.
+```shell script
+conda env create -f environment.yml 
+conda activate jupyter
+```
+- `frontend/api.py` skilgreinir einfalt viðmót fyrir pakkann.
+- `frontend/core.py` skilgreinir föll sem taka inn stakar setningar og skilar stökum setningum.
+- `frontend/bulk.py` skilgreinir föll sem taka inn skrár og vinnur þær á mörgum þráðum.
+- `frontend/server.py` skilgreinir þýðingarþjóninn sem sendir fyrirspurnir á Moses XMLRPC.
+- `frontend/cli.py` skilgreinir föllin sem eru aðgengileg í skjáherminum.
 - `conftest.py` skilgreinir prófana uppsetningu.
-- `corpus.py` er kjötið - þ.e. þarna eru öll föllin skilgreind og útfærð til þess að vinna með texta.
 - `setup.py` skilgreinir hvernig á að pakka kóðanum svo hægt sé að nota `pip install`.
-- `setup.cfg` skilgreinir stillingar fyrir þróun á verkefninu.
-- `test_corpus.py` skilgreinir prófanirnar sem eru gerðar á föllum úr `corpus.py`.
-- `test_data/*.tmx` í þessa skrá er hægt að setja `.tmx` skjöl til að nota í prófanir.
 
-Keyra prófanir
-    pytest -s --data=./test_data
+Undir `tests/` er ýmsar prófanir. Þegar nýtt fall er útfært skal skrifa prófun fyrir það.
+Við nýtum okkur prófunargögn og bendum `pytest` á þau.
+```shell script
+pytest -s --data=./tests/test_data
+```
 
 ### Útgáfa
-Leiðbeiningar til þess að gefa út nýja útgáfu af `corpus`.
+Leiðbeiningar til þess að gefa út nýja útgáfu af `frontend`.
 1. Keyra prófanir. Útgefin föll eiga að hafa prófanir og öll próf eiga að fara í gegn.
 1. Uppfæra `setup.py` útgáfunúmer.
 1. Uppfæra `README.md` með breytingum fyrir útgáfunúmer og leiðbeiningar.
@@ -61,6 +71,13 @@ Leiðbeiningar til þess að gefa út nýja útgáfu af `corpus`.
 
 ### Útgáfur
 Hér er listi yfir breytingar á milli útgáfa.
+
+#### 2.0.0
+Bætt við þýðingarþjón og kóði brotinn í mismunandi skrár.
+- `core.py` fyrir staka setninga vinnslu.
+- `bulk.py` fyrir skráa vinnslu.
+- `server.py` fyrir þýðingarþjón.
+- `api.py` fyrir einfalt viðmót á þýðingarvél og forvinnslu.
 
 #### 1.2.0
 Ný föll til að auðvelda vinnslu.

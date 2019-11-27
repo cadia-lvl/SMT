@@ -132,11 +132,14 @@ def translate_bulk(sentences: List[str], s_lang: c.Lang, model: str) -> List[str
 
     async def run():
         client = ServerProxy(MODELS[model], loop=loop, encoding='utf-8')
-        for sentence in sentences:
-            translated.append(await translate(sentence, s_lang, client, PROCESSING[model]))
-        await client.close()
+        tasks = [translate(sentence, s_lang, client, PROCESSING[model]) for sentence in sentences]
+        for task in asyncio.as_completed(tasks, loop=loop):
+            translated.append(await task)
 
-    loop.run_until_complete(run())
+        return translated
+
+    translated = loop.run_until_complete(run())
+    loop.close()
     return translated
 
 

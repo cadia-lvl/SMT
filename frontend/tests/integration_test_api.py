@@ -2,12 +2,8 @@ import frontend.api as api
 import frontend.core as c
 
 
-# To run these test a server needs to be up and running.
-# docker run -p 80:8080 haukurp/Dockerfile-lvl:1.0.2-en-is /bin/bash -c "/opt/Dockerfile/bin/Dockerfile -threads 4 -f /work/Dockerfile.ini --server"
-
-
+# To run these test a server needs to be up and running. See `moses_model/docker-run.sh`
 def test_translate_bulk():
-    api.MODELS['baseline'] = "http://localhost/RPC2"
     test_sentences = [
         "This is an English sentence, right?",
         "Let's add a few and check the output.",

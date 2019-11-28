@@ -6,8 +6,8 @@
 1. Einfaldað viðmót til þess að þýða og forvinna setningar (`api.py`)
 1. Python pakka til þess að forvinna stakar setningar og skjöl (setning í línu) fyrir líkanagerð.
 
-```
-pip install -e git+https://github.com/cadia-lvl/SMT.git@master#egg=frontend\&subdirectory=frontend
+```shell script
+pip install git+https://github.com/cadia-lvl/SMT.git@master#egg=frontend\&subdirectory=frontend
 ```
 
 Notkun sem skjárhermir.
@@ -41,11 +41,13 @@ curl -d '{"contents":["A sentence"],"sourceLanguageCode":"en","targetLanguageCod
 MIT leyfi - sjá `License`.
 
 ## Þróun
-Gert er ráð fyrir að unnið sé með Conda.
 ```shell script
-conda env create -f environment.yml 
-conda activate jupyter
+conda create --name <env> --file requirements.txt
+conda activate <env>
+# eða vera í virtual env og svo
+pip install -r requirements.txt
 ```
+
 - `frontend/api.py` skilgreinir einfalt viðmót fyrir pakkann.
 - `frontend/core.py` skilgreinir föll sem taka inn stakar setningar og skilar stökum setningum.
 - `frontend/bulk.py` skilgreinir föll sem taka inn skrár og vinnur þær á mörgum þráðum.

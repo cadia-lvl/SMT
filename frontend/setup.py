@@ -25,7 +25,9 @@ setuptools.setup(
         'translate-toolkit',
         'lxml',
         'tqdm',
-        'aiohttp-xmlrpc'
+        'aiohttp-xmlrpc',
+        'flask',
+        'flask-restful'
     ],
     entry_points='''
         [console_scripts]

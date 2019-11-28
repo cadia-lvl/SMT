@@ -4,10 +4,9 @@ MAINTAINER haukurpalljonsson@gmail.com
 ARG FRONTEND_VERSION="v2.0.0"
 
 # Add the environment
-COPY environment.yml /opt/
+COPY requirements.txt /opt/
 
-RUN conda env create -f /opt/environment.yml && \
-    echo "conda activate jupyter" >> ~/.bashrc && \
+RUN pip install -r /opt/requirements.txt && \
     mkdir /project && \
     mkdir /work
 

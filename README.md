@@ -4,16 +4,21 @@ kerfi til þess að þróa og keyra tölfræðilega vélþýðingar.
 Í þessu skjali er lýst hvernig hægt er að nota (forþjálfað) Moses þýðingarkerfi 
 og leiðbeiningar fyrir frekari þróun.
 
-Kerfið er gefið út sem nokkrar `Docker` myndir sem hægt er að keyra með 
-`docker` eða `singularity`. 
-Inn í þessum myndum er Moses kerfið uppsett og framendi til þess að forvinna texta.
+Verkefninu er skipt í nokkra hluta:
+1. Moses `moses/` kerfið uppsett og dreift `docker`.
+1. Framendi fyrir þýðingarvél og forvinnslu föll í `frontend/`. Dreift sem Python pakka og `docker`.
+1. Forþjálfuð Moses kerfi í `moses_model/`. Dreift með `docker`.
+1. Vélrit sem eru notuð til þess að þjálfa líkön í `notebooks/`. Vélritin þarf að keyra þar sem Moses 
+er uppsett, t.d. í gegnum Docker.
+
+Einnig er hægt að nota `singularity` til þess að keyra `docker` (gott fyrir `slurm`).
+
 Gögn fyrir þjálfun er ekki deilt með myndunum (sökum stærðar) en 
 hægt er að nálgast samhliða málheild og einhliðamálheild fyrir íslensku 
 á malfong.is.
 
-Hægt er að keyra forþjálfað kerfi á einstökum setningum með `docker` eða með HTTP (þýðingarþjónn).
-
 ## Keyrsla
+
 Til þess að keyra kerfið þá þarf `docker` eða `singularity` að vera uppsett.
 
 Keyrsla (þýðing en-is) beint á einstökum setningum:

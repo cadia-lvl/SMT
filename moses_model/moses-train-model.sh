@@ -1,6 +1,4 @@
 #!/bin/bash
-set -euxo
-LOCAL=0
 #SBATCH --job-name=train-moses
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=15
@@ -8,6 +6,8 @@ LOCAL=0
 #SBATCH --time=18:00:00
 #SBATCH --output=server.out
 #SBATCH --error=server.out
+set -euxo
+LOCAL=0
 if [ $LOCAL = 1 ] ; then
   export THREADS=4
   export MEMORY=4096

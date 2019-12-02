@@ -16,16 +16,25 @@ docker run haukurp/moses-lvl:2.0.0
 # Keyra þýðingarþjón í aflúsunarham.
 frontend server --debug
 # eða
-docker run -p 5000:5000 haukurp/moses-lvl:2.0.0 frontend server --debug
+docker run --publish 5000:5000 haukurp/moses-lvl:2.0.0 frontend server --debug
 ```
 Athuga hvort þjónn sé keyrandi
 ```shell script
 curl http://127.0.0.1:5000/
 # "pong"
 ```
-Þýða setningu:
+Þýða setningu (þetta mun ekki virka nema Moses bakendi er skilgreindur):
 ```shell script
 curl -d '{"contents":["A sentence"],"sourceLanguageCode":"en","targetLanguageCode":"is","model":"baseline"}' -H "Content-Type: application/json" http://127.0.0.1:5000/translateText -v
+```
+Til að skilgreina Moses bakenda, þ.e. leyfileg `model`s þarf að setja tvær stýrikerfisbreytur:
+```shell script
+# Skilgreina model "en-is" og vísa á http://localhost:8080/RPC2 og setja preprocessing útgáfu fyrir "en-is" sem "v2".
+export MODEL_en-is=http://localhost:8080/RPC2
+export PREPROCESSING_en-is=v2
+frontend server --debug
+# eða
+docker run --env PREPROCESSING_en-is=v2 --env MODEL_en-is=http://localhost:8080/RPC2 --publish 5000:5000 haukurp/moses-lvl:2.0.0 frontend server --debug
 ```
 
 ### Forvinnsla gagn
@@ -83,6 +92,9 @@ Leiðbeiningar til þess að gefa út nýja útgáfu af `frontend`.
 
 ### Útgáfur
 Hér er listi yfir breytingar á milli útgáfa.
+
+#### 2.0.3
+Stuðningur fyrir mismunandi model og preprocessing með stýrikerfisbreytum.
 
 #### 2.0.2
 Villuleiðréttingar í Flask.

@@ -19,4 +19,4 @@ def test_translate_bulk():
         "Lemons",
         "Celeriac",
     ]
-    print(api.translate_bulk(test_sentences, c.Lang.EN, 'baseline'))
+    print(api.translate_bulk(test_sentences, c.Lang.EN, 'is-en'))

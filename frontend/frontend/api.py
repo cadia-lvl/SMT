@@ -3,18 +3,24 @@ Moses MT API. To be used by MT clients (server.py).
 """
 from typing import List, Generator
 import asyncio
+import os
 
 from aiohttp_xmlrpc.client import ServerProxy
 
 import frontend.core as c
 
-# TODO: Put in config file
-MODELS = {
-    'baseline': 'http://localhost/RPC2'
-}
-PROCESSING = {
-    'baseline': 'v1'
-}
+MODELS = dict()
+for key in os.environ:
+    if "MODEL" in key:
+        MODELS[''.join(key.split('_')[1:])] = os.environ.get(key)
+
+PREPROCESSING = dict()
+for key in os.environ:
+    if "PREPROCESSING" in key:
+        PREPROCESSING[''.join(key.split('_')[1:])] = os.environ.get(key)
+
+print(MODELS)
+print(PREPROCESSING)
 
 
 def to_lang(lang: str) -> c.Lang:
@@ -132,10 +138,10 @@ def translate_bulk(sentences: List[str], s_lang: c.Lang, model: str) -> List[str
 
     async def run():
         client = ServerProxy(MODELS[model], loop=loop, encoding='utf-8')
-        tasks = [translate(sentence, s_lang, client, PROCESSING[model]) for sentence in sentences]
-        for task in asyncio.as_completed(tasks, loop=loop):
-            translated.append(await task)
+        tasks = [asyncio.create_task(translate(sentence, s_lang, client, PREPROCESSING[model])) for sentence in sentences]
+        translated = await asyncio.gather(*tasks)
 
+        await client.close()
         return translated
 
     translated = loop.run_until_complete(run())

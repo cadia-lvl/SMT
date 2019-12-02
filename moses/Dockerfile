@@ -6,6 +6,7 @@ ENV MOSESDECODER_TOOLS=/opt/moses_tools
 
 WORKDIR /opt
 
+ENV PACKAGES_NO_REMOVE="python-minimal"
 ENV PACKAGES="build-essential \
     git-core \
     pkg-config \
@@ -15,10 +16,9 @@ ENV PACKAGES="build-essential \
     zlib1g-dev \
     python-dev \
     libbz2-dev \
-    cmake \
-    python-minimal"
+    cmake "
 
-RUN apt-get update && apt-get install -q -y ${PACKAGES} \
+RUN apt-get update && apt-get install -q -y ${PACKAGES} ${PACKAGES_NO_REMOVE} \
     && git clone --depth 1 https://github.com/moses-smt/mosesdecoder.git \
     && cd mosesdecoder \
     && make -j4 -f contrib/Makefiles/install-dependencies.gmake PREFIX=/opt \

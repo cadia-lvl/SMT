@@ -1,7 +1,7 @@
 FROM python:3.7.5
 MAINTAINER haukurpalljonsson@gmail.com
 
-ARG FRONTEND_VERSION="v2.0.0"
+ARG FRONTEND_VERSION
 EXPOSE 5000
 
 # Add the environment

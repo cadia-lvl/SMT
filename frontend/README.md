@@ -1,50 +1,64 @@
 # Moses Frontend
-Þessi Python pakki inniheldur:
-1. Þýðingarþjón (`server.py`) sem sendir setningar á keyrandi og þjálfað Moses kerfi (XMLRPC).
-1. Safn Python falla til þess að forvinna stakar setningar (`core.py`).
-1. Safn Python falla til þess að vinna skjöl og nýtir marga þræði (`bulk.py`).
-1. Einfaldað viðmót til þess að þýða og forvinna setningar (`api.py`)
-1. Python pakka til þess að forvinna stakar setningar og skjöl (setning í línu) fyrir líkanagerð.
+Þetta Python verkefni inniheldur:
+1. Þýðingarþjón sem sendir setningar á þjálfað Moses kerfi.
+1. Safn Python falla til þess að forvinna gögn.
 
+Það er aðgengilegt sem Python safn:
 ```shell script
 pip install git+https://github.com/cadia-lvl/SMT.git@master#egg=frontend\&subdirectory=frontend
 ```
-
-Notkun sem skjárhermir.
+Eða í gegnum Docker
 ```shell script
-# Forvinna eina íslenska setningu, með útgáfu v2:
-frontend preprocess "Þetta er setning." "is" "v2"
+docker run haukurp/moses-lvl:2.0.0
 ```
-Dæmi um notkun sem Python safn.
-```python
-import frontend.api as a
-a.preprocess("Þetta er setning.", a.to_lang("is"), "v2")
-# 'þetta er setning .\n'
-```
-
-## Þýðingarþjónn
+### Þýðingarþjónn
 ```shell script
 # Keyra þýðingarþjón í aflúsunarham.
 frontend server --debug
+# eða
+docker run --publish 5000:5000 haukurp/moses-lvl:2.0.0 frontend server --debug
 ```
 Athuga hvort þjónn sé keyrandi
 ```shell script
 curl http://127.0.0.1:5000/
 # "pong"
 ```
-Þýða setningu:
+Þýða setningu (þetta mun ekki virka nema Moses bakendi er skilgreindur):
 ```shell script
 curl -d '{"contents":["A sentence"],"sourceLanguageCode":"en","targetLanguageCode":"is","model":"baseline"}' -H "Content-Type: application/json" http://127.0.0.1:5000/translateText -v
 ```
+Til að skilgreina Moses bakenda, þ.e. leyfileg `model`s þarf að setja tvær stýrikerfisbreytur:
+```shell script
+# Skilgreina model "en-is" og vísa á http://localhost:8080/RPC2 og setja preprocessing útgáfu fyrir "en-is" sem "v2".
+export MODEL_en-is=http://localhost:8080/RPC2
+export PREPROCESSING_en-is=v2
+frontend server --debug
+# eða
+docker run --env PREPROCESSING_en-is=v2 --env MODEL_en-is=http://localhost:8080/RPC2 --publish 5000:5000 haukurp/moses-lvl:2.0.0 frontend server --debug
+```
+
+### Forvinnsla gagn
+Notkun í skjárhermir.
+```shell script
+# Forvinna eina íslenska setningu, með útgáfu v2:
+frontend preprocess "Þetta er setning." "is" "v2"
+# Sjá frontend --help fyrir frekari skipanir.
+```
+
+Dæmi um notkun sem Python safn.
+```python
+import frontend.api as a
+a.preprocess("Þetta er setning.", a.to_lang("is"), "v2")
+# 'þetta er setning .\n'
+```
+Sjá nánari lýsingu síðar fyrir Python safn.
 
 ## Leyfi
-MIT leyfi - sjá `License`.
+MIT leyfi - sjá `LICENSE`.
 
 ## Þróun
 ```shell script
-conda create --name <env> --file requirements.txt
-conda activate <env>
-# eða vera í virtual env og svo
+# Gert er ráð fyrir að notandi setji sjálfur upp sýndarumhverfi fyrir Python
 pip install -r requirements.txt
 ```
 
@@ -55,26 +69,41 @@ pip install -r requirements.txt
 - `frontend/cli.py` skilgreinir föllin sem eru aðgengileg í skjáherminum.
 - `conftest.py` skilgreinir prófana uppsetningu.
 - `setup.py` skilgreinir hvernig á að pakka kóðanum svo hægt sé að nota `pip install`.
+- `requirements.txt` skilgreinir nauðsynleg python söfn til þróunar.
 
 Undir `tests/` er ýmsar prófanir. Þegar nýtt fall er útfært skal skrifa prófun fyrir það.
 Við nýtum okkur prófunargögn og bendum `pytest` á þau.
 ```shell script
 pytest -s --data=./tests/test_data
 ```
+- `Dockerfile` skilgreining Docker myndina sem er notuð til þess að dreifa kóðanum.
+- `docker-build.sh` er script-a til þess að byggja Docker myndina.
 
 ### Útgáfa
 Leiðbeiningar til þess að gefa út nýja útgáfu af `frontend`.
 1. Keyra prófanir. Útgefin föll eiga að hafa prófanir og öll próf eiga að fara í gegn.
-1. Skilgreina útgáfunúmer: `VERSION=2.0.0`
+1. Skilgreina útgáfunúmer: `VERSION=2.0.1`
 1. Uppfæra `setup.py` útgáfunúmer.
 1. Uppfæra `README.md` með breytingum fyrir útgáfunúmer og leiðbeiningar.
 1. Vista breytingar `git commit`.
-1. Merkja (`git tag v$VERSION`) kóða með útgáfunúmeri.
+1. Merkja (`git tag v$VERSION`) kóða með útgáfunúmeri ("v" er bætt fyrir framan útgáfunúmer).
 1. Ýta breytingum (`git push --tag`).
 1. Byggja og hlaða upp Docker geymi: `bash docker-build.sh $VERSION`
 
 ### Útgáfur
 Hér er listi yfir breytingar á milli útgáfa.
+
+#### 2.0.4
+Lagaði úttakið úr þýðingarþjóninum svo þýddar setningar koma út í réttri röð.
+
+#### 2.0.3
+Stuðningur fyrir mismunandi model og preprocessing með stýrikerfisbreytum.
+
+#### 2.0.2
+Villuleiðréttingar í Flask.
+
+#### 2.0.1
+Villuleiðréttingar í nauðsynlegum Python söfnum.
 
 #### 2.0.0
 Bætt við þýðingarþjón og kóði brotinn í mismunandi skrár.

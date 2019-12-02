@@ -8,8 +8,7 @@ Verkefninu er skipt í nokkra hluta:
 1. Moses `moses/` kerfið uppsett og dreift `docker`.
 1. Framendi fyrir þýðingarvél og forvinnslu föll í `frontend/`. Dreift sem Python pakka og `docker`.
 1. Forþjálfuð Moses kerfi í `moses_model/`. Dreift með `docker`.
-1. Vélrit sem eru notuð til þess að þjálfa líkön í `notebooks/`. Vélritin þarf að keyra þar sem Moses 
-er uppsett, t.d. í gegnum Docker.
+1. Vélrit sem eru notuð til þess að þjálfa líkön í `notebooks/`.
 
 Einnig er hægt að nota `singularity` til þess að keyra `docker` (gott fyrir `slurm`).
 
@@ -18,11 +17,11 @@ hægt er að nálgast samhliða málheild og einhliðamálheild fyrir íslensku
 á malfong.is.
 
 ## Keyrsla
-
 Til þess að keyra kerfið þá þarf `docker` eða `singularity` að vera uppsett.
 
-Keyrsla (þýðing en-is) beint á einstökum setningum:
+Keyrsla (þýðing en-is) beint á einstökum setningum (ath. að fyrst eru setningar forunnar):
 ```
+docker run haukurp/moses-lvl:2.0.1 frontend preprocess 'This is an English sentence.' 'en' 'v2' | docker run 
 docker run -ti haukurp/moses-lvl:1.0.1-en-is /bin/bash -c "corpus sent-process-v1 'This is an English sentence.' 'en' | /opt/moses/bin/moses -f /work/moses.ini" 
 ```
 Fyrir is-en:

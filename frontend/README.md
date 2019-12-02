@@ -84,6 +84,9 @@ Leiðbeiningar til þess að gefa út nýja útgáfu af `frontend`.
 ### Útgáfur
 Hér er listi yfir breytingar á milli útgáfa.
 
+#### 2.0.2
+Villuleiðréttingar í Flask.
+
 #### 2.0.1
 Villuleiðréttingar í nauðsynlegum Python söfnum.
 

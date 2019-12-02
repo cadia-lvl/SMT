@@ -1,12 +1,12 @@
 version: '3'
 services:
   moses-en-is:
-    image: haukurp/moses-smt:en-is
+    image: haukurp/moses-smt:en-is-improved
     ports:
       - "8081:8080"
     command: /opt/moses/bin/moses -threads 4 -f /work/moses.ini --server
   moses-is-en:
-    image: haukurp/moses-smt:is-en
+    image: haukurp/moses-smt:is-en-improved
     ports:
       - "8082:8080"
     command: /opt/moses/bin/moses -threads 4 -f /work/moses.ini --server

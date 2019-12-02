@@ -93,6 +93,9 @@ Leiðbeiningar til þess að gefa út nýja útgáfu af `frontend`.
 ### Útgáfur
 Hér er listi yfir breytingar á milli útgáfa.
 
+#### 2.0.4
+Lagaði úttakið úr þýðingarþjóninum svo þýddar setningar koma út í réttri röð.
+
 #### 2.0.3
 Stuðningur fyrir mismunandi model og preprocessing með stýrikerfisbreytum.
 

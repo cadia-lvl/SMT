@@ -4,8 +4,8 @@
 #SBATCH --cpus-per-task=15
 #SBATCH --mem=32GB
 #SBATCH --time=18:00:00
-#SBATCH --output=server.out
-#SBATCH --error=server.out
+#SBATCH --output=slurm.out
+#SBATCH --error=slurm.out
 set -euxo
 LOCAL=0
 if [ $LOCAL = 1 ] ; then
@@ -18,7 +18,7 @@ else
   WORK_DIR="/work/haukurpj"
 fi
 
-MOSES_TAG="1.0.0"
+MOSES_TAG="1.1.0"
 DATA_DIR="${WORK_DIR}/process"
 MOSESDECODER="/opt/moses"
 MOSESDECODER_TOOLS="/opt/moses_tools"

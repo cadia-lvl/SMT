@@ -15,7 +15,8 @@ ENV PACKAGES="build-essential \
     zlib1g-dev \
     python-dev \
     libbz2-dev \
-    cmake"
+    cmake \
+    python-minimal"
 
 RUN apt-get update && apt-get install -q -y ${PACKAGES} \
     && git clone --depth 1 https://github.com/moses-smt/mosesdecoder.git \

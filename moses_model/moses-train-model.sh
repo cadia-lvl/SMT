@@ -50,8 +50,9 @@ function run_in_singularity() {
 
 # Data prep
 run_in_singularity ${MOSESDECODER}/scripts/training/clean-corpus-n.perl $TRAINING_DATA $LANG_FROM $LANG_TO $CLEAN_DATA $CLEAN_MIN_LENGTH $CLEAN_MAX_LENGTH
+
 # LM creation
-LM_DATA=${MODEL_NAME}-lm.${LANG_TO}
+LM_DATA=${DATA_DIR}/${MODEL_NAME}-lm.${LANG_TO}
 cat ${CLEAN_DATA}.${LANG_TO} $LM_EXTRA_DATA > $LM_DATA
 run_in_singularity ${MOSESDECODER}/bin/lmplz --order $LM_ORDER --temp_prefix $DATA_DIR/ --memory 50% --discount_fallback < ${LM_DATA} > ${LM}.arpa
 run_in_singularity ${MOSESDECODER}/bin/build_binary -S 50% ${LM}.arpa ${LM}
@@ -74,7 +75,7 @@ run_in_singularity ${MOSESDECODER}/scripts/training/train-model.perl -root-dir $
         -external-bin-dir $MOSESDECODER_TOOLS
 
 
-BASE_MOSES_INI="${BASE_DIR}/moses.ini"
+BASE_MOSES_INI="${BASE_DIR}/model/moses.ini"
 BASE_PHRASE_TABLE="${BASE_DIR}/model/phrase-table.gz"
 BASE_REORDERING_TABLE="${BASE_DIR}/model/reordering-table.wbe-msd-bidirectional-fe.gz"
 

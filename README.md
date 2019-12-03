@@ -26,7 +26,12 @@ Einnig er hægt að nota `singularity` til þess að keyra `docker`.
 Það er ekki sérstaklega útskýrt hér hvernig hægt er að nota `singularity` í stað `docker`.
 
 ## Keyrsla
-Til þess að keyra kerfið í heild þá þarf `docker` og `docker-compose` að vera uppsett.
+Til þess að keyra forþjálfað líkan á einstaka setningar þá þarf `docker` að vera uppsett.
+```shell script
+docker run haukurp/moses-lvl:2.0.4 frontend preprocess "Þetta er íslensk setning." "is" "v2" | docker run -i haukurp/moses-smt:is-en-improved /opt/moses/bin/moses -f /work/moses.ini
+```
+
+Til þess að keyra kerfið í heild sem þýðingarþjón þarf `docker` og `docker-compose` að vera uppsett.
 
 ```shell script
 docker-compose up -d
@@ -37,7 +42,7 @@ curl -d '{"contents":["A really long sentence which should be in the first outpu
 # stöðva
 docker-compose stop
 ```
-Kerfið sem er ræst hér er í þremur hlutum.
+Kerfið sem er ræst hér er í þremur hlutum sem eru skilgreindir í `docker-compose.yml`.
 1. Forþjálfað Moses kerfi fyrir `en-is`
 1. Forþjálfað Moses kerfi fyrir `is-en`
 1. Framendi sem forvinnur setningar sem koma inn.

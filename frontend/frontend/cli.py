@@ -8,7 +8,7 @@ from . import server as s
 
 @click.group()
 def cli():
-    """ # noqa: D205
+    """
     The main entry point of the command line client.
 
     Other commands are attached to this functions.
@@ -16,7 +16,7 @@ def cli():
 
 
 class PathParamType(click.ParamType):
-    """A type to convert strings from command line to Path."""  # noqa: D203
+    """A type to convert strings from command line to Path."""
 
     def convert(self, value, param, ctx):
         try:
@@ -40,7 +40,7 @@ PathType = PathParamType()
 @click.argument('lang', default='is', type=str)
 @click.argument('version', default='v2', type=str)
 def preprocess(sent: str, lang: str, version: str) -> str:
-    """ # noqa: D205
+    """
     Applies the same preprocessing steps to a sentence as specified by the version.
     See api.py for preprocessing step details.
     """

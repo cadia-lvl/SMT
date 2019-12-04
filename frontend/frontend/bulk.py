@@ -1,5 +1,10 @@
 """
-Bulk processing of sentences. Uses functions defined in core.py and supports multiprocessing.
+A collection of functions to process files, a sentence per line. Uses multiple threads to process.
+
+- Uses pathlib.Path to manipulate files.
+
+- Has a naming convention to read and write files: modifier1-modifier2.lang. Use the "read()" and "write()" functions
+to avoid implementation details.
 """
 import re
 from collections import Counter
@@ -17,16 +22,31 @@ from translate.storage.tmx import tmxfile
 
 from .core import Lang, get_tokenizer, apply_tokenizer, should_drop
 from .core import regexp as c_regexp, lowercase_normalize as c_lower_norm
-# A dict to map between "ISO 639-1-ISO 3166-1" to ISO 639-1 (two letter language code)
 
 TMX_2_LANG: Dict[str, Lang] = {
     'EN-GB': Lang.EN,
     'IS-IS': Lang.IS
 }
+"""
+A dict to map between "ISO 639-1-ISO 3166-1" to ISO 639-1 (two letter language code).
+Used for .tmx file reading.
+"""
 
 # Some parts of the processing support threading, set the value here.
 THREADS = int(os.environ.get('THREADS', 4))
+"""
+Some parts of the processing support threading.
+Set the number of threads using core.THREADS = 4.
+
+Default value is 4.
+"""
 CHUNKSIZE = 4000
+"""
+The chunksize/number of sentences sent to each thread during parallel processing.
+Set the chunksize using core.CHUNKSIZE = 4000. A higher values are often better.
+
+Default value is 4000.
+"""
 
 
 def _sizeof_fmt(num: float, suffix: str = 'B') -> str:
@@ -53,27 +73,33 @@ def _get_line_count(path: Path) -> int:
 
 
 def info(path: Path) -> Tuple[str, str, int]:
-    """Returns the path, size and line count of a Path."""
+    """Get some basic information of the file input.\n
+    :param path: The pathlib.Path to the file.\n
+    :return: A tuple (path, size, line count) of the input.\n
+    """
     size = _sizeof_fmt(path.stat().st_size)
     line_count = _get_line_count(path.resolve())
     return str(path.resolve()), size, line_count
 
 
 def info_formatted(path: Path) -> str:
-    """Returns the formatted path, size and line count of a Path."""
+    """Get some basic information of the file input and returns as a formatted string.\n
+    :param path: The pathlib.Path to the file.\n
+    :return: Returns the formatted bulk.info()
+    """
     path_s, size, lines = info(path)
     return f'{path_s:<40}{size:^15}{lines:>10}'
 
 
 def read(directory: Path, lang: Lang, *modifiers) -> Optional[Path]:
-    """
-    Returns the path to a file in dir with given language and all modifiers.
+    """A handy helper function to retrieve the pathlib.Path given a collection of modifiers.\n
+    Works as a nice abstraction from the implementation of the naming convention.\n
 
-    Assumes the naming convention: modifier-modifier.lang
-    :param directory: The directory to read from.
-    :param lang: The Lang to read.
-    :param modifiers: A sequence of modifiers to search for.
-    :return: If exists, a Path pointing to the file, o.w. error.
+    Assumes the naming convention: modifier-modifier.lang\n
+    :param directory: The directory to search for the modifiers.\n
+    :param lang: The core.Lang of the file to read.\n
+    :param modifiers: A sequence of modifiers to search for.\n
+    :return: If exists, returns a Path pointing to the file, o.w. error.\n
     """
     path = Path(directory.joinpath("-".join(modifiers)).with_suffix(f".{lang.value}"))
     if path.exists():
@@ -82,15 +108,15 @@ def read(directory: Path, lang: Lang, *modifiers) -> Optional[Path]:
 
 
 def write(directory: Path, lang: Lang, *modifiers, overwrite=True) -> Optional[Path]:
-    """
-    Returns the path to a file in dir with given language and all modifiers.
+    """A handy helper function to create a pathlib.Path given a collection of modifiers.\n
+    Works as a nice abstraction from the implementation of the naming convention.\n
 
-    Assumes the naming convention: modifier-modifier.lang
-    :param directory: The directory to write to.
-    :param lang: The Lang to write.
-    :param modifiers: A sequence of modifiers.
-    :param overwrite: If set True, will not raise error if exists.
-    :return: A Path pointing to the file.
+    Assumes the naming convention: modifier-modifier.lang\n
+    :param directory: The directory to write to.\n
+    :param lang: The Lang to write.\n
+    :param modifiers: A sequence of modifiers.\n
+    :param overwrite: If set True, will not raise error if the file exists.\n
+    :return: A pathlin.Path pointing to the file.\n
     """
     path = Path(directory.joinpath("-".join(modifiers)).with_suffix(f".{lang.value}"))
     if path.exists() and not overwrite:
@@ -99,15 +125,15 @@ def write(directory: Path, lang: Lang, *modifiers, overwrite=True) -> Optional[P
 
 
 def list_dir(directory: Path, langs: Sequence[Lang], *modifiers, print_info=True) -> List[Path]:
-    """
-    Returns the paths in dir with given languages and contain all modifiers.
+    """A handy helper function to list a pathlib.Path given a collection of modifiers.\n
+    Works as a nice abstraction from the implementation of the naming convention.\n
 
-    Assumes the naming convention: modifier-modifier.lang
-    :param directory: The directory to list.
-    :param langs: The Langs to list.
-    :param modifiers: A sequence of modifiers.
-    :param print_info: If set True, will print_info of files.
-    :return: A List[Path] pointing to the files.
+    Assumes the naming convention: modifier-modifier.lang\n
+    :param directory: The directory to list.\n
+    :param langs: The core.Langs to list.\n
+    :param modifiers: A sequence of modifiers.\n
+    :param print_info: If set True, will print_info of files.\n
+    :return: A List[Path] pointing to the files.\n
     """
     results = []
     for lang in langs:
@@ -129,7 +155,12 @@ def _lang(path: Path) -> Lang:
 def tmx_split(paths: Tuple[Path],
               src_lang: str,
               tar_lang: str) -> List[Tuple[Path, Path]]:
-    """Split a tmx file to ParaCorpus."""
+    """Split a collection tmx file to multiple language files with a line per sentence.\n
+    :param paths: A sequence of tmx files to split.\n
+    :param src_lang: The source language code as defined in the .tmx file.\n
+    :param tar_lang: The target language code as defined in the .tmx file.\n
+    :return: A List of Tuples with pathlib.Path pointing to the source and target language files.\n
+    """
     result: List[Tuple[Path, Path]] = list()
     for tmx_path in paths:
         # We read the file as bytes since the xml defines an encoding.
@@ -149,10 +180,13 @@ def tmx_split(paths: Tuple[Path],
 
 
 def tei_read_file(path: Path) -> Sequence[str]:
-    """ # noqa: D205
-    Reads a tei file. Returns a list of sentences, newline at end.
+    """Reads a tei file to extract the contents.\n
+    Hand-tailored to reading the RMH.\n
 
     Adjusted code from xml_tools.py from Róbert Kjaran <robert@kjaran.com>
+
+    :param path: A pathlib.Path to the .tei file to read.\n
+    :return: A List of sentences as defined in the .tei file.\n
     """
     NS = {'a': 'http://www.tei-c.org/ns/1.0'}
     root = ET.parse(str(path)).getroot()
@@ -175,7 +209,13 @@ def tei_read_file(path: Path) -> Sequence[str]:
 
 
 def tei_read(paths: Sequence[Path], out_path: Path) -> bool:
-    """Reads a sequence of Path of TEI files from RMH and writes to a single file."""
+    """Reads a sequence of Path of TEI files from RMH and writes to a single file.\n
+    Uses multiple threads.\n
+
+    :param paths: A Sequence of pathlib.Path of .tei files to read.\n
+    :param out_path: pathlib.Path to write the contents to.\n
+    :return: True if successful.\n
+    """
     with out_path.open('w+') as f_out:
         with ProcessPoolExecutor(max_workers=14) as executor:
             results = list(tqdm(executor.map(
@@ -189,7 +229,12 @@ def tei_read(paths: Sequence[Path], out_path: Path) -> bool:
 
 
 def peek(path: Path, length: int = 10) -> Iterator[str]:
-    """Returns the first length many lines from a given path."""
+    """A handy function to yield the first lines of a file.
+
+    :param path: The pathlib.Path of the file to peek into.\n
+    :param length: The number of lines to yield.\n
+    :return: An iterator yielding the next line.\n
+    """
     with path.open() as f:
         index = 0
         for line in f:
@@ -200,8 +245,13 @@ def peek(path: Path, length: int = 10) -> Iterator[str]:
 
 
 def peeks(paths: List[Path], length: int = 10) -> Iterator[str]:
-    """ # noqa: D205
-    Returns a generator of formatted strings of the first length lines of corpora."""
+    """A handy function to yield the first lines of multiple files.
+    Formats the output.
+
+    :param paths: A list of pathlib.Path of the files to peek into.\n
+    :param length: The number of lines to yield from each file.\n
+    :return: An iterator yielding the next line from multiple files at once, prepended with the language of the file.\n
+    """
     langs = [_lang(path) for path in paths]
     generators = [peek(path, length) for path in paths]
     remaining = True
@@ -215,10 +265,12 @@ def peeks(paths: List[Path], length: int = 10) -> Iterator[str]:
 
 
 def combine(paths: Sequence[Path], out_path: Path) -> bool:
-    """# noqa: D205
-    Combines a collection of Paths to a single Path.
+    """Combines a collection of files to a single file.\n
+    The output gets written over if run multiple times.\n
 
-    The output gets written over if run multiple times.
+    :param paths: A Sequence of pathlib.Path to concatenate together.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :return: True if successful.
     """
     command = ['cat'] + [str(path) for path in paths]
     with out_path.open('w+') as f_out:
@@ -233,6 +285,16 @@ def in_parallel(path: Path,
                 func: Callable,
                 chunksize: int = 4000,
                 **kwargs) -> bool:
+    """Runs the given function with **kwargs arguments in parallel on the given file.
+
+    :param path: The pathlib.Path of the file to process.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :param threads: The number of threads to use.\n
+    :param func: The function to apply per line.\n
+    :param chunksize: The number of lines to process in parallel.\n
+    :param kwargs: The arguments to the function to apply.\n
+    :return: True if successful.
+    """
     with ProcessPoolExecutor(max_workers=threads) as executor:
         with path.open() as f_in, out_path.open('w+') as f_out:
             # get the list now since executor.map will read everyting to mem.
@@ -248,9 +310,13 @@ def in_parallel(path: Path,
 
 
 def split(path: Path, out_path_1: Path, out_path_2: Path, count) -> bool:
-    """ # noqa: D205
-    Splits a Path to two Path with stages. The latter stage has count
-    many lines
+    """Splits a file to the two files provided. The latter file will have count number of lines.
+
+    :param path: The pathlib.Path of the file to split.\n
+    :param out_path_1: A pathlib.Path to write the first x lines to.\n
+    :param out_path_2: A pathlib.Path to write count last lines to.\n
+    :param count: The number of lines the latter file should have.\n
+    :return: True if succesful.
     """
     with path.open() as f_in:
         # Careful, we read all the lines
@@ -266,9 +332,15 @@ def split(path: Path, out_path_1: Path, out_path_2: Path, count) -> bool:
 def regexp(path: Path,
            out_path: Path,
            regexps: List[Tuple[re.Pattern, str]]) -> bool:
-    """ # noqa: D205
-    Applies a list of regular expressions and their substitions to a Path and
-    writes the result to the out_path. returns True if successful.
+    """Applies a list of regular expressions and their substitions to each line in a file.
+    Uses multiple threads.
+
+    :param path: The pathlib.Path of the file to apply the regular expression to.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :param regexps: A list of Tuples (re.Pattern, str).
+    The pattern is used to match and the str is used as a replacement.
+    The str supports referencing groups in the match expression.\n
+    :return: True if successful.
     """
     return in_parallel(path,
                        out_path,
@@ -278,9 +350,12 @@ def regexp(path: Path,
 
 
 def shuffle(path: Path, out_path: Path, seed_path: Path) -> bool:
-    """ # noqa: D205
-    Shuffles a Path using the seed_path as a random seed. Writes the result
-    to out_path. Returns True if successful.
+    """Shuffles a file using a file as a random seed.
+
+    :param path: The pathlib.Path of the file to shuffle.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :param seed_path: The pathlib.Path to use a as a random seed. Can be the input file.\n
+    :return: True if successful.
     """
     command = [
         'shuf',
@@ -293,7 +368,12 @@ def shuffle(path: Path, out_path: Path, seed_path: Path) -> bool:
 
 
 def sample(path: Path, count: int) -> Iterable[str]:
-    """Samples count many lines from a Path."""
+    """Yields a random sample of count many lines from a file.
+
+    :param path: The pathlib.Path of the file to sample from.\n
+    :param count: The number of lines to sample.\n
+    :return: An iterator of strings.
+    """
     with path.open() as f_in:
         # Careful, we read the whole file...
         lines = f_in.readlines()
@@ -301,7 +381,11 @@ def sample(path: Path, count: int) -> Iterable[str]:
 
 
 def sentence_counter(path: Path) -> Counter:
-    """Returns a Counter with the sentence length as key and the count as value."""
+    """Count the number of sentences in a file.
+
+    :param path: The pathlib.Path of the file to count.\n
+    :return: A collections.Counter with the sentence length as key and the count as value.
+    """
     with path.open() as f_in:
         counter: Counter = Counter()
         for line in f_in:
@@ -311,7 +395,12 @@ def sentence_counter(path: Path) -> Counter:
 
 
 def token_counter(path: Path) -> Counter:
-    """Returns a Counter with the token as key and the count as value."""
+    """Count the number of unique tokens in a file.
+    A collections.Counter with the token as key and the count as value.
+
+    :param path: The pathlib.Path of the file to count.\n
+    :return: A collections.Counter with the token as key and the count as value.
+    """
     with path.open() as f_in:
         counter: Counter = Counter()
         for line in f_in:
@@ -321,9 +410,12 @@ def token_counter(path: Path) -> Counter:
 
 def lowercase_normalize(path: Path,
                         out_path: Path) -> bool:
-    """ # noqa: D205
-    Applies unicode lowercase and normalize on a Path. Writes the
-    result to out_path. Returns True if successful.
+    """Applies unicode lowercase and normalize on a file.
+    Uses many threads.
+
+    :param path: The pathlib.Path of the file to lowercase and normalize.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :return: True if successful.
     """
     return in_parallel(path,
                        out_path,
@@ -334,12 +426,13 @@ def lowercase_normalize(path: Path,
 def tokenize(path: Path,
              out_path: Path,
              method: str = 'pass-through') -> bool:
-    """ # noqa D205
-    Tokenizes a Path using the specified method. Writes the output to
-    out_path. Returns True if successful.
-    Supported methods for IS (only):
-        IS(default): "pass-through", basic tokenization.
-        IS: "placeholders", uses placeholders for some NEs.
+    """Tokenizes a file using the specified method. Reads the language from the filename.
+    See core.tokenize() for accepted methods. Uses many threads.
+
+    :param path: The pathlib.Path of the file to tokenize.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :param method: The tokenization method to use. See core.tokenize() for accepted methods.\n
+    :return: True if successful.
     """
     tok = get_tokenizer(_lang(path), method)
     return in_parallel(path,
@@ -349,21 +442,27 @@ def tokenize(path: Path,
                        )
 
 
-def get_drop_lines(path: Path,  # pylint: disable=too-many-arguments,too-many-locals
+def get_drop_lines(path: Path,
                    regexps: Sequence[re.Pattern],
                    known_tokens: Sequence[str],
                    keep_ratio=0.5,
                    normalize=True,
                    keep_sent_length=1) -> List[Tuple[int, float, str]]:
-    """ # noqa: D205
-    Returns a list of line number and lines which should be dropped.
+    """Returns a list of line number and lines which should be dropped given the criteria.
+    Regexp defines a black-list of regular expressions.
 
-    If normalized=True all non-words (\d\W_) are removed from the sentence.
-    If the remaining sentence contains any of the regexps it is DROPPED.
-    If the remaining sentence has length less than or equal to keep_sent_length
-    is it KEPT.
-    If the keep_ratio is smaller or equal to the fraction of known_tokens in
-    sentence it is KEPT.
+    If normalized=True all non-words (\d\W_) are removed from the sentence before counting the numer of words.\n
+    If the remaining sentence contains any of the regexps it is DROPPED.\n
+    If the remaining sentence has length less than or equal to keep_sent_length is it KEPT.\n
+    If the keep_ratio is smaller or equal to the fraction of known_tokens in sentence it is KEPT.
+
+    :param path: The pathlib.Path of the file to get the drop lines from.\n
+    :param regexps: A black-list of regular expressions. If any is matched in a sentence, it is DROPPED.\n
+    :param known_tokens: A whitelist of tokens which are considered as known.\n
+    :param keep_ratio: If the fraction of known tokens is higher than keep_ration, the sentence is KEPT.\n
+    :param normalize: If True, we first normalize the sentence by removing all words which contain non-words.\n
+    :param keep_sent_length: If a sentence contains keep_sent_length of fewer words, it is KEPT.\n
+    :return: A List of Tuples (the line number, the known fraction, the line).
     """
     drop_lines: List[Tuple[int, float, str]] = []
     with ProcessPoolExecutor(max_workers=THREADS) as executor:
@@ -387,7 +486,13 @@ def get_drop_lines(path: Path,  # pylint: disable=too-many-arguments,too-many-lo
 
 
 def drop_lines(path: Path, out_path, lines_in: List[int]) -> bool:
-    """Writes the path to out_path, skipping the lines given."""
+    """Drops the given line numbers in a file. Words as a second step from "get_drop_lines()"
+
+    :param path: The pathlib.Path of the file to drop the lines from.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :param lines_in: A List of line numbers to drop.\n
+    :return: True if successful.
+    """
     lines = list(lines_in)
     with path.open() as f_in, out_path.open('w+') as f_out:
         next_skip = -1

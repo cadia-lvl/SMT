@@ -1,5 +1,7 @@
 """
-Moses MT API. To be used by MT clients (server.py).
+The API for preprocessing and translating sentences.
+
+Supports multiple preprocessing version and multiple (Moses) translation endpoints.
 """
 from typing import List, Generator
 import asyncio
@@ -15,44 +17,46 @@ from . import core as c
 log = logging.getLogger('frontend.api')
 
 MODELS = dict()
+"""
+Holds the accepted "model" parameters and the URL to the translation endpoints.
+Set using environment variables. To define a model "en-is" with endpoint "http://localhost:8080/RPC2" do:
+
+export MODEL_en_is=http://localhost:8080/RPC2
+"""
 for key in os.environ:
     if "MODEL" in key:
         MODELS['-'.join(key.split('_')[1:])] = os.environ.get(key)
 
 PREPROCESSING = dict()
+"""
+Holds the preprocessing version for the "model".
+Set using environment variables. To set the model "en-is" to use preprocessing version "v2" do:
+
+export PREPROCESSING_en_is=v2
+"""
 for key in os.environ:
     if "PREPROCESSING" in key:
         PREPROCESSING['-'.join(key.split('_')[1:])] = os.environ.get(key)
 
 
-
-
 def to_lang(lang: str) -> c.Lang:
-    if lang == 'is':
-        return c.Lang.IS
-    elif lang == 'en':
-        return c.Lang.EN
-    raise ValueError("Invalid language specified. Only 'is' and 'en' allowed.")
+    """
+    Get the core.Lang enum based on the string identifier. Only "is" and "en" are supported.
+    :param lang: The string identifier for the language
+    :return: The core.Lang if support.
+    """
+    return c.Lang(lang)
 
 
 def preprocess(sent: str, lang: c.Lang, version: str) -> str:
-    """ # noqa: D205
+    """
     Applies the same preprocessing steps to a sentence as specified by the version.
+    For further details of the differences between version, see the corresponding functions.
 
     :param sent: The sentence to preprocess.
-    :param lang: The Lang of the sentence, frontend.Lang.IS or frontend.Lang.EN.
-    :param version: "v1" for  or "v2"
+    :param lang: The core.Lang of the sentence.
+    :param version: "v1" or "v2".
     :return: The preprocessed sentence
-
-    v1: baseline Moses en-is/is-en MT system.
-    1. Lowercase & unicode normalize NFKC.
-    2. Tokenize "is" with "pass-through", "en" with "toktok".
-    3. Add URI placeholders for URIs and []()<>.
-
-    v2: Improved baseline Moses en-is/is-en MT system.
-    1. Lowercase & unicode normalize NFKC.
-    2. Tokenize "is" with "pass-through", "en" with "moses".
-    3. Add URI placeholders for URIs and []()<>.
     """
     if version == "v1":
         sent = preprocess_v1(sent, lang)
@@ -62,7 +66,7 @@ def preprocess(sent: str, lang: c.Lang, version: str) -> str:
 
 
 def preprocess_v1(sent: str, lang: c.Lang) -> str:
-    """ # noqa: D205
+    """
     Applies the same preprocessing steps to a sentence as used in
     baseline Moses en-is/is-en MT system.
 
@@ -70,6 +74,10 @@ def preprocess_v1(sent: str, lang: c.Lang) -> str:
     2. Add URI placeholders.
     3. Tokenize "is" with "pass-through", "en" with "toktok".
     4. Fix URI placeholders and add more placeholders []()<>.
+
+    :param sent: The sentence to preprocess.
+    :param lang: The core.Lang of the sentence.
+    :return: The preprocessed sentence
     """
     sent = c.lowercase_normalize(sent)
     regexps = [
@@ -95,7 +103,7 @@ def preprocess_v1(sent: str, lang: c.Lang) -> str:
 
 
 def preprocess_v2(sent: str, lang: c.Lang) -> str:
-    """ # noqa: D205
+    """
     Applies the same preprocessing steps to a sentence as used in the improved
     baseline Moses en-is/is-en MT system.
 
@@ -103,6 +111,10 @@ def preprocess_v2(sent: str, lang: c.Lang) -> str:
     2. Add imporoved URI placeholders.
     3. Tokenize "is" with "pass-through", "en" with "moses".
     4. Fix URI placeholders and add more placeholders []()<>.
+
+    :param sent: The sentence to preprocess.
+    :param lang: The core.Lang of the sentence.
+    :return: The preprocessed sentence
     """
     sent = c.lowercase_normalize(sent)
     regexps = [
@@ -130,11 +142,13 @@ def preprocess_v2(sent: str, lang: c.Lang) -> str:
 
 def translate_bulk(sentences: List[str], s_lang: c.Lang, model: str) -> List[str]:
     """
-    Translates the sentences from source language to target language.
-    :param model: A string specifying the model.
-    :param sentences: The sentences to translate.
+    Preprocesses and translates the sentences from source language to target language.
+    Uses the endpoint defined by model and preprocessing steps for the model.
+
+    :param sentences: A list of sentences to translate.
     :param s_lang: The source language.
-    :return: The translated sentence.
+    :param model: A string specifying the model. Needs to exist in MODELS.
+    :return: The translated sentences.
     """
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -162,13 +176,15 @@ def translate_bulk(sentences: List[str], s_lang: c.Lang, model: str) -> List[str
     return translated
 
 
-async def translate(sent: str, s_lang: c.Lang, proxy: ServerProxy, version: str) -> Generator[str, None, None]:
+async def translate(sent: str, s_lang: c.Lang, proxy: ServerProxy, version: str) -> str:
     """
-    Translates the sentence from source language to target language.
-    :param proxy: An XMLRPC proxy.
-    :param version: The preprocessing version
+    Preprocesses and translates the sentence from source language to target language.
+    Uses the endpoint defined by model and preprocessing steps for the model.
+
     :param sent: The sentence to translate.
     :param s_lang: The source language.
+    :param proxy: An XMLRPC proxy.
+    :param version: The preprocessing version
     :return: The translated sentence.
     """
     log.info(f"Translating: sent={sent}, s_lang={s_lang}, version={version}")

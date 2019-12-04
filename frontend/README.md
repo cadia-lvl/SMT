@@ -98,6 +98,11 @@ Leiðbeiningar til þess að gefa út nýja útgáfu af `frontend`.
 ### Útgáfur
 Hér er listi yfir breytingar á milli útgáfa.
 
+#### 2.0.5
+Lagaði nokkrar villur.
+Bætti skráningu í api og server.
+Bætti við skjölun á Python pakka undir `docs`.
+
 #### 2.0.4
 Lagaði úttakið úr þýðingarþjóninum svo þýddar setningar koma út í réttri röð.
 

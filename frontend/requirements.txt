@@ -13,11 +13,14 @@ itsdangerous==1.1.0
 Jinja2==2.10.3
 joblib==0.14.0
 lxml==4.4.2
+Mako==1.1.0
+Markdown==2.4.1
 MarkupSafe==1.1.1
 more-itertools==7.2.0
 multidict==4.6.1
 nltk==3.4.5
 packaging==19.2
+pdoc==0.3.2
 pluggy==0.13.1
 py==1.8.0
 pyparsing==2.4.5

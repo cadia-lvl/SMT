@@ -1,4 +1,4 @@
-""" # noqa: D213
+"""
 Sentence level processing. Some useful functions to process sentences.
 """
 import re
@@ -17,7 +17,7 @@ nltk.download('punkt')
 
 
 class Lang(Enum):
-    """An enum for supported ISO 639-1 language codes. String based"""  # noqa: D203
+    """An enum for supported ISO 639-1 language codes. String based"""
     EN = 'en'
     IS = 'is'
 
@@ -56,7 +56,7 @@ REGEXP_SUB: Dict[str, Tuple[re.Pattern, str]] = {
 
 
 def regexp(sent: str, regexps: List[Tuple[re.Pattern, str]]) -> str:
-    """ # noqa: D205
+    """
     Applies a list of regular expressions and their substitutions to a string.
     """
     processed_line = sent
@@ -72,7 +72,7 @@ def lowercase_normalize(sent: str) -> str:
 
 
 def get_tokenizer(lang: Lang, method: str) -> Callable[[str], List[str]]:
-    """ # noqa D205
+    """
     Returns a tokenizer for a specified method and additional arguments.
     Supported methods:
         IS(default): "pass-through", basic tokenization.
@@ -105,7 +105,7 @@ def apply_tokenizer(sentence: str, tokenizer: Callable[[str], List[str]]) -> str
 
 
 def tokenize(sentence: str, lang: Lang, method: str = 'pass-through'):
-    """ # noqa D205
+    """
     Tokenizes a sentence using the specified method. Returns the tokenized
     sentence.
     Supported methods:
@@ -195,7 +195,7 @@ def _tok_placeholders(kind, txt, val):
 
 
 def known_tok_fraction(sentence: str, known_tokens: Sequence[str]) -> float:
-    """ # noqa: D205
+    """
     Returns the fraction of known words in the (tokenized) sentence.
 
     Gives better results if the sentence has been normalized to only words."""
@@ -231,7 +231,7 @@ def should_drop(line: str,  # pylint: disable=too-many-arguments
                 keep_ratio=0.5,
                 normalize=True,
                 keep_sent_length=1) -> Tuple[bool, float, str]:
-    """ # noqa: D205
+    """
     Returns True and the line if line should be skipped, o.w. False and line.
 
     If normalized=True all non-words (\d\W_) are removed from the sentence.

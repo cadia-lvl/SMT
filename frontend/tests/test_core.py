@@ -1,6 +1,6 @@
 import re
 
-import frontend.core as c
+import core as c
 
 
 def test_regexp():
@@ -34,7 +34,7 @@ def test_is_tok():
     assert tokenized == "númer , grein , fyrsti fyrsti , 1. , tveggja , og svo framvegis .\n"
 
     # Moses only understands gr. and o.s.frv. but does not expand
-    tokenized = c.tokenize(test, c.Lang.IS, method='Dockerfile')
+    tokenized = c.tokenize(test, c.Lang.IS, method='moses')
     assert tokenized == "nr . , gr. , 1sti fyrsti , 1 . , 2ja , o.s.frv.\n"
 
     test = "H2O, CO2, 9%\n"
@@ -44,7 +44,7 @@ def test_is_tok():
     print(tokenized)
 
     # Moses treats compounds correctly
-    tokenized = c.tokenize(test, c.Lang.IS, method='Dockerfile')
+    tokenized = c.tokenize(test, c.Lang.IS, method='moses')
     assert tokenized == "H2O , CO2 , 9 %\n"
     print(tokenized)
 
@@ -55,7 +55,7 @@ def test_is_tok():
     assert tokenized == "http://www.malfong.is\n"
 
     # Moses does not
-    tokenized = c.tokenize(test, c.Lang.IS, method='Dockerfile')
+    tokenized = c.tokenize(test, c.Lang.IS, method='moses')
     print(tokenized)
     assert tokenized == "http : / / www.malfong.is\n"
 
@@ -65,7 +65,7 @@ def test_is_tok():
     print(tokenized)
     assert tokenized == "ég mun setja @ uri @ og @ lt @ .\n"
 
-    tokenized = c.tokenize(test, c.Lang.IS, method='Dockerfile')
+    tokenized = c.tokenize(test, c.Lang.IS, method='moses')
     print(tokenized)
     assert tokenized == "ég mun setja @ uri @ og @ lt @ .\n"
 
@@ -77,7 +77,7 @@ hemlabúnaðar\"er átt við dráttarvélar sem eru eins í grundvallaratriðum 
     assert tokenized == "1.1.1.1.1 . Dráttarvélargerð með tilliti til hemlabúnaðar Með “ dráttarvélargerð með \
 tilliti til hemlabúnaðar “ er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem :\n"
     # Moses handle sections the same way and does not translate "
-    tokenized = c.tokenize(test, c.Lang.IS, method="Dockerfile")
+    tokenized = c.tokenize(test, c.Lang.IS, method="moses")
     print(tokenized)
     assert tokenized == "1.1.1.1.1 . Dráttarvélargerð með tilliti til hemlabúnaðar Með \" dráttarvélargerð með \
 tilliti til hemlabúnaðar \" er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem :\n"
@@ -90,7 +90,7 @@ def test_en_tok():
     print(tokenized)
     assert tokenized == "nr. , art. , 1st first , 1. , 2nd\n"
     # Moses does not understand most abbreviations
-    tokenized = c.tokenize(test, c.Lang.EN, 'Dockerfile')
+    tokenized = c.tokenize(test, c.Lang.EN, 'moses')
     print(tokenized)
     assert tokenized == "nr . , art . , 1st first , 1 . , 2nd\n"
     # TokTok understands better.
@@ -109,7 +109,7 @@ def test_en_tok():
     tokenized = c.tokenize(test, c.Lang.EN, 'nltk')
     print(tokenized)
     assert tokenized == "It 's i 'm could n't\n"
-    tokenized = c.tokenize(test, c.Lang.EN, 'Dockerfile')
+    tokenized = c.tokenize(test, c.Lang.EN, 'moses')
     print(tokenized)
     assert tokenized == "It 's i 'm couldn 't\n"
     # TokTok kind-of messes them up
@@ -136,7 +136,7 @@ def test_en_tok():
     print(tokenized)
     assert tokenized == "I will place @uri@ and @lt@ .\n"
 
-    tokenized = c.tokenize(test, c.Lang.EN, method='Dockerfile')
+    tokenized = c.tokenize(test, c.Lang.EN, method='moses')
     print(tokenized)
     assert tokenized == "I will place @ uri @ and @ lt @ .\n"
 

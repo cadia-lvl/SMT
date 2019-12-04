@@ -30,11 +30,11 @@ curl -d '{"contents":["A sentence"],"sourceLanguageCode":"en","targetLanguageCod
 Til að skilgreina Moses bakenda, þ.e. leyfileg `model`s þarf að setja tvær stýrikerfisbreytur:
 ```shell script
 # Skilgreina model "en-is" og vísa á http://localhost:8080/RPC2 og setja preprocessing útgáfu fyrir "en-is" sem "v2".
-export MODEL_en-is=http://localhost:8080/RPC2
-export PREPROCESSING_en-is=v2
+export MODEL_en_is=http://localhost:8080/RPC2
+export PREPROCESSING_en_is=v2
 frontend server --debug
 # eða
-docker run --env PREPROCESSING_en-is=v2 --env MODEL_en-is=http://localhost:8080/RPC2 --publish 5000:5000 haukurp/moses-lvl:2.0.0 frontend server --debug
+docker run --env PREPROCESSING_en_is=v2 --env MODEL_en_is=http://localhost:8080/RPC2 --publish 5000:5000 haukurp/moses-lvl:2.0.0 frontend server --debug
 ```
 
 ### Forvinnsla gagn
@@ -57,8 +57,8 @@ Sjá nánari lýsingu síðar fyrir Python safn.
 MIT leyfi - sjá `LICENSE`.
 
 ## Þróun
+Gert er ráð fyrir að notandi setji sjálfur upp sýndarumhverfi fyrir Python
 ```shell script
-# Gert er ráð fyrir að notandi setji sjálfur upp sýndarumhverfi fyrir Python
 pip install -r requirements.txt
 ```
 
@@ -78,6 +78,11 @@ pytest -s --data=./tests/test_data
 ```
 - `Dockerfile` skilgreining Docker myndina sem er notuð til þess að dreifa kóðanum.
 - `docker-build.sh` er script-a til þess að byggja Docker myndina.
+
+Þegar bætt er við fleiri föllum þarf að bæta við `docstring` fyrir skjölun og svo búa til skjölunina.
+```shell script
+pdoc 
+```
 
 ### Útgáfa
 Leiðbeiningar til þess að gefa út nýja útgáfu af `frontend`.

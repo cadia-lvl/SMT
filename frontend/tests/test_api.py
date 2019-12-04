@@ -1,5 +1,5 @@
-import frontend.api as a
-import frontend.core as c
+import api as a
+import core as c
 
 
 def test_process_v1():

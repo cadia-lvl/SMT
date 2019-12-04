@@ -2,8 +2,9 @@ from pathlib import Path
 
 import click
 
-import frontend.api as api
-import frontend.server as s
+from . import api as api
+from . import server as s
+
 
 @click.group()
 def cli():

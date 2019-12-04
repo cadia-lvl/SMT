@@ -5,9 +5,11 @@ The server is split in two, the RESTful interface (server.py) and a framework ag
 """
 from flask import Flask
 from flask_restful import Resource, Api, reqparse
+import logging
 
-import frontend.api as a
+from . import api as a
 
+log = logging.getLogger('frontend.server')
 app = Flask(__name__)
 api = Api(app)
 
@@ -50,7 +52,14 @@ class MosesTranslate(Resource):
         target_lang = a.to_lang(args['targetLanguageCode'])
         # We do not perform any correctness checks on the model name passed in.
         model = args['model']
+        log.info(f"""Received translation request: 
+    contents={sentences}
+    sourceLanguageCode={source_lang}
+    targetLanguageCode={target_lang}
+    model={model}""")
         translated_sentences = a.translate_bulk(sentences, source_lang, model)
+        log.info(f"""Sending translation response:
+    translated={translated_sentences}""")
 
         return {
             "translations": [

@@ -4,23 +4,27 @@ Moses MT API. To be used by MT clients (server.py).
 from typing import List, Generator
 import asyncio
 import os
+import logging
+from time import time
 
+from aiohttp import ClientTimeout
 from aiohttp_xmlrpc.client import ServerProxy
 
-import frontend.core as c
+from . import core as c
+
+log = logging.getLogger('frontend.api')
 
 MODELS = dict()
 for key in os.environ:
     if "MODEL" in key:
-        MODELS[''.join(key.split('_')[1:])] = os.environ.get(key)
+        MODELS['-'.join(key.split('_')[1:])] = os.environ.get(key)
 
 PREPROCESSING = dict()
 for key in os.environ:
     if "PREPROCESSING" in key:
-        PREPROCESSING[''.join(key.split('_')[1:])] = os.environ.get(key)
+        PREPROCESSING['-'.join(key.split('_')[1:])] = os.environ.get(key)
 
-print(MODELS)
-print(PREPROCESSING)
+
 
 
 def to_lang(lang: str) -> c.Lang:
@@ -47,7 +51,7 @@ def preprocess(sent: str, lang: c.Lang, version: str) -> str:
 
     v2: Improved baseline Moses en-is/is-en MT system.
     1. Lowercase & unicode normalize NFKC.
-    2. Tokenize "is" with "pass-through", "en" with "Dockerfile".
+    2. Tokenize "is" with "pass-through", "en" with "moses".
     3. Add URI placeholders for URIs and []()<>.
     """
     if version == "v1":
@@ -97,7 +101,7 @@ def preprocess_v2(sent: str, lang: c.Lang) -> str:
 
     1. Lowercase & unicode normalize NFKC.
     2. Add imporoved URI placeholders.
-    3. Tokenize "is" with "pass-through", "en" with "Dockerfile".
+    3. Tokenize "is" with "pass-through", "en" with "moses".
     4. Fix URI placeholders and add more placeholders []()<>.
     """
     sent = c.lowercase_normalize(sent)
@@ -108,7 +112,7 @@ def preprocess_v2(sent: str, lang: c.Lang) -> str:
     ]
     sent = c.regexp(sent, regexps)
     if lang == c.Lang.EN:
-        sent = c.tokenize(sent, lang, method="Dockerfile")
+        sent = c.tokenize(sent, lang, method="moses")
     else:
         sent = c.tokenize(sent, lang, method="pass-through")
     regexps = [
@@ -134,13 +138,22 @@ def translate_bulk(sentences: List[str], s_lang: c.Lang, model: str) -> List[str
     """
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    translated = []
+    log.info(f"Defined models={MODELS}")
+    log.info(f"Defined preprocessing={PREPROCESSING}")
 
     async def run():
-        client = ServerProxy(MODELS[model], loop=loop, encoding='utf-8')
-        tasks = [asyncio.create_task(translate(sentence, s_lang, client, PREPROCESSING[model])) for sentence in sentences]
-        translated = await asyncio.gather(*tasks)
+        translated = []
+        client = ServerProxy(MODELS[model], loop=loop, encoding='utf-8', timeout=ClientTimeout(total=60))
+        start = time()
 
+        try:
+            tasks = [asyncio.create_task(translate(sentence, s_lang, client, PREPROCESSING[model])) for sentence in sentences]
+            translated = await asyncio.gather(*tasks)
+        except asyncio.TimeoutError as e:
+            log.error(f"Translation timed-out", e)
+
+        end = time()
+        log.info(f"Bulk translation took={end-start:.2f}\nTranslated: {sentences} -> {translated}")
         await client.close()
         return translated
 
@@ -158,6 +171,13 @@ async def translate(sent: str, s_lang: c.Lang, proxy: ServerProxy, version: str)
     :param s_lang: The source language.
     :return: The translated sentence.
     """
+    log.info(f"Translating: sent={sent}, s_lang={s_lang}, version={version}")
+    start = time()
+
     sentence = preprocess(sent, s_lang, version)
     result = await proxy.translate({'text': sentence})
-    return result['text']
+
+    end = time()
+    translated = result['text']
+    log.info(f"Single translation took={end-start:.2f}\nTranslated: {sent} -> {translated}")
+    return translated

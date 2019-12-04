@@ -15,8 +15,8 @@ from xml.etree import ElementTree as ET
 from tqdm import tqdm
 from translate.storage.tmx import tmxfile
 
-from frontend.core import Lang, get_tokenizer, apply_tokenizer, should_drop
-from frontend.core import regexp as c_regexp, lowercase_normalize as c_lower_norm
+from .core import Lang, get_tokenizer, apply_tokenizer, should_drop
+from .core import regexp as c_regexp, lowercase_normalize as c_lower_norm
 # A dict to map between "ISO 639-1-ISO 3166-1" to ISO 639-1 (two letter language code)
 
 TMX_2_LANG: Dict[str, Lang] = {

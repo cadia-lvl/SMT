@@ -77,7 +77,7 @@ def get_tokenizer(lang: Lang, method: str) -> Callable[[str], List[str]]:
     Supported methods:
         IS(default): "pass-through", basic tokenization.
         IS: "placeholders", uses placeholders for some NEs.
-        EN(default): "Dockerfile", Moses tokenization, does not tackle URLs.
+        EN(default): "moses", Moses tokenization, does not tackle URLs.
         Poor abbreviation handling.
         EN: "nltk", does not tackle URLs.
         EN: "toktok", handles URLs, does not handle "." but at the end.
@@ -93,7 +93,7 @@ def get_tokenizer(lang: Lang, method: str) -> Callable[[str], List[str]]:
         m_tok = MosesTokenizer(lang='en')
         return partial(m_tok.tokenize, escape=False)
     # Moses for 'is'
-    if method == 'Dockerfile':
+    if method == 'moses':
         m_tok = MosesTokenizer(lang='is')
         return partial(m_tok.tokenize, escape=False)
     return partial(_tokenize_is, method=method)
@@ -111,7 +111,7 @@ def tokenize(sentence: str, lang: Lang, method: str = 'pass-through'):
     Supported methods:
         IS(default): "pass-through", basic tokenization.
         IS: "placeholders", uses placeholders for some NEs.
-        EN(default): "Dockerfile", Moses tokenization, does not tackle URLs.
+        EN(default): "moses", Moses tokenization, does not tackle URLs.
         Poor abbreviation handling.
         EN: "nltk", does not tackle URLs.
         EN: "toktok", handles URLs, does not handle "." but at the end.

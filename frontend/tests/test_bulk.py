@@ -1,8 +1,8 @@
 import re
 from pathlib import Path
 
-import frontend.bulk as b
-import frontend.core as c
+import bulk as b
+import core as c
 
 
 def test_tmx_split(glob_files):

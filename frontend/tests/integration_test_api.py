@@ -1,5 +1,5 @@
-import frontend.api as api
-import frontend.core as c
+import api as api
+import core as c
 
 
 # To run these test a server needs to be up and running. See `moses_model/docker-run.sh`

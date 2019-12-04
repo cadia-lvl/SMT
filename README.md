@@ -19,7 +19,7 @@ Hluti af skjöluninni er á ensku þar sem henni er dreift annars staðar.
 - [frontend/README.md](frontend/README.md) fyrir lýsingu á þýðingarþjóni og forvinnsluföllum.
 
 Gögnum fyrir þjálfun er ekki deilt með kerfunum (sökum stærðar) en 
-hægt er að nálgast samhliða málheild (is-en) og einhliða málheild fyrir íslensku 
+hægt er að nálgast samhliða málheild (is-en) og einmála málheild fyrir íslensku 
 á malfong.is.
 
 Einnig er hægt að nota `singularity` til þess að keyra `docker`.

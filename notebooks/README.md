@@ -1,6 +1,8 @@
 # Reiknirit
 Hér eru nokkur reiknirit sem eru notuð til gagnaprófana, rannsókna og forvinnslu á gögnum.
 
+Notið `requirements.txt` til þess að setja upp nauðsynlega pakka fyrir reikniritin.
+
 - `data_exploration.ipynb` inniheldur forvinnslu á RMH og ParIce, 
 sem og ýmsar rannsóknir og lagfæringar á gögnunum.
 - `google-translate.ipynb` inniheldur smá útfærslu á Google Translate API, v2 og v3.

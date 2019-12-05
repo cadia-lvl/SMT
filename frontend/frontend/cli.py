@@ -1,3 +1,7 @@
+"""The command line interface to the package.
+
+See frontend --help for guidance.
+"""
 from pathlib import Path
 
 import click
@@ -8,8 +12,7 @@ from . import server as s
 
 @click.group()
 def cli():
-    """
-    The main entry point of the command line client.
+    """The main entry point of the command line client.
 
     Other commands are attached to this functions.
     """

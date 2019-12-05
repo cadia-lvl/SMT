@@ -1,12 +1,8 @@
-"""
-The frontend Python library contains a few modules designed to
+"""The frontend Python library contains a few modules designed to
 
 - Provide a simple API for preprocessing sentences and translating.
-
 - Provide a collection of functions to process files, a sentence per line.
-
 - Provide a collection of functions to process sentences.
-
 - Provide a simple RESTful translation API (based on Google Translate).
 """
 

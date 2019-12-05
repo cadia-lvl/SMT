@@ -17,9 +17,8 @@ from . import core as c
 log = logging.getLogger('frontend.api')
 
 MODELS = dict()
-"""
-Holds the accepted "model" parameters and the URL to the translation endpoints.
-Set using environment variables. To define a model "en-is" with endpoint "http://localhost:8080/RPC2" do:
+"""Holds the accepted "model" parameters and the URL to the translation endpoints.
+Set using environment variables. To define a model "en-is" with endpoint "http://localhost:8080/RPC2" set:
 
 export MODEL_en_is=http://localhost:8080/RPC2
 """
@@ -28,9 +27,8 @@ for key in os.environ:
         MODELS['-'.join(key.split('_')[1:])] = os.environ.get(key)
 
 PREPROCESSING = dict()
-"""
-Holds the preprocessing version for the "model".
-Set using environment variables. To set the model "en-is" to use preprocessing version "v2" do:
+"""Holds the preprocessing version for the "model".
+Set using environment variables. To set the model "en-is" to use preprocessing version "v2" set:
 
 export PREPROCESSING_en_is=v2
 """
@@ -40,22 +38,21 @@ for key in os.environ:
 
 
 def to_lang(lang: str) -> c.Lang:
-    """
-    Get the core.Lang enum based on the string identifier. Only "is" and "en" are supported.
-    :param lang: The string identifier for the language
+    """Get the core.Lang enum based on the string identifier. Only "is" and "en" are supported.
+
+    :param lang: The string identifier for the language\n
     :return: The core.Lang if support.
     """
     return c.Lang(lang)
 
 
 def preprocess(sent: str, lang: c.Lang, version: str) -> str:
-    """
-    Applies the same preprocessing steps to a sentence as specified by the version.
+    """Applies the same preprocessing steps to a sentence as specified by the version.
     For further details of the differences between version, see the corresponding functions.
 
-    :param sent: The sentence to preprocess.
-    :param lang: The core.Lang of the sentence.
-    :param version: "v1" or "v2".
+    :param sent: The sentence to preprocess.\n
+    :param lang: The core.Lang of the sentence.\n
+    :param version: "v1" or "v2".\n
     :return: The preprocessed sentence
     """
     if version == "v1":
@@ -75,8 +72,8 @@ def preprocess_v1(sent: str, lang: c.Lang) -> str:
     3. Tokenize "is" with "pass-through", "en" with "toktok".
     4. Fix URI placeholders and add more placeholders []()<>.
 
-    :param sent: The sentence to preprocess.
-    :param lang: The core.Lang of the sentence.
+    :param sent: The sentence to preprocess.\n
+    :param lang: The core.Lang of the sentence.\n
     :return: The preprocessed sentence
     """
     sent = c.lowercase_normalize(sent)
@@ -112,8 +109,8 @@ def preprocess_v2(sent: str, lang: c.Lang) -> str:
     3. Tokenize "is" with "pass-through", "en" with "moses".
     4. Fix URI placeholders and add more placeholders []()<>.
 
-    :param sent: The sentence to preprocess.
-    :param lang: The core.Lang of the sentence.
+    :param sent: The sentence to preprocess.\n
+    :param lang: The core.Lang of the sentence.\n
     :return: The preprocessed sentence
     """
     sent = c.lowercase_normalize(sent)
@@ -145,9 +142,9 @@ def translate_bulk(sentences: List[str], s_lang: c.Lang, model: str) -> List[str
     Preprocesses and translates the sentences from source language to target language.
     Uses the endpoint defined by model and preprocessing steps for the model.
 
-    :param sentences: A list of sentences to translate.
-    :param s_lang: The source language.
-    :param model: A string specifying the model. Needs to exist in MODELS.
+    :param sentences: A list of sentences to translate.\n
+    :param s_lang: The source language.\n
+    :param model: A string specifying the model. Needs to exist in MODELS.\n
     :return: The translated sentences.
     """
     loop = asyncio.new_event_loop()
@@ -181,10 +178,10 @@ async def translate(sent: str, s_lang: c.Lang, proxy: ServerProxy, version: str)
     Preprocesses and translates the sentence from source language to target language.
     Uses the endpoint defined by model and preprocessing steps for the model.
 
-    :param sent: The sentence to translate.
-    :param s_lang: The source language.
-    :param proxy: An XMLRPC proxy.
-    :param version: The preprocessing version
+    :param sent: The sentence to translate.\n
+    :param s_lang: The source language.\n
+    :param proxy: An XMLRPC proxy.\n
+    :param version: The preprocessing version\n
     :return: The translated sentence.
     """
     log.info(f"Translating: sent={sent}, s_lang={s_lang}, version={version}")

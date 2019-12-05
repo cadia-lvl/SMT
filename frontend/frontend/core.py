@@ -56,8 +56,13 @@ REGEXP_SUB: Dict[str, Tuple[re.Pattern, str]] = {
 
 
 def regexp(sent: str, regexps: List[Tuple[re.Pattern, str]]) -> str:
-    """
-    Applies a list of regular expressions and their substitutions to a string.
+    """Applies a list of regular expressions and their substitutions to a string.
+
+    :param sent: The sentence to process.\n
+    :param regexps: A list of Tuples (re.Pattern, str).\n
+    The pattern is used to match and the str is used as a replacement.
+    The str supports referencing groups in the match expression.\n
+    :return: The processed sentence.
     """
     processed_line = sent
     for regular_expression, sub_string in regexps:
@@ -67,20 +72,25 @@ def regexp(sent: str, regexps: List[Tuple[re.Pattern, str]]) -> str:
 
 
 def lowercase_normalize(sent: str) -> str:
-    """Applies unicode lowercase and normalize on a string."""
+    """Applies unicode lowercase and normalize (NFKC) on a string.
+
+    :param sent: The sentence to process.\n
+    :return: The processed sentence.
+    """
     return normalize('NFKC', sent.casefold())
 
 
 def get_tokenizer(lang: Lang, method: str) -> Callable[[str], List[str]]:
-    """
-    Returns a tokenizer for a specified method and additional arguments.
+    """Returns a tokenizer for a specified method and additional arguments.
+
     Supported methods:
-        IS(default): "pass-through", basic tokenization.
-        IS: "placeholders", uses placeholders for some NEs.
-        EN(default): "moses", Moses tokenization, does not tackle URLs.
-        Poor abbreviation handling.
-        EN: "nltk", does not tackle URLs.
-        EN: "toktok", handles URLs, does not handle "." but at the end.
+
+    - IS(default): "pass-through", basic tokenization.
+    - IS: "placeholders", uses placeholders for some NEs.
+    - IS: "moses", uses Moses tokenization. Poor performance for IS.
+    - EN(default): "moses", Moses tokenization, splits up URLs. Poor abbreviation handling.
+    - EN: "nltk", splits up URLs.
+    - EN: "toktok", handles URLs, does not handle "." but at the end.
     """
     if lang == Lang.EN:
         if method == "nltk":
@@ -100,21 +110,23 @@ def get_tokenizer(lang: Lang, method: str) -> Callable[[str], List[str]]:
 
 
 def apply_tokenizer(sentence: str, tokenizer: Callable[[str], List[str]]) -> str:
-    """Applies a tokenization function to a sentence."""
+    """Applies a tokenization function to a sentence.
+
+    :param sentence: The sentence to process.\n
+    :param tokenizer: The tokenizer function to use.\n
+    :return: The processed sentence.
+    """
     return " ".join(tokenizer(sentence)) + "\n"
 
 
 def tokenize(sentence: str, lang: Lang, method: str = 'pass-through'):
-    """
-    Tokenizes a sentence using the specified method. Returns the tokenized
-    sentence.
-    Supported methods:
-        IS(default): "pass-through", basic tokenization.
-        IS: "placeholders", uses placeholders for some NEs.
-        EN(default): "moses", Moses tokenization, does not tackle URLs.
-        Poor abbreviation handling.
-        EN: "nltk", does not tackle URLs.
-        EN: "toktok", handles URLs, does not handle "." but at the end.
+    """Tokenizes a sentence using the specified method. See get_tokenizer() for supported methods.
+
+    :param sentence: The sentence to process.\n
+    :param lang: The language of the sentence.\n
+    :param method: The tokenization method to use. See get_tokenizer() for supported methods.\n
+    :return: The processed sentence.
+
     """
     tok = get_tokenizer(lang, method)
     return apply_tokenizer(sentence, tok)
@@ -195,10 +207,13 @@ def _tok_placeholders(kind, txt, val):
 
 
 def known_tok_fraction(sentence: str, known_tokens: Sequence[str]) -> float:
-    """
-    Returns the fraction of known words in the (tokenized) sentence.
+    """Returns the fraction of known words in the sentence. Works best if the sentence has been tokenized and
+    if the sentence has been normalized to only words.
 
-    Gives better results if the sentence has been normalized to only words."""
+    :param sentence: The sentence to processes.\n
+    :param known_tokens: A Sequence of known tokens to compare to.\n
+    :return: The fraction of known tokens in sentence according to "known_tokens".
+    """
     sent_tokens = sentence.split()
     known = 0
     token_count = len(sent_tokens)
@@ -209,14 +224,23 @@ def known_tok_fraction(sentence: str, known_tokens: Sequence[str]) -> float:
 
 
 def contains_regexp(sentence: str, regexp: re.Pattern) -> bool:
-    """Returns true if the sentence contains the regexp."""
+    """Checks if the sentence contains the regexp.
+
+    :param sentence: The sentence to process.
+    :param regexp: The regular expression to search for.
+    :return: True if the regular expression is found in the sentence.
+    """
     if re.match(regexp, sentence) is None:
         return False
     return True
 
 
 def remove_non_words(sentence: str) -> str:
-    """Returns the (tokenized) sentence without punctuation, numbers and other symbols."""
+    """Normalizes a sentence by removing all words which contain punctuation, numbers and other non-word symbols.
+
+    :param sentence: The sentence to process.\n
+    :return: The processed sentence.
+    """
     result = []
     tokens = sentence.split()
     for token in tokens:
@@ -225,21 +249,27 @@ def remove_non_words(sentence: str) -> str:
     return " ".join(result)
 
 
-def should_drop(line: str,  # pylint: disable=too-many-arguments
+def should_drop(line: str,
                 regexps: Sequence[re.Pattern],
                 known_tokens: Sequence[str],
                 keep_ratio=0.5,
                 normalize=True,
                 keep_sent_length=1) -> Tuple[bool, float, str]:
-    """
-    Returns True and the line if line should be skipped, o.w. False and line.
+    """Decides if a line should be dropped given the criteria.
+    Regexp defines a black-list of regular expressions.
 
-    If normalized=True all non-words (\d\W_) are removed from the sentence.
-    If the remaining sentence contains any of the regexps it is SKIPPED.
-    If the remaining sentence has length less than or equal to keep_sent_length
-    is it KEPT.
-    If the keep_ratio is smaller or equal to the fraction of known_tokens in
-    sentence it is KEPT.
+    If normalized=True all non-words are removed from the sentence before counting the numer of words.\n
+    If the remaining sentence contains any of the regexps it is DROPPED.\n
+    If the remaining sentence has length less than or equal to keep_sent_length is it KEPT.\n
+    If the keep_ratio is smaller or equal to the fraction of known_tokens in sentence it is KEPT.
+
+    :param line: The sentence to process.\n
+    :param regexps: A black-list of regular expressions. If any is matched in a sentence, it is DROPPED.\n
+    :param known_tokens: A whitelist of tokens which are considered as known.\n
+    :param keep_ratio: If the fraction of known tokens is higher than keep_ration, the sentence is KEPT.\n
+    :param normalize: If True, we first normalize the sentence by removing all words which contain non-words.\n
+    :param keep_sent_length: If a sentence contains keep_sent_length of fewer words, it is KEPT.\n
+    :return: A Tuple (Should drop, the known fraction, the line).\n
     """
     normalized_line = line
     if normalize:

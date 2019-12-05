@@ -1,8 +1,6 @@
-"""
-A collection of functions to process files, a sentence per line. Uses multiple threads to process.
+"""A collection of functions to process files, a sentence per line. Uses multiple threads to process.
 
 - Uses pathlib.Path to manipulate files.
-
 - Has a naming convention to read and write files: modifier1-modifier2.lang. Use the "read()" and "write()" functions
 to avoid implementation details.
 """
@@ -27,22 +25,19 @@ TMX_2_LANG: Dict[str, Lang] = {
     'EN-GB': Lang.EN,
     'IS-IS': Lang.IS
 }
-"""
-A dict to map between "ISO 639-1-ISO 3166-1" to ISO 639-1 (two letter language code).
+"""A dict to map between "ISO 639-1-ISO 3166-1" to ISO 639-1 (two letter language code).
 Used for .tmx file reading.
 """
 
 # Some parts of the processing support threading, set the value here.
 THREADS = int(os.environ.get('THREADS', 4))
-"""
-Some parts of the processing support threading.
+"""Some parts of the processing support threading.
 Set the number of threads using core.THREADS = 4.
 
 Default value is 4.
 """
 CHUNKSIZE = 4000
-"""
-The chunksize/number of sentences sent to each thread during parallel processing.
+"""The chunksize/number of sentences sent to each thread during parallel processing.
 Set the chunksize using core.CHUNKSIZE = 4000. A higher values are often better.
 
 Default value is 4000.
@@ -73,9 +68,10 @@ def _get_line_count(path: Path) -> int:
 
 
 def info(path: Path) -> Tuple[str, str, int]:
-    """Get some basic information of the file input.\n
+    """Get some basic information of the file input.
+
     :param path: The pathlib.Path to the file.\n
-    :return: A tuple (path, size, line count) of the input.\n
+    :return: A tuple (path, size, line count) of the input.
     """
     size = _sizeof_fmt(path.stat().st_size)
     line_count = _get_line_count(path.resolve())
@@ -83,7 +79,8 @@ def info(path: Path) -> Tuple[str, str, int]:
 
 
 def info_formatted(path: Path) -> str:
-    """Get some basic information of the file input and returns as a formatted string.\n
+    """Get some basic information of the file input and returns as a formatted string.
+
     :param path: The pathlib.Path to the file.\n
     :return: Returns the formatted bulk.info()
     """
@@ -92,14 +89,14 @@ def info_formatted(path: Path) -> str:
 
 
 def read(directory: Path, lang: Lang, *modifiers) -> Optional[Path]:
-    """A handy helper function to retrieve the pathlib.Path given a collection of modifiers.\n
-    Works as a nice abstraction from the implementation of the naming convention.\n
+    """A handy helper function to retrieve the pathlib.Path given a collection of modifiers.
+    Works as a nice abstraction from the implementation of the naming convention.
 
     Assumes the naming convention: modifier-modifier.lang\n
     :param directory: The directory to search for the modifiers.\n
     :param lang: The core.Lang of the file to read.\n
     :param modifiers: A sequence of modifiers to search for.\n
-    :return: If exists, returns a Path pointing to the file, o.w. error.\n
+    :return: If exists, returns a Path pointing to the file, o.w. error.
     """
     path = Path(directory.joinpath("-".join(modifiers)).with_suffix(f".{lang.value}"))
     if path.exists():
@@ -108,15 +105,15 @@ def read(directory: Path, lang: Lang, *modifiers) -> Optional[Path]:
 
 
 def write(directory: Path, lang: Lang, *modifiers, overwrite=True) -> Optional[Path]:
-    """A handy helper function to create a pathlib.Path given a collection of modifiers.\n
-    Works as a nice abstraction from the implementation of the naming convention.\n
+    """A handy helper function to create a pathlib.Path given a collection of modifiers.
+    Works as a nice abstraction from the implementation of the naming convention.
 
     Assumes the naming convention: modifier-modifier.lang\n
     :param directory: The directory to write to.\n
     :param lang: The Lang to write.\n
     :param modifiers: A sequence of modifiers.\n
     :param overwrite: If set True, will not raise error if the file exists.\n
-    :return: A pathlin.Path pointing to the file.\n
+    :return: A pathlin.Path pointing to the file.
     """
     path = Path(directory.joinpath("-".join(modifiers)).with_suffix(f".{lang.value}"))
     if path.exists() and not overwrite:
@@ -125,15 +122,15 @@ def write(directory: Path, lang: Lang, *modifiers, overwrite=True) -> Optional[P
 
 
 def list_dir(directory: Path, langs: Sequence[Lang], *modifiers, print_info=True) -> List[Path]:
-    """A handy helper function to list a pathlib.Path given a collection of modifiers.\n
-    Works as a nice abstraction from the implementation of the naming convention.\n
+    """A handy helper function to list a pathlib.Path given a collection of modifiers.
+    Works as a nice abstraction from the implementation of the naming convention.
 
     Assumes the naming convention: modifier-modifier.lang\n
     :param directory: The directory to list.\n
     :param langs: The core.Langs to list.\n
     :param modifiers: A sequence of modifiers.\n
     :param print_info: If set True, will print_info of files.\n
-    :return: A List[Path] pointing to the files.\n
+    :return: A List[Path] pointing to the files.
     """
     results = []
     for lang in langs:
@@ -155,11 +152,12 @@ def _lang(path: Path) -> Lang:
 def tmx_split(paths: Tuple[Path],
               src_lang: str,
               tar_lang: str) -> List[Tuple[Path, Path]]:
-    """Split a collection tmx file to multiple language files with a line per sentence.\n
+    """Split a collection tmx file to multiple language files with a line per sentence.
+
     :param paths: A sequence of tmx files to split.\n
     :param src_lang: The source language code as defined in the .tmx file.\n
     :param tar_lang: The target language code as defined in the .tmx file.\n
-    :return: A List of Tuples with pathlib.Path pointing to the source and target language files.\n
+    :return: A List of Tuples with pathlib.Path pointing to the source and target language files.
     """
     result: List[Tuple[Path, Path]] = list()
     for tmx_path in paths:
@@ -180,13 +178,12 @@ def tmx_split(paths: Tuple[Path],
 
 
 def tei_read_file(path: Path) -> Sequence[str]:
-    """Reads a tei file to extract the contents.\n
-    Hand-tailored to reading the RMH.\n
+    """Reads a tei file to extract the contents. Hand-tailored to reading the RMH.
 
     Adjusted code from xml_tools.py from Róbert Kjaran <robert@kjaran.com>
 
     :param path: A pathlib.Path to the .tei file to read.\n
-    :return: A List of sentences as defined in the .tei file.\n
+    :return: A List of sentences as defined in the .tei file.
     """
     NS = {'a': 'http://www.tei-c.org/ns/1.0'}
     root = ET.parse(str(path)).getroot()
@@ -209,12 +206,12 @@ def tei_read_file(path: Path) -> Sequence[str]:
 
 
 def tei_read(paths: Sequence[Path], out_path: Path) -> bool:
-    """Reads a sequence of Path of TEI files from RMH and writes to a single file.\n
-    Uses multiple threads.\n
+    """Reads a sequence of Path of TEI files from RMH and writes to a single file.
+    Uses multiple threads.
 
     :param paths: A Sequence of pathlib.Path of .tei files to read.\n
     :param out_path: pathlib.Path to write the contents to.\n
-    :return: True if successful.\n
+    :return: True if successful.
     """
     with out_path.open('w+') as f_out:
         with ProcessPoolExecutor(max_workers=14) as executor:
@@ -233,7 +230,7 @@ def peek(path: Path, length: int = 10) -> Iterator[str]:
 
     :param path: The pathlib.Path of the file to peek into.\n
     :param length: The number of lines to yield.\n
-    :return: An iterator yielding the next line.\n
+    :return: An iterator yielding the next line.
     """
     with path.open() as f:
         index = 0
@@ -250,7 +247,7 @@ def peeks(paths: List[Path], length: int = 10) -> Iterator[str]:
 
     :param paths: A list of pathlib.Path of the files to peek into.\n
     :param length: The number of lines to yield from each file.\n
-    :return: An iterator yielding the next line from multiple files at once, prepended with the language of the file.\n
+    :return: An iterator yielding the next line from multiple files at once, prepended with the language of the file.
     """
     langs = [_lang(path) for path in paths]
     generators = [peek(path, length) for path in paths]
@@ -265,8 +262,8 @@ def peeks(paths: List[Path], length: int = 10) -> Iterator[str]:
 
 
 def combine(paths: Sequence[Path], out_path: Path) -> bool:
-    """Combines a collection of files to a single file.\n
-    The output gets written over if run multiple times.\n
+    """Combines a collection of files to a single file.
+    The output gets written over if run multiple times.
 
     :param paths: A Sequence of pathlib.Path to concatenate together.\n
     :param out_path: A pathlib.Path to write the result to.\n
@@ -451,7 +448,7 @@ def get_drop_lines(path: Path,
     """Returns a list of line number and lines which should be dropped given the criteria.
     Regexp defines a black-list of regular expressions.
 
-    If normalized=True all non-words (\d\W_) are removed from the sentence before counting the numer of words.\n
+    If normalized=True all non-words are removed from the sentence before counting the numer of words.\n
     If the remaining sentence contains any of the regexps it is DROPPED.\n
     If the remaining sentence has length less than or equal to keep_sent_length is it KEPT.\n
     If the keep_ratio is smaller or equal to the fraction of known_tokens in sentence it is KEPT.

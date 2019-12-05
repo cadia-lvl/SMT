@@ -1,7 +1,4 @@
-"""
-A server front-end to an MT system, RESTful. Implements a translation interface to Moses.
-
-The server is split in two, the RESTful interface (server.py) and a framework agnostic API (api.py).
+"""A server front-end to an MT system. A RESTful interface. Implements a translation interface to Moses.
 """
 from flask import Flask
 from flask_restful import Resource, Api, reqparse
@@ -40,12 +37,45 @@ parser.add_argument('model',
 
 
 class Ping(Resource):
+    """A dummy resource which responds "pong" if called.
+
+    :param path: / \n
+    """
     def get(self):
-        return 'pong'
+        """
+        :param method: GET\n
+        :return 'pong'
+        """
 
 
 class MosesTranslate(Resource):
+    """The translation endpoint. Accepts a list of sentences to translate and returns the results.
+
+    :param path: /translateText \n
+
+    """
     def post(self):
+        """
+        :param method: POST \n
+        :param accepts: application/json \n
+        :param payload:\n
+            {
+                "contents": ["Sentence to translate"],
+                "sourceLanguageCode": "en"/"is",
+                "targetLanguageCode": "en"/"is",
+                "model": "The model to use"
+            }
+        :param returns:\n
+            {
+                "translations": [
+                    {
+                        "translatedText": "The translated text",
+                        "model": "The model used"
+                    }
+                ]
+            }
+        :return:
+        """
         args = parser.parse_args(strict=True)
         sentences = args['contents']
         source_lang = a.to_lang(args['sourceLanguageCode'])

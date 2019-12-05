@@ -51,7 +51,8 @@ import frontend.api as a
 a.preprocess("Þetta er setning.", a.to_lang("is"), "v2")
 # 'þetta er setning .\n'
 ```
-Sjá nánari lýsingu síðar fyrir Python safn.
+
+Fyrir nánari skjölun á pakka sjá `docs/frontend/index.html`.
 
 ## Leyfi
 MIT leyfi - sjá `LICENSE`.

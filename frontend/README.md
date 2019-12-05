@@ -82,7 +82,7 @@ pytest -s --data=./tests/test_data
 
 Þegar bætt er við fleiri föllum þarf að bæta við `docstring` fyrir skjölun og svo búa til skjölunina.
 ```shell script
-pdoc 
+pdoc --html --force --output-dir docs frontend
 ```
 
 ### Útgáfa

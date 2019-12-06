@@ -100,9 +100,11 @@ Leiðbeiningar til þess að gefa út nýja útgáfu af `frontend`.
 Hér er listi yfir breytingar á milli útgáfa.
 
 #### 2.0.5
-Lagaði nokkrar villur.
-Bætti skráningu í api og server.
-Bætti við skjölun á Python pakka undir `docs`.
+- Nokkrar villur lagaðar.
+- Bætti við skjölun á Python pakka undir `docs`.
+- Miðeind v2.0.0 tokenizer
+- Setningavinnsla skilar ekki lengur nýrri línu, char(10), eftir vinnslu.
+- "_" notað í stað "@" fyrir leppun þar sem Miðeind Tokenizer skilur @orð sem Twitter notendanafn.
 
 #### 2.0.4
 Lagaði úttakið úr þýðingarþjóninum svo þýddar setningar koma út í réttri röð.

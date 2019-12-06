@@ -435,7 +435,7 @@ def tokenize(path: Path,
     return in_parallel(path,
                        out_path,
                        THREADS,
-                       partial(apply_tokenizer, tokenizer=tok)
+                       partial(apply_tokenizer, tokenizer=tok, add_newline=True)
                        )
 
 

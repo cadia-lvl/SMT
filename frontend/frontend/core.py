@@ -27,25 +27,25 @@ REGEXP_SUB: Dict[str, Tuple[re.Pattern, str]] = {
     'URI-OLD': (
         re.compile(
             r'(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)'),
-        '@uri@'),
+        '_uri_'),
     'IS-COMBINE-NEWLINE': (re.compile(r'([\w]+)\.\n([a-záðéíóúýþæö])'),
                            r'\1. \2'),
     'IS-SPLIT-NEWLINE': (re.compile(r'([\w\(\)\[\]\.]{2,})\.([A-ZÁÐÉÍÓÚÝÞÆÖ])'),
                          r'\1. \2'),
     'URI': (re.compile(
         r"((http(s)?:\/\/)|(www)|([-a-zA-Z0-9:%_\+.~#?&/=]+?@))+([-a-zA-Z0-9@:%_\+.~#?&/=]+)"),
-            '@uri@'),
-    'URI-SIMPLE': (re.compile(r"([-a-zA-Z0-9@:%_\+.~#?&/=]+?)(\.is|\.com)"), "@uri@"),
+            '_uri_'),
+    'URI-SIMPLE': (re.compile(r"([-a-zA-Z0-9@:%_\+.~#?&/=]+?)(\.is|\.com)"), "_uri_"),
     'EMPTY-BRACKETS': (re.compile(r"[\[\(]\s*[\]\)]"), ""),
     # u'\u007c' - |
-    'PIPE': (re.compile(r"\u007c"), '@pipe@'),
+    'PIPE': (re.compile(r"\u007c"), '_pipe_'),
     # u'\u003c', u'\u003e' - <, >
-    'LT': (re.compile(r"\u003c"), '@lt@'),
-    'GT': (re.compile(r"\u003e"), '@gt@'),
+    'LT': (re.compile(r"\u003c"), '_lt_'),
+    'GT': (re.compile(r"\u003e"), '_gt_'),
     # u'\u005b', u'\u005d' - [, ]
-    'BRACKET-OPEN': (re.compile(r"\u005b"), '@brac_open@'),
-    'BRACKET-CLOSE': (re.compile(r"\u005d"), '@brac_close@'),
-    'FIX-URI': (re.compile(r"@ uri @"), '@uri@'),
+    'BRACKET-OPEN': (re.compile(r"\u005b"), '_brac_open_'),
+    'BRACKET-CLOSE': (re.compile(r"\u005d"), '_brac_close_'),
+    'FIX-URI': (re.compile(r"_ uri _"), '_uri_'),
     'CRYLLIC': (re.compile(r'.*[\u0400-\u04FF\u0500-\u052F\u2DE0-\u2DFF\uA640-\uA69F]+.*'),
                 ''),
     'GREEK': (re.compile(r'.*[\u0370-\u03bb\u03bd-\u03FF\u1F00-\u1FFF]+.*'), ''),
@@ -85,7 +85,8 @@ def get_tokenizer(lang: Lang, method: str) -> Callable[[str], List[str]]:
 
     Supported methods:
 
-    - IS(default): "pass-through", basic tokenization.
+    - IS(default) "shallow": Basic tokenization, no abbreviation expansion.
+    - IS: "pass-through": Mideind deep tokenization with extra handling of percentages (50 %).
     - IS: "placeholders", uses placeholders for some NEs.
     - IS: "moses", uses Moses tokenization. Poor performance for IS.
     - EN(default): "moses", Moses tokenization, splits up URLs. Poor abbreviation handling.
@@ -103,23 +104,29 @@ def get_tokenizer(lang: Lang, method: str) -> Callable[[str], List[str]]:
         m_tok = MosesTokenizer(lang='en')
         return partial(m_tok.tokenize, escape=False)
     # Moses for 'is'
-    if method == 'moses':
-        m_tok = MosesTokenizer(lang='is')
-        return partial(m_tok.tokenize, escape=False)
-    return partial(_tokenize_is, method=method)
+    if lang == Lang.IS:
+        if method == 'moses':
+            m_tok = MosesTokenizer(lang='is')
+            return partial(m_tok.tokenize, escape=False)
+        if not method:
+            return partial(_tokenize_is, method="shallow")
+        return partial(_tokenize_is, method=method)
 
 
-def apply_tokenizer(sentence: str, tokenizer: Callable[[str], List[str]]) -> str:
+def apply_tokenizer(sentence: str, tokenizer: Callable[[str], List[str]], add_newline: bool = False) -> str:
     """Applies a tokenization function to a sentence.
 
     :param sentence: The sentence to process.\n
     :param tokenizer: The tokenizer function to use.\n
+    :param add_newline: If set True, adds a new-line after tokenization.
     :return: The processed sentence.
     """
-    return " ".join(tokenizer(sentence)) + "\n"
+    if add_newline:
+        return " ".join(tokenizer(sentence)) + "\n"
+    return " ".join(tokenizer(sentence))
 
 
-def tokenize(sentence: str, lang: Lang, method: str = 'pass-through'):
+def tokenize(sentence: str, lang: Lang, method: str):
     """Tokenizes a sentence using the specified method. See get_tokenizer() for supported methods.
 
     :param sentence: The sentence to process.\n
@@ -134,17 +141,23 @@ def tokenize(sentence: str, lang: Lang, method: str = 'pass-through'):
 
 def _tokenize_is(sentence: str, method: str):
     """Helper function. Tokenizes an Icelandic sentence."""
-    # We set the option to change "1sti", ... to "1", ...
     result = []
-    for token in mideind_tok.tokenize(sentence,
-                                      handle_kludgy_ordinals=mideind_tok.KLUDGY_ORDINALS_MODIFY):
-        kind, txt, val = token
-        if method == 'pass-through':
-            token = _tok_pass_through(kind, txt, val)
-        elif method == 'placeholders':
-            token = _tok_placeholders(kind, txt, val)
-        if token:
-            result.append(token)
+    if method == "shallow":
+        for sent in mideind_tok.split_into_sentences(sentence):
+            result.extend(sent.split(" "))
+    else:
+        # We set the option to change "1sti", ... to "1", ...
+        for token in mideind_tok.tokenize(sentence,
+                                          handle_kludgy_ordinals=mideind_tok.KLUDGY_ORDINALS_MODIFY):
+            kind, txt, val = token
+            if method == 'pass-through':
+                token = _tok_pass_through(kind, txt, val)
+            elif method == 'placeholders':
+                token = _tok_placeholders(kind, txt, val)
+            else:
+                raise ValueError(f"Unkown tokenization method={method}")
+            if token:
+                result.append(token)
     return result
 
 
@@ -154,7 +167,7 @@ def _tok_pass_through(kind, txt, val):
             return val[0][0]
         return txt
     if kind == mideind_tok.TOK.PERCENT:
-        return f'{val[0]} %'
+        return f'{val[0]:g} %'
     if kind == mideind_tok.TOK.S_BEGIN:
         return None
     if kind == mideind_tok.TOK.S_END:

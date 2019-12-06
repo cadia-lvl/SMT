@@ -3,7 +3,7 @@ The API for preprocessing and translating sentences.
 
 Supports multiple preprocessing version and multiple (Moses) translation endpoints.
 """
-from typing import List, Generator
+from typing import List
 import asyncio
 import os
 import logging
@@ -59,6 +59,10 @@ def preprocess(sent: str, lang: c.Lang, version: str) -> str:
         sent = preprocess_v1(sent, lang)
     elif version == "v2":
         sent = preprocess_v2(sent, lang)
+    elif version == "v3":
+        sent = preprocess_v3(sent, lang)
+    else:
+        raise ValueError(f"Unkown version={version}")
     return sent
 
 
@@ -136,6 +140,42 @@ def preprocess_v2(sent: str, lang: c.Lang) -> str:
 
     return sent
 
+
+def preprocess_v3(sent: str, lang: c.Lang) -> str:
+    """
+    Applies the same preprocessing steps to a sentence as used in the en-is-v3 and is-en-v3 Moses MT system.
+
+    1. Lowercase & unicode normalize NFKC.
+    2. Add URI placeholders.
+    3. Tokenize "is" with "shallow", "en" with "moses".
+    4. Fix URI placeholders and add more placeholders for []()<>.
+
+    :param sent: The sentence to preprocess.\n
+    :param lang: The core.Lang of the sentence.\n
+    :return: The preprocessed sentence
+    """
+    sent = c.lowercase_normalize(sent)
+    regexps = [
+        c.REGEXP_SUB['URI'],
+        c.REGEXP_SUB['URI-SIMPLE'],
+        c.REGEXP_SUB['EMPTY-BRACKETS']
+    ]
+    sent = c.regexp(sent, regexps)
+    if lang == c.Lang.EN:
+        sent = c.tokenize(sent, lang, method="moses")
+    else:
+        sent = c.tokenize(sent, lang, method="shallow")
+    regexps = [
+        c.REGEXP_SUB['PIPE'],
+        c.REGEXP_SUB['FIX-URI'],
+        c.REGEXP_SUB['LT'],
+        c.REGEXP_SUB['GT'],
+        c.REGEXP_SUB['BRACKET-OPEN'],
+        c.REGEXP_SUB['BRACKET-CLOSE']
+    ]
+    sent = c.regexp(sent, regexps)
+
+    return sent
 
 def translate_bulk(sentences: List[str], s_lang: c.Lang, model: str) -> List[str]:
     """

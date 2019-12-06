@@ -1,6 +1,6 @@
 import re
 
-import core as c
+import frontend.core as c
 
 
 def test_regexp():
@@ -28,117 +28,162 @@ morgun, hátt í 2 klukkutíma í dag, og þá hefði ég vissulega þegið þá
 
 
 def test_is_tok():
-    # Miðeind expands some abbreviations
-    test = "nr., gr., 1sti fyrsti, 1., 2ja, o.s.frv.\n"
-    tokenized = c.tokenize(test, c.Lang.IS)
-    assert tokenized == "númer , grein , fyrsti fyrsti , 1. , tveggja , og svo framvegis .\n"
-
-    # Moses only understands gr. and o.s.frv. but does not expand
+    # Abbreviations
+    test = "nr., gr., 1sti fyrsti, 1., 2ja, o.s.frv."
+    # Miðeind deep tokenization expands some abbreviations, but inconsistently.
+    tokenized = c.tokenize(test, c.Lang.IS, method="pass-through")
+    print(tokenized)
+    # TODO: wait for patch due to inconsistency in abbreviation expansion: https://github.com/mideind/Tokenizer/issues/11.
+    # assert tokenized == "númer , greinir , fyrsti fyrsti , 1. , tveggja , og svo framvegis ."
+    # Miðeind shallow tokenzation understands abbreviations but does not expand.
+    tokenized = c.tokenize(test, c.Lang.IS, method="shallow")
+    print(tokenized)
+    assert tokenized == "nr. , gr. , 1sti fyrsti , 1. , 2ja , o.s.frv ."
+    # Moses only understands gr. and o.s.frv. and does not expand.
     tokenized = c.tokenize(test, c.Lang.IS, method='moses')
-    assert tokenized == "nr . , gr. , 1sti fyrsti , 1 . , 2ja , o.s.frv.\n"
+    print(tokenized)
+    assert tokenized == "nr . , gr. , 1sti fyrsti , 1 . , 2ja , o.s.frv."
 
-    test = "H2O, CO2, 9%\n"
-    tokenized = c.tokenize(test, c.Lang.IS)
-    # Miðeind tokenizer breaks up H2O to H 2O
-    # assert tokenized == "H2O , CO2 , 9 %\n"
+    # Compounds / Percentages:
+    test = "H2O, CO2, 9%"
+    # Miðeind tokenizer does not break up compounds and we manually break up percentages.
+    tokenized = c.tokenize(test, c.Lang.IS, method="pass-through")
+    print(tokenized)
+    assert tokenized == "H2O , CO2 , 9 %"
+    # Miðeind shallow does not break up compounds and also not percentages.
+    tokenized = c.tokenize(test, c.Lang.IS, method="shallow")
+    print(tokenized)
+    assert tokenized == "H2O , CO2 , 9%"
+    # Moses treats compounds correctly and breaks up percentages.
+    tokenized = c.tokenize(test, c.Lang.IS, method='moses')
+    assert tokenized == "H2O , CO2 , 9 %"
     print(tokenized)
 
-    # Moses treats compounds correctly
-    tokenized = c.tokenize(test, c.Lang.IS, method='moses')
-    assert tokenized == "H2O , CO2 , 9 %\n"
-    print(tokenized)
-
+    # URLs:
+    test = "http://www.malfong.is"
     # Miðeind deals with URLs
-    test = "http://www.malfong.is\n"
-    tokenized = c.tokenize(test, c.Lang.IS)
+    tokenized = c.tokenize(test, c.Lang.IS, method="pass-through")
     print(tokenized)
-    assert tokenized == "http://www.malfong.is\n"
-
+    assert tokenized == "http://www.malfong.is"
+    # Miðeind shallow also
+    tokenized = c.tokenize(test, c.Lang.IS, method="shallow")
+    print(tokenized)
+    assert tokenized == "http://www.malfong.is"
     # Moses does not
     tokenized = c.tokenize(test, c.Lang.IS, method='moses')
     print(tokenized)
-    assert tokenized == "http : / / www.malfong.is\n"
+    assert tokenized == "http : / / www.malfong.is"
 
-    # Both will mess-up our placeholders
-    test = "ég mun setja @uri@ og @lt@."
-    tokenized = c.tokenize(test, c.Lang.IS)
-    print(tokenized)
-    assert tokenized == "ég mun setja @ uri @ og @ lt @ .\n"
-
-    tokenized = c.tokenize(test, c.Lang.IS, method='moses')
-    print(tokenized)
-    assert tokenized == "ég mun setja @ uri @ og @ lt @ .\n"
-
-    # Miðeind handles sections (almost) almost correctly and translates " correctly to “
-    test = "1.1.1.1.1. Dráttarvélargerð með tilliti til hemlabúnaðar Með\"dráttarvélargerð með tilliti til \
-hemlabúnaðar\"er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem:"
+    # Placeholders:
+    test = "ég mun setja _uri_ og _lt_."
+    # Miðeind pass-through messes them up and treats them as twitter handles.
     tokenized = c.tokenize(test, c.Lang.IS, method="pass-through")
     print(tokenized)
-    assert tokenized == "1.1.1.1.1 . Dráttarvélargerð með tilliti til hemlabúnaðar Með “ dráttarvélargerð með \
-tilliti til hemlabúnaðar “ er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem :\n"
+    assert tokenized == "ég mun setja _ uri _ og _ lt _ ."
+    # Miðeind shallow as well.
+    tokenized = c.tokenize(test, c.Lang.IS, method="pass-through")
+    print(tokenized)
+    assert tokenized == "ég mun setja _ uri _ og _ lt _ ."
+    # Moses as well.
+    tokenized = c.tokenize(test, c.Lang.IS, method='moses')
+    print(tokenized)
+    assert tokenized == "ég mun setja _ uri _ og _ lt _ ."
+
+    # Sections:
+    test = "1.1.1.1.1. Dráttarvélargerð með tilliti til hemlabúnaðar Með\"dráttarvélargerð með tilliti til \
+hemlabúnaðar\"er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem:"
+    # Miðeind pass-through handles sections (almost) almost correctly. No longer translates " to “
+    tokenized = c.tokenize(test, c.Lang.IS, method="pass-through")
+    print(tokenized)
+    assert tokenized == "1.1.1.1.1 . Dráttarvélargerð með tilliti til hemlabúnaðar Með \" dráttarvélargerð með \
+tilliti til hemlabúnaðar \" er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem :"
+    # Miðeind shallow does the same.
+    tokenized = c.tokenize(test, c.Lang.IS, method="shallow")
+    print(tokenized)
+    assert tokenized == "1.1.1.1.1 . Dráttarvélargerð með tilliti til hemlabúnaðar Með \" dráttarvélargerð með \
+tilliti til hemlabúnaðar \" er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem :"
     # Moses handle sections the same way and does not translate "
     tokenized = c.tokenize(test, c.Lang.IS, method="moses")
     print(tokenized)
     assert tokenized == "1.1.1.1.1 . Dráttarvélargerð með tilliti til hemlabúnaðar Með \" dráttarvélargerð með \
-tilliti til hemlabúnaðar \" er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem :\n"
+tilliti til hemlabúnaðar \" er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem :"
 
 
 def test_en_tok():
-    # In English we do not expand abbreviations.
-    test = "nr., art., 1st first, 1., 2nd\n"
+    # Abbreviations:
+    test = "nr., art., 1st first, 1., 2nd"
+    # NLTK does not expand abbreviations.
     tokenized = c.tokenize(test, c.Lang.EN, 'nltk')
     print(tokenized)
-    assert tokenized == "nr. , art. , 1st first , 1. , 2nd\n"
-    # Moses does not understand most abbreviations
+    assert tokenized == "nr. , art. , 1st first , 1. , 2nd"
+    # Moses does not expand abbreviations nor understands them.
     tokenized = c.tokenize(test, c.Lang.EN, 'moses')
     print(tokenized)
-    assert tokenized == "nr . , art . , 1st first , 1 . , 2nd\n"
-    # TokTok understands better.
+    assert tokenized == "nr . , art . , 1st first , 1 . , 2nd"
+    # TokTok does not expand abbreviations but understands them similarly as NLTK.
     tokenized = c.tokenize(test, c.Lang.EN, 'toktok')
     print(tokenized)
-    assert tokenized == "nr. , art. , 1st first , 1. , 2nd\n"
+    assert tokenized == "nr. , art. , 1st first , 1. , 2nd"
 
-    # TokTok understands compounds, we also know that Moses does.
-    test = "H2O, CO2, 9%\n"
-    tokenized = c.tokenize(test, c.Lang.EN, 'toktok')
-    print(tokenized)
-    assert tokenized == "H2O , CO2 , 9 %\n"
-
-    # Each tokenizer deals with contractions differently
-    test = "It's i'm couldn't\n"
+    # Compounds / Percentages:
+    test = "H2O, CO2, 9%"
+    # NLTK
     tokenized = c.tokenize(test, c.Lang.EN, 'nltk')
     print(tokenized)
-    assert tokenized == "It 's i 'm could n't\n"
+    assert tokenized == "H2O , CO2 , 9 %"
+    # Moses
     tokenized = c.tokenize(test, c.Lang.EN, 'moses')
     print(tokenized)
-    assert tokenized == "It 's i 'm couldn 't\n"
+    assert tokenized == "H2O , CO2 , 9 %"
+    # TokTok does not split up compounds (good) and splits percentages to number and symbol (good).
+    tokenized = c.tokenize(test, c.Lang.EN, 'toktok')
+    print(tokenized)
+    assert tokenized == "H2O , CO2 , 9 %"
+
+    # Contractions:
+    test = "It's i'm couldn't"
+    # NLTK handles contractions.
+    tokenized = c.tokenize(test, c.Lang.EN, 'nltk')
+    print(tokenized)
+    assert tokenized == "It 's i 'm could n't"
+    # Moses also handles contractions, but not in the same way.
+    tokenized = c.tokenize(test, c.Lang.EN, 'moses')
+    print(tokenized)
+    assert tokenized == "It 's i 'm couldn 't"
     # TokTok kind-of messes them up
     tokenized = c.tokenize(test, c.Lang.EN, 'toktok')
     print(tokenized)
-    assert tokenized == "It ' s i ' m couldn ' t\n"
+    assert tokenized == "It ' s i ' m couldn ' t"
 
-    test = "http://www.malfong.is\n"
+    # URLs
+    test = "http://www.malfong.is"
+    # NLTK breaks up URLs
     tokenized = c.tokenize(test, c.Lang.EN, 'nltk')
     print(tokenized)
-    # TODO: The NLTK tokenizer does not deal with URLs.
-    # assert tokenized == "http://www.malfong.is\n"
+    assert tokenized == "http : //www.malfong.is"
+    # Moses also breaks them up even further
+    tokenized = c.tokenize(test, c.Lang.EN, 'moses')
+    print(tokenized)
+    assert tokenized == "http : / / www.malfong.is"
+    # TokTok does not.
     tokenized = c.tokenize(test, c.Lang.EN, 'toktok')
     print(tokenized)
-    assert tokenized == "http://www.malfong.is\n"
+    assert tokenized == "http://www.malfong.is"
 
-    # Only TokTok will not mess-up the placeholders
-    test = "I will place @uri@ and @lt@."
+    # Placeholders
+    test = "I will place _uri_ and _lt_."
+    # NLTK does not break them up.
     tokenized = c.tokenize(test, c.Lang.EN, 'nltk')
     print(tokenized)
-    assert tokenized == "I will place @ uri @ and @ lt @ .\n"
-
+    assert tokenized == "I will place _uri_ and _lt_ ."
+    # Moses breaks them up
+    tokenized = c.tokenize(test, c.Lang.EN, 'moses')
+    print(tokenized)
+    assert tokenized == "I will place _ uri _ and _ lt _ ."
+    # TokTok does not break them up
     tokenized = c.tokenize(test, c.Lang.EN, method='toktok')
     print(tokenized)
-    assert tokenized == "I will place @uri@ and @lt@ .\n"
-
-    tokenized = c.tokenize(test, c.Lang.EN, method='moses')
-    print(tokenized)
-    assert tokenized == "I will place @ uri @ and @ lt @ .\n"
+    assert tokenized == "I will place _uri_ and _lt_ ."
 
 
 def test_lowercase_normalize():
@@ -254,14 +299,14 @@ def test_regexps():
     ]
     for test in tests_uri:
         print(test, c.regexp(test, [c.REGEXP_SUB["URI"]]))
-        assert c.regexp(test, [c.REGEXP_SUB["URI"]]) == "@uri@"
+        assert c.regexp(test, [c.REGEXP_SUB["URI"]]) == "_uri_"
     for test in tests_uri_simple:
         print(test, c.regexp(test, [c.REGEXP_SUB["URI-SIMPLE"]]))
-        assert c.regexp(test, [c.REGEXP_SUB["URI-SIMPLE"]]) == "@uri@"
+        assert c.regexp(test, [c.REGEXP_SUB["URI-SIMPLE"]]) == "_uri_"
     for test in tests_uri + tests_uri_simple:
         result = c.regexp(test, [c.REGEXP_SUB["URI"], c.REGEXP_SUB["URI-SIMPLE"]])
         print(test, result)
-        assert result == "@uri@"
+        assert result == "_uri_"
     for test in tests_uri_not:
         print(c.regexp(test, [c.REGEXP_SUB["URI"], c.REGEXP_SUB["URI-SIMPLE"]]))
-        assert c.regexp(test, [c.REGEXP_SUB["URI"], c.REGEXP_SUB["URI-SIMPLE"]]) != "@uri@"
+        assert c.regexp(test, [c.REGEXP_SUB["URI"], c.REGEXP_SUB["URI-SIMPLE"]]) != "_uri_"

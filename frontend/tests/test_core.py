@@ -8,8 +8,9 @@ def test_regexp():
     # u'\u0000'-u'\u001f', u'\u007f' - Non-printing characters
     patterns = [(re.compile(r"[\u0000-\u001f|\u007f]"), 'a')]
     string = '\u0000a\u001fa\u007fa\u0001a\u007fa'
-    output = c.regexp(string, patterns)
+    output, counter = c.regexp(string, patterns, count=True)
     assert output == 'aaaaaaaaaa'
+    assert counter[str(patterns[0][0])] == 5
 
 
 def test_specific_regexps():
@@ -20,9 +21,11 @@ morgun, hátt í 2 klukkutíma í dag, og þá hefði ég vissulega þegið þá
     regexps = [
         c.REGEXP_SUB["IS-COMBINE-NEWLINE"]
     ]
-    result = c.regexp(test, regexps)
+    result, counter = c.regexp(test, regexps, count=True)
     print(test)
     print(result)
+    print(counter)
+    assert counter[str(c.REGEXP_SUB["IS-COMBINE-NEWLINE"][0])] == 2
     assert len(re.findall(r"\n", test)) == 3
     assert len(re.findall(r"\n", result)) == 1
 
@@ -107,6 +110,42 @@ tilliti til hemlabúnaðar \" er átt við dráttarvélar sem eru eins í grundv
     print(tokenized)
     assert tokenized == "1.1.1.1.1 . Dráttarvélargerð með tilliti til hemlabúnaðar Með \" dráttarvélargerð með \
 tilliti til hemlabúnaðar \" er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem :"
+
+
+def test_fix_incorrect_abbreviations():
+    # Error prone sentences:
+    tests = ["gr.)? • hvernig er það ákvarðað hvort mengun jarðvegs og grunnvatns „veldur umtalsverðri áhættu fyrir \
+heilbrigði manna eða umhverfið“ (3mgr22gr.)?",
+             "framkvæmdastjórnin skal einnig birta skýrslu um framvindu framkvæmdarinnar byggða á yfirlitsskýrslum, \
+sem aðildarríki leggja fram skv2mgr15gr., og leggja hana fyrir evrópuþingið og aðildarríkin eigi síðar en tveimur \
+árum eftir dagsetningarnar sem um getur í 5og 8gr.",
+             "hlíti hlutaðeigandi aðildarríki ekki skilyrtum eða neikvæðum ákvörðunum, einkum í tilvikum sem um getur\
+ í 14gr., er framkvæmdastjórninni heimilt að vísa málinu beint til dómstóls evrópubandalaganna í \
+ samræmi við 2mgr93grsáttmálans.\
+enn fremur skal synja um leyfi ef dæmi eru um að upplýsingar eða skjöl, sem fylgja til stuðnings umsókninni, eru ekki í samræmi við ákvæði 8gr., 10gr., 10gra,",
+             "í því skyni að ná markmiðunum, sem mælt er fyrir um í 1gr., skal bandalagið grípa til þverlægra aðgerða \
+             og ráðstaf- ana til stuðnings sviðsnetum, eins og kveðið er á um í 4til 10grog í samræmi við ida-vinnuáætlunina.",
+             "með fyrirvara um þau upplýsingaskipti og notkun upp lýsinga, sem veittar eru skv3mgr5grog 1mgr11gr., skal\
+ við málsmeðferð þar sem ekki er farið að tilskildum ákvæðum virða meginreglurnar um trúnaðarkvöð og þagnarskyldu.",
+             "greða, í tilviki lánastofnana sem reikna fjárhæðir áhættuveginna áhættuskuldbindinga og vænts \
+taps skv83.–89gr., þ au hafa ekki lánshæfismat frá viðurkenndri utanaðkomandi lánshæfismatsstofnun og eru \
+metin innanhúss með líkur á vanskilum jafngildar þeim sem tengjast lánshæfismati utanaðkomandi lánshæfismatsstofnunar, \
+sem lögbær yfirvöld hafa ákvarðað að sé tengt"
+             ]
+    regexps = [
+        (re.compile(
+            r"(\d+(.\d+)?)(mgr|gr|skv|og|eða|til|með|janúar|febrúar|mars|apríl|maí|júní|júlí|ágúst|september|október|nóvember|desember)"),
+         r"\1. \3"),
+        (re.compile(r"(skv)(?=[^.])"), r"\1."),
+        (re.compile(r"(\d+(.\d+)?\. )(mgr|gr)(?=[^.])"), r"\1\3. ")
+    ]
+    results = [c.regexp(sent, regexps, count=True) for sent in tests]
+    print(results[0])
+    assert results[0][1][str(regexps[0][0])] == 2
+    print(results[1])
+    assert results[1][1][str(regexps[0][0])] == 4
+    print(results[2])
+    assert results[2][1][str(regexps[0][0])] == 6
 
 
 def test_en_tok():

@@ -177,6 +177,7 @@ def preprocess_v3(sent: str, lang: c.Lang) -> str:
 
     return sent
 
+
 def translate_bulk(sentences: List[str], s_lang: c.Lang, model: str) -> List[str]:
     """
     Preprocesses and translates the sentences from source language to target language.

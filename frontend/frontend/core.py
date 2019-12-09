@@ -2,9 +2,10 @@
 Sentence level processing. Some useful functions to process sentences.
 """
 import re
+from collections import Counter
 from unicodedata import normalize
 from typing import Tuple, List, Dict, Callable, \
-    Sequence
+    Sequence, Union
 from enum import Enum
 from functools import partial
 
@@ -55,19 +56,26 @@ REGEXP_SUB: Dict[str, Tuple[re.Pattern, str]] = {
 }
 
 
-def regexp(sent: str, regexps: List[Tuple[re.Pattern, str]]) -> str:
+def regexp(sent: str, regexps: List[Tuple[re.Pattern, str]], count=False) -> Union[str, Tuple[str, Counter]]:
     """Applies a list of regular expressions and their substitutions to a string.
 
     :param sent: The sentence to process.\n
     :param regexps: A list of Tuples (re.Pattern, str).\n
     The pattern is used to match and the str is used as a replacement.
     The str supports referencing groups in the match expression.\n
-    :return: The processed sentence.
+    :param count: If set True, will count instances of replacements of each expression.
+    :return: The processed sentence and a Counter which contains the number of substitutions made for each Pattern.
     """
     processed_line = sent
+    if count:
+        replacements = Counter()
     for regular_expression, sub_string in regexps:
-        processed_line = re.sub(
+        processed_line, num_replacements = re.subn(
             regular_expression, sub_string, processed_line)
+        if count:
+            replacements[str(regular_expression)] += num_replacements
+    if count:
+        return processed_line, replacements
     return processed_line
 
 

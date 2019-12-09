@@ -21,7 +21,7 @@ def test_process_v2():
     test = "This is an English sentence, with [ ] () www.mbl.is i.e. <awsome>! 60%"
     result = a.preprocess(test, c.Lang.EN, "v2")
     print(result)
-    assert result == "this is an english sentence , with _uri_ i.e. _lt_ awsome ! _gt_ 60 %"
+    assert result == "this is an english sentence , with _uri_ i.e. _lt_ awsome _gt_ ! 60 %"
 
 
 def test_process_v3():

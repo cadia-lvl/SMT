@@ -99,6 +99,10 @@ Leiðbeiningar til þess að gefa út nýja útgáfu af `frontend`.
 ### Útgáfur
 Hér er listi yfir breytingar á milli útgáfa.
 
+#### 2.0.6
+- Miðeind v2.0.1 tokenizer
+- Regexp skilar núna fjölda innsetninga.
+
 #### 2.0.5
 - Nokkrar villur lagaðar.
 - Bætti við skjölun á Python pakka undir `docs`.

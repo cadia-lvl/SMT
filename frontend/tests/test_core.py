@@ -36,8 +36,7 @@ def test_is_tok():
     # Miðeind deep tokenization expands some abbreviations, but inconsistently.
     tokenized = c.tokenize(test, c.Lang.IS, method="pass-through")
     print(tokenized)
-    # TODO: wait for patch due to inconsistency in abbreviation expansion: https://github.com/mideind/Tokenizer/issues/11.
-    # assert tokenized == "númer , greinir , fyrsti fyrsti , 1. , tveggja , og svo framvegis ."
+    assert tokenized == "númer , grein , fyrsti fyrsti , 1. , tveggja , og svo framvegis ."
     # Miðeind shallow tokenzation understands abbreviations but does not expand.
     tokenized = c.tokenize(test, c.Lang.IS, method="shallow")
     print(tokenized)

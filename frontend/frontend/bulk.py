@@ -295,8 +295,10 @@ def in_parallel(path: Path,
     with ProcessPoolExecutor(max_workers=threads) as executor:
         replacements = dict()
         with path.open() as f_in, out_path.open('w+') as f_out:
-            # get the list now since executor.map will read everyting to mem.
+            # get the list now since executor.map will read everything to memory.
             f_list = f_in.readlines()
+            # we remove the newline from the sentence.
+            f_list = [line.strip() for line in f_list]
             results = tqdm(executor.map(
                 partial(func, **kwargs),
                 f_list,
@@ -309,7 +311,8 @@ def in_parallel(path: Path,
                     write_out = result[0]
                     if isinstance(result[1], Counter):
                         replacements.update(result[1])
-                f_out.write(write_out)
+                # we add a newline to the sentence.
+                f_out.write(write_out + "\n")
 
     return replacements
 
@@ -443,7 +446,7 @@ def tokenize(path: Path,
     return in_parallel(path,
                        out_path,
                        THREADS,
-                       partial(apply_tokenizer, tokenizer=tok, add_newline=True)
+                       partial(apply_tokenizer, tokenizer=tok)
                        )
 
 

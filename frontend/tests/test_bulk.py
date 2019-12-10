@@ -49,23 +49,6 @@ def test_load_pipeline(list_data_dir):
     assert len(raw_pipeline) == 2
 
 
-def test_remove_illegal_chars(data_dir):
-    in_stage = 'cat'
-    out_stage = 'regexp'
-    p_in = b.read(data_dir, c.Lang.IS, in_stage)
-    p_out = b.write(data_dir, c.Lang.IS, out_stage)
-    # u'\u0000'-u'\u001f', u'\u007f' - Non-printing characters
-    patterns = [(re.compile(r"[\u0000-\u001f|\u007f]"), '')]
-
-    # Check that we find some of these characters in the first lines
-    assert ord('\u000A') == 10
-    assert any(ord(char) == 10 for line in b.peek(p_in) for char in line)
-
-    print(b.regexp(p_in, p_out, patterns))
-    # Now all the newlines are gone (atleast from the first lines).
-    assert all(ord(char) != 10 for line in b.peek(p_out) for char in line)
-
-
 def test_combine_corpora(list_data_dir, data_dir):
     stages = [
         'tatoeba',

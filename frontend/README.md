@@ -99,6 +99,10 @@ Leiðbeiningar til þess að gefa út nýja útgáfu af `frontend`.
 ### Útgáfur
 Hér er listi yfir breytingar á milli útgáfa.
 
+#### 2.0.7
+- Núna sér `bulk.py` `in_parallel` um að fjarlægja `char(10)` þegar setningar eru lesnar og skrifa 
+inn þegar setningar eru skrifaðar.
+
 #### 2.0.6
 - Miðeind v2.0.1 tokenizer
 - Regexp skilar núna fjölda innsetninga.

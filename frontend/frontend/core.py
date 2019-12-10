@@ -121,16 +121,13 @@ def get_tokenizer(lang: Lang, method: str) -> Callable[[str], List[str]]:
         return partial(_tokenize_is, method=method)
 
 
-def apply_tokenizer(sentence: str, tokenizer: Callable[[str], List[str]], add_newline: bool = False) -> str:
+def apply_tokenizer(sentence: str, tokenizer: Callable[[str], List[str]]) -> str:
     """Applies a tokenization function to a sentence.
 
     :param sentence: The sentence to process.\n
     :param tokenizer: The tokenizer function to use.\n
-    :param add_newline: If set True, adds a new-line after tokenization.
     :return: The processed sentence.
     """
-    if add_newline:
-        return " ".join(tokenizer(sentence)) + "\n"
     return " ".join(tokenizer(sentence))
 
 

@@ -27,7 +27,8 @@ setuptools.setup(
         'tqdm',
         'aiohttp-xmlrpc',
         'flask',
-        'flask-restful'
+        'flask-restful',
+        'flask-cors'
     ],
     entry_points='''
         [console_scripts]

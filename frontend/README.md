@@ -99,6 +99,9 @@ Leiðbeiningar til þess að gefa út nýja útgáfu af `frontend`.
 ### Útgáfur
 Hér er listi yfir breytingar á milli útgáfa.
 
+#### 2.0.8
+- Bætti við stuðning við CORS.
+
 #### 2.0.7
 - Núna sér `bulk.py` `in_parallel` um að fjarlægja `char(10)` þegar setningar eru lesnar og skrifa 
 inn þegar setningar eru skrifaðar.

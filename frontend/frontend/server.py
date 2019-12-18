@@ -1,6 +1,7 @@
 """A server front-end to an MT system. A RESTful interface. Implements a translation interface to Moses.
 """
 from flask import Flask
+from flask_cors import CORS
 from flask_restful import Resource, Api, reqparse
 import logging
 
@@ -8,6 +9,7 @@ from . import api as a
 
 log = logging.getLogger('frontend.server')
 app = Flask(__name__)
+CORS(app)
 api = Api(app)
 
 parser = reqparse.RequestParser()

@@ -11,7 +11,9 @@ from functools import partial
 
 import tokenizer as mideind_tok
 # also in sacremoses: punct norm, detok and sent split
-from sacremoses import MosesTokenizer
+from sacremoses import MosesTokenizer, MosesDetokenizer
+
+from . import definitions as d
 
 
 class Lang(Enum):
@@ -176,6 +178,38 @@ def _tok_placeholders(kind, txt, val):
     if kind == mideind_tok.TOK.UNKNOWN:
         return "UNKOWN"
     return "UNKOWN"
+
+
+def detokenize(sentence: str, lang: Lang, method: str):
+    """Detokenizes a sentence using the specified method.
+
+    :param sentence: The sentence to process.\n
+    :param lang: The language of the sentence.\n
+    :param method: The detokenization method to use.\n
+    :return: The processed sentence.
+
+    Supported methods:
+
+    - IS(default) "shallow": Will tokenize the input and then detokenize it again. Mideind tokenizer expects the
+    input to be a List[TOK], not a string.
+    - EN(default): "moses": The input needs to be preprocessed by "pre_detokenization_moses()" before detokenization.
+
+    """
+    if lang == Lang.EN and method == "moses":
+        tokens = sentence.split(" ")
+        detok = MosesDetokenizer(lang='en')
+        return detok.detokenize(tokens, unescape=False)
+    if lang == Lang.IS and method == 'shallow':
+        tokenized = list(mideind_tok.tokenize(sentence, normalize=False))
+        return mideind_tok.detokenize(tokenized, normalize=False)
+    raise ValueError("Unkown method for detokenization")
+
+
+def pre_detokenization_moses(sentence: str) -> str:
+    """
+    Fixes the translated
+    """
+    return re.sub(r"' ", r"'", sentence)
 
 
 def known_tok_fraction(sentence: str, known_tokens: Sequence[str]) -> float:

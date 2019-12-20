@@ -111,6 +111,69 @@ tilliti til hemlabúnaðar \" er átt við dráttarvélar sem eru eins í grundv
 tilliti til hemlabúnaðar \" er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem :"
 
 
+def test_detokenizer():
+    import tokenizer
+    tokenized = list(tokenizer.tokenize('prófa "gæsalappir" í detok', normalize=False))
+    print(tokenized)
+    detokenized = tokenizer.detokenize(tokenized, normalize=False)
+    print(detokenized)
+    spaces_fix = tokenizer.correct_spaces(detokenized)
+    print(spaces_fix)
+
+    from sacremoses import MosesDetokenizer, MosesTokenizer
+    tok = MosesTokenizer(lang='en')
+    detok = MosesDetokenizer(lang='en')
+    tokenized = tok.tokenize('testing "quotes" in detok', escape=False)
+    print(tokenized)
+    detokenized = detok.detokenize(tokenized, unescape=False)
+    print(detokenized)
+
+
+def test_is_detok():
+    # Abbreviations
+    test = "nr., gr., 1sti fyrsti, 1., 2ja, o.s.frv."
+    mt_output = c.tokenize(test, c.Lang.IS, method="shallow")
+    print(mt_output)
+    detokenized = c.detokenize(mt_output, c.Lang.IS, method="shallow")
+    print(detokenized)
+    assert detokenized == test
+
+    # Compounds / Percentages:
+    test = "H2O, CO2, 9%"
+    mt_output = c.tokenize(test, c.Lang.IS, method="shallow")
+    print(mt_output)
+    detokenized = c.detokenize(mt_output, c.Lang.IS, method="shallow")
+    print(detokenized)
+    assert detokenized == test
+
+    # URLs:
+    test = "http://www.malfong.is"
+    mt_output = c.tokenize(test, c.Lang.IS, method="shallow")
+    print(mt_output)
+    detokenized = c.detokenize(mt_output, c.Lang.IS, method="shallow")
+    print(detokenized)
+    assert detokenized == test
+
+    # Placeholders:
+    test = "ég mun setja _uri_ og _lt_."
+    mt_output = c.tokenize(test, c.Lang.IS, method="shallow")
+    print(mt_output)
+    detokenized = c.detokenize(mt_output, c.Lang.IS, method="shallow")
+    print(detokenized)
+    assert detokenized == "ég mun setja _ uri _ og _ lt _."
+
+    # Sections:
+    test = "1.1.1.1.1. dráttarvélargerð með tilliti til hemlabúnaðar með \"dráttarvélargerð með tilliti til \
+hemlabúnaðar\" er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem:"
+    mt_output = c.tokenize(test, c.Lang.IS, method="shallow")
+    print(mt_output)
+    detokenized = c.detokenize(mt_output, c.Lang.IS, method="shallow")
+    print(detokenized)
+    # The Mideind tokenizer cannot handle English quotation marks (").
+    assert detokenized == "1.1.1.1.1. dráttarvélargerð með tilliti til hemlabúnaðar með \" dráttarvélargerð með tilliti til \
+hemlabúnaðar \" er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem:"
+
+
 def test_fix_incorrect_abbreviations():
     # Error prone sentences:
     tests = ["gr.)? • hvernig er það ákvarðað hvort mengun jarðvegs og grunnvatns „veldur umtalsverðri áhættu fyrir \
@@ -190,6 +253,49 @@ def test_en_tok():
     tokenized = c.tokenize(test, c.Lang.EN, 'moses')
     print(tokenized)
     assert tokenized == "I will place _ uri _ and _ lt _ ."
+
+
+def test_en_detok():
+    # Abbreviations:
+    test = "nr., art., 1st first, 1., 2nd"
+    mt_output = c.tokenize(test, c.Lang.EN, method="moses")
+    print(mt_output)
+    detokenized = c.detokenize(mt_output, c.Lang.EN, method="moses")
+    print(detokenized)
+    assert detokenized == test
+
+    # Compounds / Percentages:
+    test = "H2O, CO2, 9%"
+    mt_output = c.tokenize(test, c.Lang.EN, method="moses")
+    print(mt_output)
+    detokenized = c.detokenize(mt_output, c.Lang.EN, method="moses")
+    print(detokenized)
+    assert detokenized == test
+
+    # Contractions:
+    test = "It's i'm couldn't"
+    mt_output = c.tokenize(test, c.Lang.EN, method="moses")
+    print(mt_output)
+    detokenized = c.detokenize(mt_output, c.Lang.EN, method="moses")
+    print(detokenized)
+    assert detokenized == test
+
+    # URLs
+    test = "http://www.malfong.is"
+    # Moses cannot fix URLs again.
+    mt_output = c.tokenize(test, c.Lang.EN, method="moses")
+    print(mt_output)
+    detokenized = c.detokenize(mt_output, c.Lang.EN, method="moses")
+    print(detokenized)
+    assert detokenized == "http: / / www.malfong.is"
+
+    # Placeholders
+    test = "I will place _uri_ and _lt_."
+    mt_output = "I will place _uri_ and _lt_ ."
+    print(mt_output)
+    detokenized = c.detokenize(mt_output, c.Lang.EN, method="moses")
+    print(detokenized)
+    assert detokenized == test
 
 
 def test_lowercase_normalize():

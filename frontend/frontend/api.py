@@ -182,7 +182,38 @@ def preprocess_v3(sent: str, lang: c.Lang) -> str:
     return sent
 
 
-def translate_bulk(sentences: List[str], s_lang: c.Lang, model: str) -> List[str]:
+def postprocess(sent: str, lang: c.Lang, version: str) -> str:
+    """
+    Postprocesses the sentence after translation as specified by the version.
+    For further details of the differences between version, see the corresponding functions.\n
+    Only implemented from version 3.
+
+    :param sent: The sentence to process.\n
+    :param lang: The language of the sentence.\n
+    :param version: The version of processing to use.\n
+    :return: The processed sentence.
+    """
+    if version == "v1":
+        pass
+    elif version == "v2":
+        pass
+    elif version == "v3":
+        sent = postprocess_v3(sent, lang)
+
+    return sent
+
+
+def postprocess_v3(sent: str, lang: c.Lang) -> str:
+    method = "shallow"
+    if lang == c.Lang.EN:
+        method = "moses"
+    sent = c.detokenize(sent, lang, method)
+    sent = c.regexp(sent, [d.SUB_FIX_PLACEHOLDERS])
+
+    return sent
+
+
+def translate_bulk(sentences: List[str], s_lang: c.Lang, t_lang: c.Lang, model: str, id: str) -> List[str]:
     """
     Preprocesses and translates the sentences from source language to target language.
     Uses the endpoint defined by model and preprocessing steps for the model.

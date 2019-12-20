@@ -99,6 +99,11 @@ Leiðbeiningar til þess að gefa út nýja útgáfu af `frontend`.
 ### Útgáfur
 Hér er listi yfir breytingar á milli útgáfa.
 
+#### 2.1.0
+- Núna er hægt að eftirvinna setningar.
+- Regexps/sub sett undir sér skrá (`definitions.py`).
+- Ekki lengur stuðningur við NLTK og TokTok tilreiðara (v1).
+
 #### 2.0.8
 - Bætti við stuðning við CORS.
 

@@ -19,9 +19,8 @@ setuptools.setup(
     include_package_data=True,
     install_requires=[
         'Click',
-        'nltk',
         'sacremoses',
-        'tokenizer',
+        'tokenizer==2.0.3',
         'translate-toolkit',
         'lxml',
         'tqdm',

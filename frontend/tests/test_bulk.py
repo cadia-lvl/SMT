@@ -136,7 +136,7 @@ def test_in_parallel(data_dir):
     out_stage = 'regexp'
     p_in = b.read(data_dir, b.Lang.IS, in_stage)
     out = b.write(data_dir, b.Lang.IS, out_stage)
-    patterns = [(re.compile(r"[\u0000-\u001f|\u007f]"), '')]
+    patterns = [{'pattern': re.compile(r"[\u0000-\u001f|\u007f]"), 'repl': ''}]
 
     print(b.in_parallel(p_in,
                         out,

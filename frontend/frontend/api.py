@@ -13,6 +13,7 @@ from aiohttp import ClientTimeout
 from aiohttp_xmlrpc.client import ServerProxy
 
 from . import core as c
+from . import definitions as d
 
 log = logging.getLogger('frontend.api')
 
@@ -56,7 +57,8 @@ def preprocess(sent: str, lang: c.Lang, version: str) -> str:
     :return: The preprocessed sentence
     """
     if version == "v1":
-        sent = preprocess_v1(sent, lang)
+        # No longer supported.
+        pass
     elif version == "v2":
         sent = preprocess_v2(sent, lang)
     elif version == "v3":
@@ -68,6 +70,8 @@ def preprocess(sent: str, lang: c.Lang, version: str) -> str:
 
 def preprocess_v1(sent: str, lang: c.Lang) -> str:
     """
+    DEPRICATED
+
     Applies the same preprocessing steps to a sentence as used in
     baseline Moses en-is/is-en MT system.
 
@@ -82,8 +86,7 @@ def preprocess_v1(sent: str, lang: c.Lang) -> str:
     """
     sent = c.lowercase_normalize(sent)
     regexps = [
-        c.REGEXP_SUB['URI'],
-        c.REGEXP_SUB['EMPTY-BRACKETS']
+        d.SUB_URI
     ]
     sent = c.regexp(sent, regexps)
     if lang == c.Lang.EN:
@@ -91,13 +94,14 @@ def preprocess_v1(sent: str, lang: c.Lang) -> str:
     else:
         sent = c.tokenize(sent, lang, method="pass-through")
     regexps = [
-        c.REGEXP_SUB['PIPE'],
-        c.REGEXP_SUB['FIX-URI'],
-        c.REGEXP_SUB['LT'],
-        c.REGEXP_SUB['GT'],
-        c.REGEXP_SUB['BRACKET-OPEN'],
-        c.REGEXP_SUB['BRACKET-CLOSE']
+        d.SUB_PIPE,
+        d.SUB_LT,
+        d.SUB_GT,
+        d.SUB_BRACKET_OPEN,
+        d.SUB_BRACKET_CLOSE,
+        d.SUB_FIX_PLACEHOLDERS
     ]
+
     sent = c.regexp(sent, regexps)
 
     return sent
@@ -109,7 +113,7 @@ def preprocess_v2(sent: str, lang: c.Lang) -> str:
     baseline Moses en-is/is-en MT system.
 
     1. Lowercase & unicode normalize NFKC.
-    2. Add imporoved URI placeholders.
+    2. Add improved URI placeholders.
     3. Tokenize "is" with "pass-through", "en" with "moses".
     4. Fix URI placeholders and add more placeholders []()<>.
 
@@ -119,9 +123,8 @@ def preprocess_v2(sent: str, lang: c.Lang) -> str:
     """
     sent = c.lowercase_normalize(sent)
     regexps = [
-        c.REGEXP_SUB['URI'],
-        c.REGEXP_SUB['URI-SIMPLE'],
-        c.REGEXP_SUB['EMPTY-BRACKETS']
+        d.SUB_URI,
+        d.SUB_URI_SIMPLE,
     ]
     sent = c.regexp(sent, regexps)
     if lang == c.Lang.EN:
@@ -129,12 +132,12 @@ def preprocess_v2(sent: str, lang: c.Lang) -> str:
     else:
         sent = c.tokenize(sent, lang, method="pass-through")
     regexps = [
-        c.REGEXP_SUB['PIPE'],
-        c.REGEXP_SUB['FIX-URI'],
-        c.REGEXP_SUB['LT'],
-        c.REGEXP_SUB['GT'],
-        c.REGEXP_SUB['BRACKET-OPEN'],
-        c.REGEXP_SUB['BRACKET-CLOSE']
+        d.SUB_PIPE,
+        d.SUB_LT,
+        d.SUB_GT,
+        d.SUB_BRACKET_OPEN,
+        d.SUB_BRACKET_CLOSE,
+        d.SUB_FIX_PLACEHOLDERS
     ]
     sent = c.regexp(sent, regexps)
 
@@ -156,23 +159,24 @@ def preprocess_v3(sent: str, lang: c.Lang) -> str:
     """
     sent = c.lowercase_normalize(sent)
     regexps = [
-        c.REGEXP_SUB['URI'],
-        c.REGEXP_SUB['URI-SIMPLE'],
-        c.REGEXP_SUB['EMPTY-BRACKETS']
+        d.SUB_URI,
+        d.SUB_URI_SIMPLE,
     ]
+
     sent = c.regexp(sent, regexps)
     if lang == c.Lang.EN:
         sent = c.tokenize(sent, lang, method="moses")
     else:
         sent = c.tokenize(sent, lang, method="shallow")
     regexps = [
-        c.REGEXP_SUB['PIPE'],
-        c.REGEXP_SUB['FIX-URI'],
-        c.REGEXP_SUB['LT'],
-        c.REGEXP_SUB['GT'],
-        c.REGEXP_SUB['BRACKET-OPEN'],
-        c.REGEXP_SUB['BRACKET-CLOSE']
+        d.SUB_PIPE,
+        d.SUB_LT,
+        d.SUB_GT,
+        d.SUB_BRACKET_OPEN,
+        d.SUB_BRACKET_CLOSE,
+        d.SUB_FIX_PLACEHOLDERS
     ]
+
     sent = c.regexp(sent, regexps)
 
     return sent

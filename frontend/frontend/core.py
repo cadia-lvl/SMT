@@ -10,11 +10,8 @@ from enum import Enum
 from functools import partial
 
 import tokenizer as mideind_tok
-import nltk
 # also in sacremoses: punct norm, detok and sent split
 from sacremoses import MosesTokenizer
-
-nltk.download('punkt')
 
 
 class Lang(Enum):
@@ -23,57 +20,22 @@ class Lang(Enum):
     IS = 'is'
 
 
-REGEXP_SUB: Dict[str, Tuple[re.Pattern, str]] = {
-    # Taken from https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url?noredirect=1&lq=1
-    'URI-OLD': (
-        re.compile(
-            r'(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)'),
-        '_uri_'),
-    'IS-COMBINE-NEWLINE': (re.compile(r'([\w]+)\.\n([a-záðéíóúýþæö])'),
-                           r'\1. \2'),
-    'IS-SPLIT-NEWLINE': (re.compile(r'([\w\(\)\[\]\.]{2,})\.([A-ZÁÐÉÍÓÚÝÞÆÖ])'),
-                         r'\1. \2'),
-    'URI': (re.compile(
-        r"((http(s)?:\/\/)|(www)|([-a-zA-Z0-9:%_\+.~#?&/=]+?@))+([-a-zA-Z0-9@:%_\+.~#?&/=]+)"),
-            '_uri_'),
-    'URI-SIMPLE': (re.compile(r"([-a-zA-Z0-9@:%_\+.~#?&/=]+?)(\.is|\.com)"), "_uri_"),
-    'EMPTY-BRACKETS': (re.compile(r"[\[\(]\s*[\]\)]"), ""),
-    # u'\u007c' - |
-    'PIPE': (re.compile(r"\u007c"), '_pipe_'),
-    # u'\u003c', u'\u003e' - <, >
-    'LT': (re.compile(r"\u003c"), '_lt_'),
-    'GT': (re.compile(r"\u003e"), '_gt_'),
-    # u'\u005b', u'\u005d' - [, ]
-    'BRACKET-OPEN': (re.compile(r"\u005b"), '_brac_open_'),
-    'BRACKET-CLOSE': (re.compile(r"\u005d"), '_brac_close_'),
-    'FIX-URI': (re.compile(r"_ uri _"), '_uri_'),
-    'CRYLLIC': (re.compile(r'.*[\u0400-\u04FF\u0500-\u052F\u2DE0-\u2DFF\uA640-\uA69F]+.*'),
-                ''),
-    'GREEK': (re.compile(r'.*[\u0370-\u03bb\u03bd-\u03FF\u1F00-\u1FFF]+.*'), ''),
-    'UNKNOWN-CHARS': (re.compile(r'.*[žčšè¿ğūįł]+.*'), ''),
-    'NOT-WORDS': (re.compile(r'.*[\W\d_].*'), ''),
-    'NOT-WORDS-OLD': (re.compile(r'.*[\d();.:,•\-=?!_+@].*'), '')
-}
-
-
-def regexp(sent: str, regexps: List[Tuple[re.Pattern, str]], count=False) -> Union[str, Tuple[str, Counter]]:
+def regexp(sent: str, regexps: List[Dict], count=False) -> Union[str, Tuple[str, Counter]]:
     """Applies a list of regular expressions and their substitutions to a string.
 
     :param sent: The sentence to process.\n
-    :param regexps: A list of Tuples (re.Pattern, str).\n
-    The pattern is used to match and the str is used as a replacement.
-    The str supports referencing groups in the match expression.\n
+    :param regexps: A list of Dict with keywords for the subn expression.\n
+    Must contain "pattern" and "replace", the "string" is supplied by the function.\n
     :param count: If set True, will count instances of replacements of each expression.
     :return: The processed sentence and a Counter which contains the number of substitutions made for each Pattern.
     """
     processed_line = sent
     if count:
         replacements = Counter()
-    for regular_expression, sub_string in regexps:
-        processed_line, num_replacements = re.subn(
-            regular_expression, sub_string, processed_line)
+    for keywords in regexps:
+        processed_line, num_replacements = re.subn(string=processed_line, **keywords)
         if count:
-            replacements[str(regular_expression)] += num_replacements
+            replacements[str(keywords['pattern'])] += num_replacements
     if count:
         return processed_line, replacements
     return processed_line
@@ -98,17 +60,9 @@ def get_tokenizer(lang: Lang, method: str) -> Callable[[str], List[str]]:
     - IS: "placeholders", uses placeholders for some NEs.
     - IS: "moses", uses Moses tokenization. Poor performance for IS.
     - EN(default): "moses", Moses tokenization, splits up URLs. Poor abbreviation handling.
-    - EN: "nltk", splits up URLs.
-    - EN: "toktok", handles URLs, does not handle "." but at the end.
     """
     if lang == Lang.EN:
-        if method == "nltk":
-            # We use the word_tokenize NLTL tokenizer for english
-            return nltk.word_tokenize
         # o.w. we use Moses
-        if method == 'toktok':
-            toktok = nltk.tokenize.ToktokTokenizer()
-            return toktok.tokenize
         m_tok = MosesTokenizer(lang='en')
         return partial(m_tok.tokenize, escape=False)
     # Moses for 'is'
@@ -262,7 +216,7 @@ def remove_non_words(sentence: str) -> str:
     result = []
     tokens = sentence.split()
     for token in tokens:
-        if not contains_regexp(token, REGEXP_SUB['NOT-WORDS'][0]):
+        if not contains_regexp(token, d.NOT_WORDS):
             result.append(token)
     return " ".join(result)
 

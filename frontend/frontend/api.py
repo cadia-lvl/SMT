@@ -203,13 +203,14 @@ def translate_bulk(sentences: List[str], s_lang: c.Lang, model: str) -> List[str
         start = time()
 
         try:
-            tasks = [asyncio.create_task(translate(sentence, s_lang, client, PREPROCESSING[model])) for sentence in sentences]
+            tasks = [asyncio.create_task(translate(sentence, s_lang, t_lang, client, PREPROCESSING[model], id)) for
+                     sentence in sentences]
             translated = await asyncio.gather(*tasks)
         except asyncio.TimeoutError as e:
             log.error(f"Translation timed-out", e)
 
         end = time()
-        log.info(f"Bulk translation took={end-start:.2f}\nTranslated: {sentences} -> {translated}")
+        log.info(f"Bulk translation id={id}: took={end - start:.2f}")
         await client.close()
         return translated
 
@@ -218,24 +219,32 @@ def translate_bulk(sentences: List[str], s_lang: c.Lang, model: str) -> List[str
     return translated
 
 
-async def translate(sent: str, s_lang: c.Lang, proxy: ServerProxy, version: str) -> str:
+async def translate(sent: str, s_lang: c.Lang, t_lang: c.Lang, proxy: ServerProxy, version: str, id: str) -> str:
     """
     Preprocesses and translates the sentence from source language to target language.
     Uses the endpoint defined by model and preprocessing steps for the model.
 
     :param sent: The sentence to translate.\n
     :param s_lang: The source language.\n
+    :param t_lang: The target language.\n
     :param proxy: An XMLRPC proxy.\n
     :param version: The preprocessing version\n
+    :param id: The UUID of the translation request.\n
     :return: The translated sentence.
     """
-    log.info(f"Translating: sent={sent}, s_lang={s_lang}, version={version}")
-    start = time()
+    log.info(f"Translation id={id}: source={sent}")
 
     sentence = preprocess(sent, s_lang, version)
-    result = await proxy.translate({'text': sentence})
+    log.info(f"Translation id={id}: preprocessed={sentence}")
 
+    start = time()
+    result = await proxy.translate({'text': sentence})
     end = time()
+    log.info(f"Translation id={id}: took={end - start:.2f}")
+
     translated = result['text']
-    log.info(f"Single translation took={end-start:.2f}\nTranslated: {sent} -> {translated}")
+    log.info(f"Translation id={id}: {sentence} -> {translated}")
+
+    translated = postprocess(translated, t_lang, version)
+    log.info(f"Translation id={id}: postprocessed={translated}")
     return translated

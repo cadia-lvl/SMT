@@ -3,7 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=10
 #SBATCH --mem=16GB
-#SBATCH --time=7:00:00
+#SBATCH --time=6:00:00
 set -euxo
 LOCAL=0
 if [ $LOCAL = 1 ] ; then
@@ -21,12 +21,12 @@ DATA_DIR="${WORK_DIR}/process"
 MOSESDECODER="/opt/moses"
 MOSESDECODER_TOOLS="/opt/moses_tools"
 
-LANG_FROM="en"
-LANG_TO="is"
-MODIFIER="mideind-v2"
-TRAINING_DATA="${DATA_DIR}/parice-train-final"
-VALIDATION_DATA="${DATA_DIR}/parice-val-final"
-TEST_DATA="${DATA_DIR}/parice-test-final"
+LANG_FROM="is"
+LANG_TO="en"
+MODIFIER="tokenization"
+TRAINING_DATA="${DATA_DIR}/parice-train-processed-tok_low"
+VALIDATION_DATA="${DATA_DIR}/parice-val-final-tok_low"
+TEST_DATA="${DATA_DIR}/parice-test-final-tok_low"
 # Set LM_EXTRA_DATA to "" if no extra lm data.
 # LM_EXTRA_DATA="${DATA_DIR}/rmh-final.is"
 # LM_EXTRA_DATA="${DATA_DIR}/mono-final.en"
@@ -46,6 +46,19 @@ function run_in_singularity() {
 	docker://haukurp/moses-smt:$MOSES_TAG \
   "$@"
 }
+# Test if data is there
+function check_data() {
+  if [ ! -f $1 ]; then
+    echo "File does not exist. Exiting..."
+    exit 1
+  fi
+}
+check_data $TRAINING_DATA.en
+check_data $TRAINING_DATA.is
+check_data $VALIDATION_DATA.en
+check_data $VALIDATION_DATA.is
+check_data $TEST_DATA.en
+check_data $TEST_DATA.is
 
 # Data prep
 run_in_singularity ${MOSESDECODER}/scripts/training/clean-corpus-n.perl $TRAINING_DATA $LANG_FROM $LANG_TO $CLEAN_DATA $CLEAN_MIN_LENGTH $CLEAN_MAX_LENGTH

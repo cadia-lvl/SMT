@@ -1,11 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=train-moses
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=15
-#SBATCH --mem=32GB
-#SBATCH --time=18:00:00
-#SBATCH --output=slurm.out
-#SBATCH --error=slurm.out
+#SBATCH --cpus-per-task=10
+#SBATCH --mem=16GB
+#SBATCH --time=7:00:00
 set -euxo
 LOCAL=0
 if [ $LOCAL = 1 ] ; then
@@ -25,12 +23,13 @@ MOSESDECODER_TOOLS="/opt/moses_tools"
 
 LANG_FROM="en"
 LANG_TO="is"
-MODIFIER="test"
+MODIFIER="mideind-v2"
 TRAINING_DATA="${DATA_DIR}/parice-train-final"
 VALIDATION_DATA="${DATA_DIR}/parice-val-final"
 TEST_DATA="${DATA_DIR}/parice-test-final"
 # Set LM_EXTRA_DATA to "" if no extra lm data.
 # LM_EXTRA_DATA="${DATA_DIR}/rmh-final.is"
+# LM_EXTRA_DATA="${DATA_DIR}/mono-final.en"
 LM_EXTRA_DATA=""
 
 CLEAN_MIN_LENGTH=1

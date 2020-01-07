@@ -1,15 +1,16 @@
 import re
 
 import frontend.core as c
-
+import frontend.definitions as d
 
 def test_regexp():
     # Lets test on a string
     # u'\u0000'-u'\u001f', u'\u007f' - Non-printing characters
-    patterns = [(re.compile(r"[\u0000-\u001f|\u007f]"), 'a')]
+    patterns = [{'pattern': re.compile(r"[\u0000-\u001f|\u007f]"), 'repl': 'a'}]
     string = '\u0000a\u001fa\u007fa\u0001a\u007fa'
-    output = c.regexp(string, patterns)
+    output, counter = c.regexp(string, patterns, count=True)
     assert output == 'aaaaaaaaaa'
+    assert counter[str(patterns[0]['pattern'])] == 5
 
 
 def test_specific_regexps():
@@ -18,11 +19,13 @@ nýtt þann tíma, sem farið hefur í það hjá stjórnarliðinu að semja um 
 morgun, hátt í 2 klukkutíma í dag, og þá hefði ég vissulega þegið þá ábendingu að kynna mér frekar, hvað hv.\n\
 þm.\nSjálfstfl.\nhefðu sagt um ýmis mál hér á undanförnum vikum eða mánuðum. "
     regexps = [
-        c.REGEXP_SUB["IS-COMBINE-NEWLINE"]
+        d.SUB_IS_COMBINE_NEWLINE
     ]
-    result = c.regexp(test, regexps)
+    result, counter = c.regexp(test, regexps, count=True)
     print(test)
     print(result)
+    print(counter)
+    assert counter[str(regexps[0]['pattern'])] == 2
     assert len(re.findall(r"\n", test)) == 3
     assert len(re.findall(r"\n", result)) == 1
 
@@ -33,8 +36,7 @@ def test_is_tok():
     # Miðeind deep tokenization expands some abbreviations, but inconsistently.
     tokenized = c.tokenize(test, c.Lang.IS, method="pass-through")
     print(tokenized)
-    # TODO: wait for patch due to inconsistency in abbreviation expansion: https://github.com/mideind/Tokenizer/issues/11.
-    # assert tokenized == "númer , greinir , fyrsti fyrsti , 1. , tveggja , og svo framvegis ."
+    assert tokenized == "númer , grein , fyrsti fyrsti , 1. , tveggja , og svo framvegis ."
     # Miðeind shallow tokenzation understands abbreviations but does not expand.
     tokenized = c.tokenize(test, c.Lang.IS, method="shallow")
     print(tokenized)
@@ -90,8 +92,8 @@ def test_is_tok():
     assert tokenized == "ég mun setja _ uri _ og _ lt _ ."
 
     # Sections:
-    test = "1.1.1.1.1. Dráttarvélargerð með tilliti til hemlabúnaðar Með\"dráttarvélargerð með tilliti til \
-hemlabúnaðar\"er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem:"
+    test = "1.1.1.1.1. Dráttarvélargerð með tilliti til hemlabúnaðar Með \"dráttarvélargerð með tilliti til \
+hemlabúnaðar\" er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem:"
     # Miðeind pass-through handles sections (almost) almost correctly. No longer translates " to “
     tokenized = c.tokenize(test, c.Lang.IS, method="pass-through")
     print(tokenized)
@@ -109,81 +111,191 @@ tilliti til hemlabúnaðar \" er átt við dráttarvélar sem eru eins í grundv
 tilliti til hemlabúnaðar \" er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem :"
 
 
+def test_detokenizer():
+    import tokenizer
+    tokenized = list(tokenizer.tokenize('prófa "gæsalappir" í detok', normalize=False))
+    print(tokenized)
+    detokenized = tokenizer.detokenize(tokenized, normalize=False)
+    print(detokenized)
+    spaces_fix = tokenizer.correct_spaces(detokenized)
+    print(spaces_fix)
+
+    from sacremoses import MosesDetokenizer, MosesTokenizer
+    tok = MosesTokenizer(lang='en')
+    detok = MosesDetokenizer(lang='en')
+    tokenized = tok.tokenize('testing "quotes" in detok', escape=False)
+    print(tokenized)
+    detokenized = detok.detokenize(tokenized, unescape=False)
+    print(detokenized)
+
+
+def test_is_detok():
+    # Abbreviations
+    test = "nr., gr., 1sti fyrsti, 1., 2ja, o.s.frv."
+    mt_output = c.tokenize(test, c.Lang.IS, method="shallow")
+    print(mt_output)
+    detokenized = c.detokenize(mt_output, c.Lang.IS, method="shallow")
+    print(detokenized)
+    assert detokenized == test
+
+    # Compounds / Percentages:
+    test = "H2O, CO2, 9%"
+    mt_output = c.tokenize(test, c.Lang.IS, method="shallow")
+    print(mt_output)
+    detokenized = c.detokenize(mt_output, c.Lang.IS, method="shallow")
+    print(detokenized)
+    assert detokenized == test
+
+    # URLs:
+    test = "http://www.malfong.is"
+    mt_output = c.tokenize(test, c.Lang.IS, method="shallow")
+    print(mt_output)
+    detokenized = c.detokenize(mt_output, c.Lang.IS, method="shallow")
+    print(detokenized)
+    assert detokenized == test
+
+    # Placeholders:
+    test = "ég mun setja _uri_ og _lt_."
+    mt_output = c.tokenize(test, c.Lang.IS, method="shallow")
+    print(mt_output)
+    detokenized = c.detokenize(mt_output, c.Lang.IS, method="shallow")
+    print(detokenized)
+    assert detokenized == "ég mun setja _ uri _ og _ lt _."
+
+    # Sections:
+    test = "1.1.1.1.1. dráttarvélargerð með tilliti til hemlabúnaðar með \"dráttarvélargerð með tilliti til \
+hemlabúnaðar\" er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem:"
+    mt_output = c.tokenize(test, c.Lang.IS, method="shallow")
+    print(mt_output)
+    detokenized = c.detokenize(mt_output, c.Lang.IS, method="shallow")
+    print(detokenized)
+    # The Mideind tokenizer cannot handle English quotation marks (").
+    assert detokenized == "1.1.1.1.1. dráttarvélargerð með tilliti til hemlabúnaðar með \" dráttarvélargerð með tilliti til \
+hemlabúnaðar \" er átt við dráttarvélar sem eru eins í grundvallaratriðum svo sem:"
+
+
+def test_fix_incorrect_abbreviations():
+    # Error prone sentences:
+    tests = ["gr.)? • hvernig er það ákvarðað hvort mengun jarðvegs og grunnvatns „veldur umtalsverðri áhættu fyrir \
+heilbrigði manna eða umhverfið“ (3mgr22gr.)?",
+             "framkvæmdastjórnin skal einnig birta skýrslu um framvindu framkvæmdarinnar byggða á yfirlitsskýrslum, \
+sem aðildarríki leggja fram skv2mgr15gr., og leggja hana fyrir evrópuþingið og aðildarríkin eigi síðar en tveimur \
+árum eftir dagsetningarnar sem um getur í 5og 8gr.",
+             "hlíti hlutaðeigandi aðildarríki ekki skilyrtum eða neikvæðum ákvörðunum, einkum í tilvikum sem um getur\
+ í 14gr., er framkvæmdastjórninni heimilt að vísa málinu beint til dómstóls evrópubandalaganna í \
+ samræmi við 2mgr93grsáttmálans.\
+enn fremur skal synja um leyfi ef dæmi eru um að upplýsingar eða skjöl, sem fylgja til stuðnings umsókninni, eru ekki í samræmi við ákvæði 8gr., 10gr., 10gra,",
+             "í því skyni að ná markmiðunum, sem mælt er fyrir um í 1gr., skal bandalagið grípa til þverlægra aðgerða \
+             og ráðstaf- ana til stuðnings sviðsnetum, eins og kveðið er á um í 4til 10grog í samræmi við ida-vinnuáætlunina.",
+             "með fyrirvara um þau upplýsingaskipti og notkun upp lýsinga, sem veittar eru skv3mgr5grog 1mgr11gr., skal\
+ við málsmeðferð þar sem ekki er farið að tilskildum ákvæðum virða meginreglurnar um trúnaðarkvöð og þagnarskyldu.",
+             "greða, í tilviki lánastofnana sem reikna fjárhæðir áhættuveginna áhættuskuldbindinga og vænts \
+taps skv83.–89gr., þ au hafa ekki lánshæfismat frá viðurkenndri utanaðkomandi lánshæfismatsstofnun og eru \
+metin innanhúss með líkur á vanskilum jafngildar þeim sem tengjast lánshæfismati utanaðkomandi lánshæfismatsstofnunar, \
+sem lögbær yfirvöld hafa ákvarðað að sé tengt"
+             ]
+    regexps = [
+        {
+            'pattern': re.compile(
+                r"(\d+(.\d+)?)(mgr|gr|skv|og|eða|til|með|janúar|febrúar|mars|apríl|maí|júní|júlí|ágúst|september|október|nóvember|desember)"),
+            'repl': r"\1. \3"
+        },
+        {
+            'pattern': re.compile(r"(skv)(?=[^.])"),
+            'repl': r"\1."
+        },
+        {
+            'pattern': re.compile(r"(\d+(.\d+)?\. )(mgr|gr)(?=[^.])"),
+            'repl': r"\1\3. "
+        },
+    ]
+    results = [c.regexp(sent, regexps, count=True) for sent in tests]
+    print(results[0])
+    assert results[0][1][str(regexps[0]['pattern'])] == 2
+    print(results[1])
+    assert results[1][1][str(regexps[0]['pattern'])] == 4
+    print(results[2])
+    assert results[2][1][str(regexps[0]['pattern'])] == 6
+
+
 def test_en_tok():
     # Abbreviations:
     test = "nr., art., 1st first, 1., 2nd"
-    # NLTK does not expand abbreviations.
-    tokenized = c.tokenize(test, c.Lang.EN, 'nltk')
-    print(tokenized)
-    assert tokenized == "nr. , art. , 1st first , 1. , 2nd"
     # Moses does not expand abbreviations nor understands them.
     tokenized = c.tokenize(test, c.Lang.EN, 'moses')
     print(tokenized)
     assert tokenized == "nr . , art . , 1st first , 1 . , 2nd"
-    # TokTok does not expand abbreviations but understands them similarly as NLTK.
-    tokenized = c.tokenize(test, c.Lang.EN, 'toktok')
-    print(tokenized)
-    assert tokenized == "nr. , art. , 1st first , 1. , 2nd"
 
     # Compounds / Percentages:
     test = "H2O, CO2, 9%"
-    # NLTK
-    tokenized = c.tokenize(test, c.Lang.EN, 'nltk')
-    print(tokenized)
-    assert tokenized == "H2O , CO2 , 9 %"
     # Moses
     tokenized = c.tokenize(test, c.Lang.EN, 'moses')
-    print(tokenized)
-    assert tokenized == "H2O , CO2 , 9 %"
-    # TokTok does not split up compounds (good) and splits percentages to number and symbol (good).
-    tokenized = c.tokenize(test, c.Lang.EN, 'toktok')
     print(tokenized)
     assert tokenized == "H2O , CO2 , 9 %"
 
     # Contractions:
     test = "It's i'm couldn't"
-    # NLTK handles contractions.
-    tokenized = c.tokenize(test, c.Lang.EN, 'nltk')
-    print(tokenized)
-    assert tokenized == "It 's i 'm could n't"
     # Moses also handles contractions, but not in the same way.
     tokenized = c.tokenize(test, c.Lang.EN, 'moses')
     print(tokenized)
     assert tokenized == "It 's i 'm couldn 't"
-    # TokTok kind-of messes them up
-    tokenized = c.tokenize(test, c.Lang.EN, 'toktok')
-    print(tokenized)
-    assert tokenized == "It ' s i ' m couldn ' t"
 
     # URLs
     test = "http://www.malfong.is"
-    # NLTK breaks up URLs
-    tokenized = c.tokenize(test, c.Lang.EN, 'nltk')
-    print(tokenized)
-    assert tokenized == "http : //www.malfong.is"
     # Moses also breaks them up even further
     tokenized = c.tokenize(test, c.Lang.EN, 'moses')
     print(tokenized)
     assert tokenized == "http : / / www.malfong.is"
-    # TokTok does not.
-    tokenized = c.tokenize(test, c.Lang.EN, 'toktok')
-    print(tokenized)
-    assert tokenized == "http://www.malfong.is"
 
     # Placeholders
     test = "I will place _uri_ and _lt_."
-    # NLTK does not break them up.
-    tokenized = c.tokenize(test, c.Lang.EN, 'nltk')
-    print(tokenized)
-    assert tokenized == "I will place _uri_ and _lt_ ."
     # Moses breaks them up
     tokenized = c.tokenize(test, c.Lang.EN, 'moses')
     print(tokenized)
     assert tokenized == "I will place _ uri _ and _ lt _ ."
-    # TokTok does not break them up
-    tokenized = c.tokenize(test, c.Lang.EN, method='toktok')
-    print(tokenized)
-    assert tokenized == "I will place _uri_ and _lt_ ."
+
+
+def test_en_detok():
+    # Abbreviations:
+    test = "nr., art., 1st first, 1., 2nd"
+    mt_output = c.tokenize(test, c.Lang.EN, method="moses")
+    print(mt_output)
+    detokenized = c.detokenize(mt_output, c.Lang.EN, method="moses")
+    print(detokenized)
+    assert detokenized == test
+
+    # Compounds / Percentages:
+    test = "H2O, CO2, 9%"
+    mt_output = c.tokenize(test, c.Lang.EN, method="moses")
+    print(mt_output)
+    detokenized = c.detokenize(mt_output, c.Lang.EN, method="moses")
+    print(detokenized)
+    assert detokenized == test
+
+    # Contractions:
+    test = "It's i'm couldn't"
+    mt_output = c.tokenize(test, c.Lang.EN, method="moses")
+    print(mt_output)
+    detokenized = c.detokenize(mt_output, c.Lang.EN, method="moses")
+    print(detokenized)
+    assert detokenized == test
+
+    # URLs
+    test = "http://www.malfong.is"
+    # Moses cannot fix URLs again.
+    mt_output = c.tokenize(test, c.Lang.EN, method="moses")
+    print(mt_output)
+    detokenized = c.detokenize(mt_output, c.Lang.EN, method="moses")
+    print(detokenized)
+    assert detokenized == "http: / / www.malfong.is"
+
+    # Placeholders
+    test = "I will place _uri_ and _lt_."
+    mt_output = "I will place _uri_ and _lt_ ."
+    print(mt_output)
+    detokenized = c.detokenize(mt_output, c.Lang.EN, method="moses")
+    print(detokenized)
+    assert detokenized == test
 
 
 def test_lowercase_normalize():
@@ -204,13 +316,13 @@ def test_remove_non_words():
 def test_contains_regexp():
     test = ["дейност", "είδοσ", "εγκατάστασησ", "казеин", "приложение", "ž",
             "č", "š", "лицата", "12052"]
-    results = [c.contains_regexp(word, c.REGEXP_SUB["CRYLLIC"][0]) for word in test]
+    results = [c.contains_regexp(word, d.CRYLLIC) for word in test]
     assert results == [True, False, False, True, True, False,
                        False, False, True, False]
-    results = [c.contains_regexp(word, c.REGEXP_SUB["GREEK"][0]) for word in test]
+    results = [c.contains_regexp(word, d.GREEK) for word in test]
     assert results == [False, True, True, False, False, False,
                        False, False, False, False]
-    results = [c.contains_regexp(word, c.REGEXP_SUB["UNKNOWN-CHARS"][0]) for word in test]
+    results = [c.contains_regexp(word, d.UNKNOWN_CHARS) for word in test]
     assert results == [False, False, False, False, False, True,
                        True, True, False, False]
 
@@ -262,11 +374,11 @@ def test_sentence_breaking():
              "lýkur 31.mars 2006",
              "asdf.Þ"
              ]
-
-    results = [c.regexp(test, [c.REGEXP_SUB["IS-SPLIT-NEWLINE"]]) for test in tests]
+    print(d.IS_SPLIT_NEWLINE.pattern)
+    results = [c.regexp(test, [d.SUB_IS_SPLIT_NEWLINE]) for test in tests]
     for result in results:
         print(result)
-    # We test wether our intended transformations happen and some should not.
+    # We test whether our intended transformations happen and some should not.
     assert " viðauka. Skipunarstillipunktar fyrir" in results
     assert "is deleted. Financial liabi" in results
     assert "are added. Paragraph 43" in results
@@ -297,16 +409,27 @@ def test_regexps():
         "not.a.uri",
         "o.s.frv."
     ]
+    URI_SUB = {
+        'pattern': d.URI,
+        'repl': '_uri_'
+    }
+    URI_SIMPLE_SUB = {
+        'pattern': d.URI_SIMPLE,
+        'repl': '_uri_'
+    }
     for test in tests_uri:
-        print(test, c.regexp(test, [c.REGEXP_SUB["URI"]]))
-        assert c.regexp(test, [c.REGEXP_SUB["URI"]]) == "_uri_"
+        sub = c.regexp(test, [URI_SUB])
+        print(test, sub)
+        assert sub == URI_SUB['repl']
     for test in tests_uri_simple:
-        print(test, c.regexp(test, [c.REGEXP_SUB["URI-SIMPLE"]]))
-        assert c.regexp(test, [c.REGEXP_SUB["URI-SIMPLE"]]) == "_uri_"
+        sub = c.regexp(test, [URI_SIMPLE_SUB])
+        print(test, sub)
+        assert sub == URI_SUB['repl']
     for test in tests_uri + tests_uri_simple:
-        result = c.regexp(test, [c.REGEXP_SUB["URI"], c.REGEXP_SUB["URI-SIMPLE"]])
-        print(test, result)
-        assert result == "_uri_"
+        sub = c.regexp(test, [URI_SUB, URI_SIMPLE_SUB])
+        print(test, sub)
+        assert sub == URI_SUB['repl']
     for test in tests_uri_not:
-        print(c.regexp(test, [c.REGEXP_SUB["URI"], c.REGEXP_SUB["URI-SIMPLE"]]))
-        assert c.regexp(test, [c.REGEXP_SUB["URI"], c.REGEXP_SUB["URI-SIMPLE"]]) != "_uri_"
+        sub = c.regexp(test, [URI_SUB, URI_SIMPLE_SUB])
+        print(test, sub)
+        assert sub != "_uri_"

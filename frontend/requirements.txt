@@ -6,6 +6,7 @@ attrs==19.3.0
 chardet==3.0.4
 Click==7.0
 Flask==1.1.1
+Flask-Cors==3.0.8
 Flask-RESTful==0.3.7
 idna==2.8
 importlib-metadata==0.23
@@ -18,9 +19,9 @@ Markdown==3.1.1
 MarkupSafe==1.1.1
 more-itertools==7.2.0
 multidict==4.6.1
-nltk==3.4.5
 packaging==19.2
 pdoc3==0.7.2
+pip-autoremove==0.9.1
 pluggy==0.13.1
 ply==3.11
 py==1.8.0
@@ -29,7 +30,7 @@ pytest==5.3.1
 pytz==2019.3
 sacremoses==0.0.35
 six==1.13.0
-tokenizer==2.0.0
+tokenizer==2.0.3
 tqdm==4.39.0
 translate-toolkit==2.4.0
 wcwidth==0.1.7

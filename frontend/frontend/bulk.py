@@ -293,17 +293,28 @@ def in_parallel(path: Path,
     :return: True if successful.
     """
     with ProcessPoolExecutor(max_workers=threads) as executor:
+        replacements = dict()
         with path.open() as f_in, out_path.open('w+') as f_out:
-            # get the list now since executor.map will read everyting to mem.
+            # get the list now since executor.map will read everything to memory.
             f_list = f_in.readlines()
+            # we remove the newline from the sentence.
+            f_list = [line.strip() for line in f_list]
             results = tqdm(executor.map(
                 partial(func, **kwargs),
                 f_list,
                 chunksize=chunksize),
                 total=len(f_list))
             for result in results:
-                f_out.write(result)
-    return True
+                # In regexp we get a Tuple[str, Counter], we only write the sentence.
+                write_out = result
+                if isinstance(result, Tuple):
+                    write_out = result[0]
+                    if isinstance(result[1], Counter):
+                        replacements.update(result[1])
+                # we add a newline to the sentence.
+                f_out.write(write_out + "\n")
+
+    return replacements
 
 
 def split(path: Path, out_path_1: Path, out_path_2: Path, count) -> bool:
@@ -342,7 +353,7 @@ def regexp(path: Path,
     return in_parallel(path,
                        out_path,
                        THREADS,
-                       partial(c_regexp, regexps=regexps)
+                       partial(c_regexp, regexps=regexps, count=True)
                        )
 
 
@@ -422,7 +433,7 @@ def lowercase_normalize(path: Path,
 
 def tokenize(path: Path,
              out_path: Path,
-             method: str = 'pass-through') -> bool:
+             method: str) -> bool:
     """Tokenizes a file using the specified method. Reads the language from the filename.
     See core.tokenize() for accepted methods. Uses many threads.
 
@@ -435,7 +446,7 @@ def tokenize(path: Path,
     return in_parallel(path,
                        out_path,
                        THREADS,
-                       partial(apply_tokenizer, tokenizer=tok, add_newline=True)
+                       partial(apply_tokenizer, tokenizer=tok)
                        )
 
 

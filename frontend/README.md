@@ -99,6 +99,22 @@ Leiðbeiningar til þess að gefa út nýja útgáfu af `frontend`.
 ### Útgáfur
 Hér er listi yfir breytingar á milli útgáfa.
 
+#### 2.1.0
+- Núna er hægt að eftirvinna setningar.
+- Regexps/sub sett undir sér skrá (`definitions.py`).
+- Ekki lengur stuðningur við NLTK og TokTok tilreiðara (v1).
+
+#### 2.0.8
+- Bætti við stuðning við CORS.
+
+#### 2.0.7
+- Núna sér `bulk.py` `in_parallel` um að fjarlægja `char(10)` þegar setningar eru lesnar og skrifa 
+inn þegar setningar eru skrifaðar.
+
+#### 2.0.6
+- Miðeind v2.0.1 tokenizer
+- Regexp skilar núna fjölda innsetninga.
+
 #### 2.0.5
 - Nokkrar villur lagaðar.
 - Bætti við skjölun á Python pakka undir `docs`.

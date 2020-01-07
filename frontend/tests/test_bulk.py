@@ -49,23 +49,6 @@ def test_load_pipeline(list_data_dir):
     assert len(raw_pipeline) == 2
 
 
-def test_remove_illegal_chars(data_dir):
-    in_stage = 'cat'
-    out_stage = 'regexp'
-    p_in = b.read(data_dir, c.Lang.IS, in_stage)
-    p_out = b.write(data_dir, c.Lang.IS, out_stage)
-    # u'\u0000'-u'\u001f', u'\u007f' - Non-printing characters
-    patterns = [(re.compile(r"[\u0000-\u001f|\u007f]"), '')]
-
-    # Check that we find some of these characters in the first lines
-    assert ord('\u000A') == 10
-    assert any(ord(char) == 10 for line in b.peek(p_in) for char in line)
-
-    b.regexp(p_in, p_out, patterns)
-    # Now all the newlines are gone (atleast from the first lines).
-    assert all(ord(char) != 10 for line in b.peek(p_out) for char in line)
-
-
 def test_combine_corpora(list_data_dir, data_dir):
     stages = [
         'tatoeba',
@@ -136,8 +119,8 @@ def test_tokenization(data_dir):
     in_2 = b.read(data_dir, b.Lang.EN, in_stage)
     out_2 = b.write(data_dir, b.Lang.EN, out_stage)
 
-    b.tokenize(p_in, out)
-    b.tokenize(in_2, out_2, 'nltk')
+    b.tokenize(p_in, out, "shallow")
+    b.tokenize(in_2, out_2, 'moses')
 
     # Check if at least some of the lines are not the same
     different_check(p_in, out)
@@ -153,13 +136,13 @@ def test_in_parallel(data_dir):
     out_stage = 'regexp'
     p_in = b.read(data_dir, b.Lang.IS, in_stage)
     out = b.write(data_dir, b.Lang.IS, out_stage)
-    patterns = [(re.compile(r"[\u0000-\u001f|\u007f]"), '')]
+    patterns = [{'pattern': re.compile(r"[\u0000-\u001f|\u007f]"), 'repl': ''}]
 
-    b.in_parallel(p_in,
-                  out,
-                  2,
-                  c.regexp,
-                  **{"regexps": patterns})
+    print(b.in_parallel(p_in,
+                        out,
+                        2,
+                        c.regexp,
+                        **{"regexps": patterns}))
 
 
 def test_split(data_dir):

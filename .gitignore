@@ -5,6 +5,7 @@ frontend/$py.class
 frontend/.mypy_cache/
 frontend/corpus.egg-info/
 .mypy_cache/
+.idea/
 # Jupyter Notebook
 .ipynb_checkpoints
 

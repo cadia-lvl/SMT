@@ -220,7 +220,8 @@ def translate_bulk(sentences: List[str], s_lang: c.Lang, t_lang: c.Lang, model: 
 
     :param sentences: A list of sentences to translate.\n
     :param s_lang: The source language.\n
-    :param model: A string specifying the model. Needs to exist in MODELS.\n
+    :param t_lang: The target language.\n
+    :param model: A string specifying the model.\n
     :return: The translated sentences.
     """
     loop = asyncio.new_event_loop()

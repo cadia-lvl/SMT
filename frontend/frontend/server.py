@@ -84,7 +84,6 @@ class MosesTranslate(Resource):
         sentences = args['contents']
         source_lang = a.to_lang(args['sourceLanguageCode'])
         target_lang = a.to_lang(args['targetLanguageCode'])
-        # We do not perform any correctness checks on the model name passed in.
         model = args['model']
         id = uuid.uuid4().hex
         log.info(f"""Received translation request id={id}:
@@ -92,6 +91,9 @@ class MosesTranslate(Resource):
     sourceLanguageCode={source_lang}
     targetLanguageCode={target_lang}
     model={model}""")
+        # We construct the model string so it fits what the api expects.
+        model = "-".join([source_lang, target_lang, model])
+        log.info(f"Parsed model string to model={model}")
         translated_sentences = a.translate_bulk(sentences, source_lang, target_lang, model, id)
         log.info(f"Sending translation response id={id}")
 

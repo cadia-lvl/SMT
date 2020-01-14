@@ -99,6 +99,9 @@ Leiðbeiningar til þess að gefa út nýja útgáfu af `frontend`.
 ### Útgáfur
 Hér er listi yfir breytingar á milli útgáfa.
 
+#### 2.1.2
+- Fjarlægja model parameter validation.
+
 #### 2.1.1
 - Núna byggjum við model strenginn út frá source-target-model_name í `server.py`.
 

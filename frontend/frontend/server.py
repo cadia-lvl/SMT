@@ -36,7 +36,6 @@ parser.add_argument('model',
                     type=str,
                     required=True,
                     location='json',
-                    choices=a.MODELS,
                     help='The model to use to translate.', )
 
 

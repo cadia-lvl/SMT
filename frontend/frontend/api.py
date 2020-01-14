@@ -19,9 +19,9 @@ log = logging.getLogger('frontend.api')
 
 MODELS = dict()
 """Holds the accepted "model" parameters and the URL to the translation endpoints.
-Set using environment variables. To define a model "en-is" with endpoint "http://localhost:8080/RPC2" set:
+Set using environment variables. To define a model "en-is-baseline" with endpoint "http://localhost:8080/RPC2" set:
 
-export MODEL_en_is=http://localhost:8080/RPC2
+export MODEL_en_is_baseline=http://localhost:8080/RPC2
 """
 for key in os.environ:
     if "MODEL" in key:
@@ -29,9 +29,9 @@ for key in os.environ:
 
 PREPROCESSING = dict()
 """Holds the preprocessing version for the "model".
-Set using environment variables. To set the model "en-is" to use preprocessing version "v2" set:
+Set using environment variables. To set the model "en-is-baseline" to use preprocessing version "v2" set:
 
-export PREPROCESSING_en_is=v2
+export PREPROCESSING_en_is_baseline=v2
 """
 for key in os.environ:
     if "PREPROCESSING" in key:

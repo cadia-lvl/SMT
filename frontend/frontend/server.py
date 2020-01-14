@@ -67,7 +67,7 @@ class MosesTranslate(Resource):
                 "contents": ["Sentence to translate"],
                 "sourceLanguageCode": "en"/"is",
                 "targetLanguageCode": "en"/"is",
-                "model": "The model to use"
+                "model": "The model to use. The model value must have a corresponding key in api.py s.t. 'source-target-model' exists"
             }
         :param returns:\n
             {
@@ -82,8 +82,8 @@ class MosesTranslate(Resource):
         """
         args = parser.parse_args(strict=True)
         sentences = args['contents']
-        source_lang = a.to_lang(args['sourceLanguageCode'])
-        target_lang = a.to_lang(args['targetLanguageCode'])
+        source_lang = args['sourceLanguageCode']
+        target_lang = args['targetLanguageCode']
         model = args['model']
         id = uuid.uuid4().hex
         log.info(f"""Received translation request id={id}:
@@ -94,7 +94,7 @@ class MosesTranslate(Resource):
         # We construct the model string so it fits what the api expects.
         model = "-".join([source_lang, target_lang, model])
         log.info(f"Parsed model string to model={model}")
-        translated_sentences = a.translate_bulk(sentences, source_lang, target_lang, model, id)
+        translated_sentences = a.translate_bulk(sentences, a.to_lang(source_lang), a.to_lang(target_lang), model, id)
         log.info(f"Sending translation response id={id}")
 
         return {

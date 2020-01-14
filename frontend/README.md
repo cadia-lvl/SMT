@@ -30,11 +30,11 @@ curl -d '{"contents":["A sentence"],"sourceLanguageCode":"en","targetLanguageCod
 Til að skilgreina Moses bakenda, þ.e. leyfileg `model`s þarf að setja tvær stýrikerfisbreytur:
 ```shell script
 # Skilgreina model "en-is" og vísa á http://localhost:8080/RPC2 og setja preprocessing útgáfu fyrir "en-is" sem "v2".
-export MODEL_en_is=http://localhost:8080/RPC2
-export PREPROCESSING_en_is=v2
+export MODEL_en_is_baseline=http://localhost:8080/RPC2
+export PREPROCESSING_en_is_baseline=v2
 frontend server --debug
 # eða
-docker run --env PREPROCESSING_en_is=v2 --env MODEL_en_is=http://localhost:8080/RPC2 --publish 5000:5000 haukurp/moses-lvl:2.0.0 frontend server --debug
+docker run --env PREPROCESSING_en_is_baseline=v2 --env MODEL_en_is_baseline=http://localhost:8080/RPC2 --publish 5000:5000 haukurp/moses-lvl:2.0.0 frontend server --debug
 ```
 
 ### Forvinnsla gagn
@@ -98,6 +98,9 @@ Leiðbeiningar til þess að gefa út nýja útgáfu af `frontend`.
 
 ### Útgáfur
 Hér er listi yfir breytingar á milli útgáfa.
+
+#### 2.1.1
+- Núna byggjum við model strenginn út frá source-target-model_name í `server.py`.
 
 #### 2.1.0
 - Núna er hægt að eftirvinna setningar.

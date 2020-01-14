@@ -16,10 +16,10 @@ services:
       - moses-en-is
       - moses-is-en
     environment:
-      - MODEL_en_is=http://moses-en-is:8080/RPC2
-      - MODEL_is_en=http://moses-is-en:8080/RPC2
-      - PREPROCESSING_en_is=v3
-      - PREPROCESSING_is_en=v3
+      - MODEL_en_is_moses=http://moses-en-is:8080/RPC2
+      - MODEL_is_en_moses=http://moses-is-en:8080/RPC2
+      - PREPROCESSING_en_is_moses=v3
+      - PREPROCESSING_is_en_moses=v3
     ports:
       - "5000:5000"
     command: frontend server --debug

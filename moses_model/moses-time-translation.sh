@@ -6,4 +6,10 @@
 #SBATCH --time=1:00:00
 
 MODEL_NAME=en-is-mideind-v2
-time singularity run -B /work/haukurpj/$MODEL_NAME/binarised:/work/haukurpj/$MODEL_NAME/binarised docker://haukurp/moses-smt:is-en-improved /opt/moses/bin/moses -f /work/haukurpj/$MODEL_NAME/binarised/moses.ini < /work/haukurpj/$MODEL_NAME/binarised/parice-test-final.en >/work/haukurpj/$MODEL_NAME/binarised/parice-test-final.translated
+FROM=en
+time singularity run \
+  -B /work/haukurpj/:/work/haukurpj/ \
+   docker://haukurp/moses-smt:1.1.0 \
+   /opt/moses/bin/moses -f /work/haukurpj/$MODEL_NAME/binarised/moses.ini \
+    < /work/haukurpj/process/test/combined-processed.$FROM \
+    > /work/haukurpj/$MODEL_NAME-combined-translated.$FROM

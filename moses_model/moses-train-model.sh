@@ -3,7 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=10
 #SBATCH --mem=16GB
-#SBATCH --time=6:00:00
+#SBATCH --time=7:00:00
 set -euxo
 LOCAL=0
 if [ $LOCAL = 1 ] ; then
@@ -21,12 +21,12 @@ DATA_DIR="${WORK_DIR}/process"
 MOSESDECODER="/opt/moses"
 MOSESDECODER_TOOLS="/opt/moses_tools"
 
-LANG_FROM="is"
-LANG_TO="en"
-MODIFIER="tokenization"
-TRAINING_DATA="${DATA_DIR}/parice-train-processed-tok_low"
-VALIDATION_DATA="${DATA_DIR}/parice-val-final-tok_low"
-TEST_DATA="${DATA_DIR}/parice-test-final-tok_low"
+LANG_FROM="en"
+LANG_TO="is"
+MODIFIER="new-test"
+TRAINING_DATA="${DATA_DIR}/train/processed"
+VALIDATION_DATA="${DATA_DIR}/dev/processed"
+TEST_DATA="${DATA_DIR}/test/combined-processed"
 # Set LM_EXTRA_DATA to "" if no extra lm data.
 # LM_EXTRA_DATA="${DATA_DIR}/rmh-final.is"
 # LM_EXTRA_DATA="${DATA_DIR}/mono-final.en"
@@ -78,7 +78,7 @@ run_in_singularity ${MOSESDECODER}/scripts/training/train-model.perl -root-dir $
         -corpus $CLEAN_DATA \
         -f $LANG_FROM \
         -e $LANG_TO \
-        -alignment grow-diag-final-and -reordering msd-bidirectional-fe \
+        -alignment grow-diag -reordering msd-bidirectional-fe \
         -lm 0:${LM_ORDER}:${LM}:8 \
         -mgiza -mgiza-cpus "$THREADS" \
         -parallel -sort-buffer-size "$MEMORY" -sort-batch-size 1021 \

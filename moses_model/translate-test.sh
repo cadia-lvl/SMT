@@ -47,12 +47,12 @@ for test_set in $TEST_SETS; do
     -B $WORKING_DIR:$WORKING_DIR \
     docker://haukurp/moses-smt:1.1.0 \
     /opt/moses/scripts/generic/multi-bleu-detok.perl -lc \
-    $WORKING_DIR/$test_set-lower.$TO < $WORKING_DIR/$test_set-translated-detok.$FROM-$TO > $test_set-$FROM-$TO.bleu
+    $WORKING_DIR/$test_set-lower.$TO < $WORKING_DIR/$test_set-translated-detok.$FROM-$TO > $WORKING_DIR/$test_set-$FROM-$TO.bleu
 
 done
 singularity exec \
   -B $WORKING_DIR:$WORKING_DIR \
   docker://haukurp/moses-smt:1.1.0 \
   /opt/moses/scripts/generic/multi-bleu-detok.perl -lc \
-  $WORKING_DIR/combined-lower.$TO < $WORKING_DIR/combined-translated-detok.$FROM-$TO > combined-$FROM-$TO.bleu
+  $WORKING_DIR/combined-lower.$TO < $WORKING_DIR/combined-translated-detok.$FROM-$TO > $WORKING_DIR/combined-$FROM-$TO.bleu
 

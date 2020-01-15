@@ -207,9 +207,16 @@ def postprocess_v3(sent: str, lang: c.Lang) -> str:
     method = "shallow"
     if lang == c.Lang.EN:
         method = "moses"
+    regexps = [
+        d.SUB_FIX_PLACEHOLDERS,
+        {'pattern': '_pipe_', 'repl': '\u007c'},
+        {'pattern': '_lt_', 'repl': '\u003c'},
+        {'pattern': '_gt_', 'repl': '\u003e'},
+        {'pattern': '_bo_', 'repl': '\u005b'},
+        {'pattern': '_bc_', 'repl': '\u005d'},
+    ]
+    sent = c.regexp(sent, regexps)
     sent = c.detokenize(sent, lang, method)
-    sent = c.regexp(sent, [d.SUB_FIX_PLACEHOLDERS])
-
     return sent
 
 

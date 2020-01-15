@@ -54,6 +54,32 @@ def preprocess(sent: str, lang: str, version: str) -> str:
 
 
 @cli.command()
+@click.argument('source', default='')
+@click.argument('lang', default='is', type=str)
+@click.argument('version', default='v2', type=str)
+def postprocess(source: str, lang: str, version: str) -> int:
+    """
+    Applies the same preprocessing steps to a sentence as specified by the version.
+    See api.py for preprocessing step details.
+    """
+    l_lang = api.to_lang(lang)
+    try:
+        # we try to treat it as a path.
+        p = Path(source)
+        if p.exists():
+            with p.open() as f_in:
+                for line in f_in:
+                    sent = api.postprocess(line, l_lang, version)
+                    click.echo(sent)
+                return 0
+    except:
+        pass
+    sent = api.postprocess(source, l_lang, version)
+    click.echo(sent)
+    return 0
+
+
+@cli.command()
 @click.option('--debug', is_flag=True)
 def server(debug: bool) -> None:
     s.app.run(debug=debug, host='0.0.0.0')

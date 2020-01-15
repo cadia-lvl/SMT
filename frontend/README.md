@@ -99,6 +99,9 @@ Leiðbeiningar til þess að gefa út nýja útgáfu af `frontend`.
 ### Útgáfur
 Hér er listi yfir breytingar á milli útgáfa.
 
+#### 2.1.3
+- Bætti við postprocess sem vali fyrir skjáhermi. Styður skrár eða strengi sem inntak.
+
 #### 2.1.2
 - Fjarlægja model parameter validation.
 

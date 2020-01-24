@@ -16,36 +16,20 @@ else
   WORK_DIR="/work/haukurpj"
 fi
 
-MOSES_TAG="1.1.0"
-DATA_DIR="${WORK_DIR}/process"
-MOSESDECODER="/opt/moses"
-MOSESDECODER_TOOLS="/opt/moses_tools"
-
 LANG_FROM="en"
 LANG_TO="is"
-MODIFIER="new-test"
-TRAINING_DATA="${DATA_DIR}/train/processed"
-VALIDATION_DATA="${DATA_DIR}/dev/processed"
-TEST_DATA="${DATA_DIR}/test/combined-processed"
+EXPERIMENT_NAME="new-test"
+
+TRAINING_DATA="${WORK_DIR}/data/mapped/Parice1.0/train"
+DEV_DATA="${WORK_DIR}/data/mapped/Parice1.0/dev"
+TEST_SETS="ees ema opensubtitles"
+TEST_INPUT="${WORK_DIR}/data/mapped/Parice1.0/test"
+GROUND_TRUTH="${WORK_DIR}/data/filtered/Parice1.0/test"
 # Set LM_EXTRA_DATA to "" if no extra lm data.
 # LM_EXTRA_DATA="${DATA_DIR}/rmh-final.is"
 # LM_EXTRA_DATA="${DATA_DIR}/mono-final.en"
 LM_EXTRA_DATA=""
 
-CLEAN_MIN_LENGTH=1
-CLEAN_MAX_LENGTH=70
-LM_ORDER=3
-
-MODEL_NAME="${LANG_FROM}-${LANG_TO}-${MODIFIER}"
-CLEAN_DATA="${DATA_DIR}/${MODEL_NAME}-train"
-LM="${DATA_DIR}/${MODEL_NAME}.${LANG_TO}.blm"
-
-function run_in_singularity() {
-  singularity exec \
-  -B $WORK_DIR:$WORK_DIR \
-	docker://haukurp/moses-smt:$MOSES_TAG \
-  "$@"
-}
 # Test if data is there
 function check_data() {
   if [ ! -f $1 ]; then
@@ -55,10 +39,53 @@ function check_data() {
 }
 check_data $TRAINING_DATA.en
 check_data $TRAINING_DATA.is
-check_data $VALIDATION_DATA.en
-check_data $VALIDATION_DATA.is
-check_data $TEST_DATA.en
-check_data $TEST_DATA.is
+check_data $DEV_DATA.en
+check_data $DEV_DATA.is
+for test_set in $TEST_SETS; do
+  check_data $TEST_INPUT-$test_set.$FROM
+  check_data $GROUND_TRUTH-$test_set.$TO
+done
+
+# Setup everything
+MODEL_NAME="${EXPERIMENT_NAME}-${LANG_FROM}-${LANG_TO}"
+MODEL_DIR=$WORKING_DIR/$MODEL_NAME
+mkdir $MODEL_DIR
+MODEL_DATA="${MODEL_DIR}/data"
+mkdir $MODEL_DATA
+MODEL_RESULTS="$MODEL_DIR/results"
+mkdir $MODEL_RESULTS
+CLEAN_DATA="$MODEL_DATA/train"
+LM="$MODEL_DATA/$TO.blm"
+
+CLEAN_MIN_LENGTH=1
+CLEAN_MAX_LENGTH=70
+LM_ORDER=3
+ALIGNMENT="grow diag"
+REORDERING="msd-bidirectional-fe"
+
+echo "name=$EXPERIMENT_NAME
+from=$FROM
+to=$TO
+lm_extra=$LM_EXTRA_DATA
+train=$TRAINING_DATA
+dev=$DEV_DATA
+test=$TEST_INPUT
+ground-truth=$GROUND_TRUTH
+clean_min=$CLEAN_MIN_LENGTH
+clean_max=$CLEAN_MAX_LENGTH
+lm_order=$LM_ORDER
+alignment=$ALIGNMENT" > $MODEL_DIR/description.txt
+
+MOSES_TAG="1.1.0"
+MOSESDECODER="/opt/moses"
+MOSESDECODER_TOOLS="/opt/moses_tools"
+
+function run_in_singularity() {
+  singularity exec \
+  -B $WORK_DIR:$WORK_DIR \
+	docker://haukurp/moses-smt:$MOSES_TAG \
+  "$@"
+}
 
 # Data prep
 run_in_singularity ${MOSESDECODER}/scripts/training/clean-corpus-n.perl $TRAINING_DATA $LANG_FROM $LANG_TO $CLEAN_DATA $CLEAN_MIN_LENGTH $CLEAN_MAX_LENGTH
@@ -66,19 +93,17 @@ run_in_singularity ${MOSESDECODER}/scripts/training/clean-corpus-n.perl $TRAININ
 # LM creation
 LM_DATA=${DATA_DIR}/${MODEL_NAME}-lm.${LANG_TO}
 cat ${CLEAN_DATA}.${LANG_TO} $LM_EXTRA_DATA > $LM_DATA
-run_in_singularity ${MOSESDECODER}/bin/lmplz --order $LM_ORDER --temp_prefix $DATA_DIR/ --memory 50% --discount_fallback < ${LM_DATA} > ${LM}.arpa
+run_in_singularity ${MOSESDECODER}/bin/lmplz --order $LM_ORDER --temp_prefix $WORKING_DIR/ --memory 50% --discount_fallback < ${LM_DATA} > ${LM}.arpa
 run_in_singularity ${MOSESDECODER}/bin/build_binary -S 50% ${LM}.arpa ${LM}
 
 # Training
-MODEL_DIR="${WORK_DIR}/${MODEL_NAME}"
-mkdir -p ${MODEL_DIR}
 BASE_DIR="${MODEL_DIR}/base"
 mkdir -p ${BASE_DIR}
 run_in_singularity ${MOSESDECODER}/scripts/training/train-model.perl -root-dir $BASE_DIR \
         -corpus $CLEAN_DATA \
         -f $LANG_FROM \
         -e $LANG_TO \
-        -alignment grow-diag -reordering msd-bidirectional-fe \
+        -alignment $ALIGNMENT -reordering $REORDERING \
         -lm 0:${LM_ORDER}:${LM}:8 \
         -mgiza -mgiza-cpus "$THREADS" \
         -parallel -sort-buffer-size "$MEMORY" -sort-batch-size 1021 \
@@ -105,12 +130,12 @@ run_in_singularity ${MOSESDECODER}/scripts/training/mert-moses.pl \
 TUNED_MOSES_INI="${TUNE_DIR}/moses.ini"
 
 # Binarise
-BINARISE_DIR="${MODEL_DIR}/binarised"
-mkdir -p ${BINARISE_DIR}
-BINARISED_MOSES_INI="${BINARISE_DIR}/moses.ini"
-BINARISED_PHRASE_TABLE="${BINARISE_DIR}/phrase-table"
-BINARISED_REORDERING_TABLE="${BINARISE_DIR}/reordering-table"
-BINARISED_LM="$BINARISE_DIR/lm.blm"
+BINARISED_DIR="${MODEL_DIR}/binarised"
+mkdir -p ${BINARISED_DIR}
+BINARISED_MOSES_INI="${BINARISED_DIR}/moses.ini"
+BINARISED_PHRASE_TABLE="${BINARISED_DIR}/phrase-table"
+BINARISED_REORDERING_TABLE="${BINARISED_DIR}/reordering-table"
+BINARISED_LM="$BINARISED_DIR/lm.blm"
 
 run_in_singularity ${MOSESDECODER}/bin/processPhraseTableMin \
         -in $BASE_PHRASE_TABLE \
@@ -129,9 +154,30 @@ sed -i "s|PhraseDictionaryMemory|PhraseDictionaryCompact|" $BINARISED_MOSES_INI
 sed -i "s|$BASE_PHRASE_TABLE|$BINARISED_PHRASE_TABLE|" $BINARISED_MOSES_INI
 sed -i "s|$BASE_REORDERING_TABLE|$BINARISED_REORDERING_TABLE|" $BINARISED_MOSES_INI
 
-# Translate the test data
-run_in_singularity ${MOSESDECODER}/bin/moses \
-        -f $BINARISED_MOSES_INI < $TEST_DATA.$LANG_FROM > ${BINARISE_DIR}/translated.$LANG_FROM
+# Translate, post process and evaluate the test sets one by one.
+for test_set in $TEST_SETS; do
+  singularity run \
+    -B $WORKING_DIR:$WORKING_DIR \
+     docker://haukurp/moses-smt:1.1.0 \
+     /opt/moses/bin/moses -f $BINARISED_DIR/moses.ini \
+     -threads $THREADS \
+      < $TEST_INPUT-$test_set.$FROM \
+      > $MODEL_RESULTS/$test_set-translated.$FROM-$TO
 
-# Score the translation
-run_in_singularity ${MOSESDECODER}/scripts/generic/multi-bleu.perl -lc $TEST_DATA.$LANG_TO < ${BINARISE_DIR}/translated.$LANG_FROM > ${BINARISE_DIR}/translated.bleu
+  frontend postprocess $MODEL_RESULTS/$test_set-translated.$FROM-$TO $TO v3 > $MODEL_RESULTS/$test_set-translated-detok.$FROM-$TO
+  cat $MODEL_RESULTS/$test_set-translated-detok.$FROM-$TO >> $MODEL_RESULTS/combined-translated-detok.$FROM-$TO
+  cat $GROUND_TRUTH-$test_set.$TO >> $MODEL_RESULTS/test-combined.$TO
+  singularity exec \
+    -B $WORKING_DIR:$WORKING_DIR \
+    docker://haukurp/moses-smt:1.1.0 \
+    /opt/moses/scripts/generic/multi-bleu-detok.perl -lc \
+    $GROUND_TRUTH-$test_set.$TO < $MODEL_RESULTS/$test_set-translated-detok.$FROM-$TO > $MODEL_RESULTS/$test_set-$FROM-$TO.bleu
+done
+
+# Score the combined translations
+singularity exec \
+  -B $WORKING_DIR:$WORKING_DIR \
+  docker://haukurp/moses-smt:1.1.0 \
+  /opt/moses/scripts/generic/multi-bleu-detok.perl -lc \
+  $MODEL_RESULTS/test-combined.$TO < $MODEL_RESULTS/combined-translated-detok.$FROM-$TO > $MODEL_RESULTS/combined-$FROM-$TO.bleu
+

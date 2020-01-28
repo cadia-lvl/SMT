@@ -2,7 +2,7 @@
 set -euxo
 MODEL_NAME=$1
 DOCKER_IMAGE="haukurp/moses-smt:$MODEL_NAME"
-THIS_DIR=$(dirname "$0")
+THIS_DIR=~/SMT/moses_model
 # Afrita líkanið yfir á núverandi vél.
 scp -r haukurpj@terra.hir.is:/work/haukurpj/"$MODEL_NAME"/binarised "$THIS_DIR"/trained_model
 # Laga skráarendingar.

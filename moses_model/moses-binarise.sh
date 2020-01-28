@@ -6,7 +6,7 @@
 #SBATCH --time=2:00:00
 set -euxo
 
-dir_name=$(dirname "$0")
+dir_name=~/SMT/moses_model
 source "$dir_name"/moses-definitions.sh
 
 # Binarise

@@ -4,7 +4,7 @@
 #SBATCH --cpus-per-task=10
 #SBATCH --mem=10GB
 #SBATCH --time=2:00:00
-set -euxo
+set -exo
 
 dir_name=~/SMT/moses_model
 source "$dir_name"/moses-definitions.sh

@@ -3,7 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=10
 #SBATCH --mem=16GB
-#SBATCH --time=2:00:00
+#SBATCH --time=1:00:00
 set -euxo
 
 dir_name=~/SMT/moses_model

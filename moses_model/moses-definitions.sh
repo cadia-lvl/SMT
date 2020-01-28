@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define Moses parameters and variables
-set -euxo
+set -exo
 LOCAL=0
 if [ $LOCAL = 1 ] ; then
   export THREADS=4

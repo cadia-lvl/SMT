@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=moses-time-translation.sh
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=10
+#SBATCH --cpus-per-task=1
 #SBATCH --mem=16GB
 #SBATCH --time=1:00:00
 

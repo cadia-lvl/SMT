@@ -2,7 +2,7 @@
 #SBATCH --job-name=train-moses
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=10
-#SBATCH --mem=16GB
+#SBATCH --mem=10GB
 #SBATCH --time=7:00:00
 set -euxo
 LOCAL=0
@@ -33,8 +33,11 @@ LM_EXTRA_DATA=""
 # Test if data is there
 function check_data() {
   if [ ! -f $1 ]; then
-    echo "File does not exist. Exiting..."
+    echo "$1 does not exist. Exiting..."
     exit 1
+  else
+    wc -l $1 
+    ls -hl $1
   fi
 }
 check_data $TRAINING_DATA.en
@@ -42,20 +45,20 @@ check_data $TRAINING_DATA.is
 check_data $DEV_DATA.en
 check_data $DEV_DATA.is
 for test_set in $TEST_SETS; do
-  check_data $TEST_INPUT-$test_set.$FROM
-  check_data $GROUND_TRUTH-$test_set.$TO
+  check_data $TEST_INPUT-$test_set.$LANG_FROM
+  check_data $GROUND_TRUTH-$test_set.$LANG_TO
 done
 
 # Setup everything
 MODEL_NAME="${EXPERIMENT_NAME}-${LANG_FROM}-${LANG_TO}"
-MODEL_DIR=$WORKING_DIR/$MODEL_NAME
-mkdir $MODEL_DIR
+MODEL_DIR=$WORK_DIR/$MODEL_NAME
+mkdir -p $MODEL_DIR
 MODEL_DATA="${MODEL_DIR}/data"
-mkdir $MODEL_DATA
+mkdir -p $MODEL_DATA
 MODEL_RESULTS="$MODEL_DIR/results"
-mkdir $MODEL_RESULTS
+mkdir -p $MODEL_RESULTS
 CLEAN_DATA="$MODEL_DATA/train"
-LM="$MODEL_DATA/$TO.blm"
+LM="$MODEL_DATA/$LANG_TO.blm"
 
 CLEAN_MIN_LENGTH=1
 CLEAN_MAX_LENGTH=70
@@ -64,8 +67,8 @@ ALIGNMENT="grow diag"
 REORDERING="msd-bidirectional-fe"
 
 echo "name=$EXPERIMENT_NAME
-from=$FROM
-to=$TO
+from=$LANG_FROM
+to=$LANG_TO
 lm_extra=$LM_EXTRA_DATA
 train=$TRAINING_DATA
 dev=$DEV_DATA
@@ -91,12 +94,17 @@ function run_in_singularity() {
 run_in_singularity ${MOSESDECODER}/scripts/training/clean-corpus-n.perl $TRAINING_DATA $LANG_FROM $LANG_TO $CLEAN_DATA $CLEAN_MIN_LENGTH $CLEAN_MAX_LENGTH
 
 # LM creation
-LM_DATA=${DATA_DIR}/${MODEL_NAME}-lm.${LANG_TO}
+LM_DATA=${MODEL_DATA}/lm.${LANG_TO}
 cat ${CLEAN_DATA}.${LANG_TO} $LM_EXTRA_DATA > $LM_DATA
-run_in_singularity ${MOSESDECODER}/bin/lmplz --order $LM_ORDER --temp_prefix $WORKING_DIR/ --memory 50% --discount_fallback < ${LM_DATA} > ${LM}.arpa
-run_in_singularity ${MOSESDECODER}/bin/build_binary -S 50% ${LM}.arpa ${LM}
+run_in_singularity ${MOSESDECODER}/bin/lmplz --order $LM_ORDER --temp_prefix $WORK_DIR/ -S 10G --discount_fallback < ${LM_DATA} > ${LM}.arpa
+run_in_singularity ${MOSESDECODER}/bin/build_binary -S 10G ${LM}.arpa ${LM}
 
-# Training
+# LM evaluation
+for test_set in $TEST_SETS; do
+  run_in_singularity ${MOSESDECODER}/bin/query ${LM} < $TEST_INPUT-$test_set.$LANG_TO | tail -n 4 > $MODEL_RESULTS/$test_set.ppl
+done
+
+Training
 BASE_DIR="${MODEL_DIR}/base"
 mkdir -p ${BASE_DIR}
 run_in_singularity ${MOSESDECODER}/scripts/training/train-model.perl -root-dir $BASE_DIR \
@@ -155,29 +163,23 @@ sed -i "s|$BASE_PHRASE_TABLE|$BINARISED_PHRASE_TABLE|" $BINARISED_MOSES_INI
 sed -i "s|$BASE_REORDERING_TABLE|$BINARISED_REORDERING_TABLE|" $BINARISED_MOSES_INI
 
 # Translate, post process and evaluate the test sets one by one.
+# Be sure to activate the correct environment
+source /data/tools/anaconda/etc/profile.d/conda.sh
+conda activate notebook
 for test_set in $TEST_SETS; do
-  singularity run \
-    -B $WORKING_DIR:$WORKING_DIR \
-     docker://haukurp/moses-smt:1.1.0 \
-     /opt/moses/bin/moses -f $BINARISED_DIR/moses.ini \
+  run_in_singularity /opt/moses/bin/moses -f $BINARISED_DIR/moses.ini \
      -threads $THREADS \
-      < $TEST_INPUT-$test_set.$FROM \
-      > $MODEL_RESULTS/$test_set-translated.$FROM-$TO
+      < $TEST_INPUT-$test_set.$LANG_FROM \
+      > $MODEL_RESULTS/$test_set-translated.$LANG_FROM-$LANG_TO
 
-  frontend postprocess $MODEL_RESULTS/$test_set-translated.$FROM-$TO $TO v3 > $MODEL_RESULTS/$test_set-translated-detok.$FROM-$TO
-  cat $MODEL_RESULTS/$test_set-translated-detok.$FROM-$TO >> $MODEL_RESULTS/combined-translated-detok.$FROM-$TO
-  cat $GROUND_TRUTH-$test_set.$TO >> $MODEL_RESULTS/test-combined.$TO
-  singularity exec \
-    -B $WORKING_DIR:$WORKING_DIR \
-    docker://haukurp/moses-smt:1.1.0 \
-    /opt/moses/scripts/generic/multi-bleu-detok.perl -lc \
-    $GROUND_TRUTH-$test_set.$TO < $MODEL_RESULTS/$test_set-translated-detok.$FROM-$TO > $MODEL_RESULTS/$test_set-$FROM-$TO.bleu
+  frontend postprocess $MODEL_RESULTS/$test_set-translated.$LANG_FROM-$LANG_TO $LANG_TO v3 > $MODEL_RESULTS/$test_set-translated-detok.$LANG_FROM-$LANG_TO
+  cat $MODEL_RESULTS/$test_set-translated-detok.$LANG_FROM-$LANG_TO >> $MODEL_RESULTS/combined-translated-detok.$LANG_FROM-$LANG_TO
+  cat $GROUND_TRUTH-$test_set.$LANG_TO >> $MODEL_RESULTS/test-combined.$LANG_TO
+  run_in_singularity /opt/moses/scripts/generic/multi-bleu-detok.perl -lc \
+    $GROUND_TRUTH-$test_set.$LANG_TO < $MODEL_RESULTS/$test_set-translated-detok.$LANG_FROM-$LANG_TO > $MODEL_RESULTS/$test_set-$LANG_FROM-$LANG_TO.bleu
 done
 
 # Score the combined translations
-singularity exec \
-  -B $WORKING_DIR:$WORKING_DIR \
-  docker://haukurp/moses-smt:1.1.0 \
-  /opt/moses/scripts/generic/multi-bleu-detok.perl -lc \
-  $MODEL_RESULTS/test-combined.$TO < $MODEL_RESULTS/combined-translated-detok.$FROM-$TO > $MODEL_RESULTS/combined-$FROM-$TO.bleu
+run_in_singularity /opt/moses/scripts/generic/multi-bleu-detok.perl -lc \
+  $MODEL_RESULTS/test-combined.$LANG_TO < $MODEL_RESULTS/combined-translated-detok.$LANG_FROM-$LANG_TO > $MODEL_RESULTS/combined-$LANG_FROM-$LANG_TO.bleu
 

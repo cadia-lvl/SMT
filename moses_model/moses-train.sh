@@ -6,7 +6,8 @@
 #SBATCH --time=5:00:00
 set -euxo
 
-source moses-definitions.sh
+dir_name=$(dirname "$0")
+source "$dir_name"/moses-definitions.sh
 
 # Train Moses
 mkdir -p ${BASE_DIR}

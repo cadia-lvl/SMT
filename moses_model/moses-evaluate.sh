@@ -6,7 +6,8 @@
 #SBATCH --time=2:00:00
 set -euxo
 
-source moses-definitions.sh
+dir_name=$(dirname "$0")
+source "$dir_name"/moses-definitions.sh
 
 # Translate, post process and evaluate the test sets one by one.
 # Be sure to activate the correct environment

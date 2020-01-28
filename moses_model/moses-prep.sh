@@ -6,7 +6,8 @@
 #SBATCH --time=2:00:00
 set -euxo
 
-source moses-definitions.sh
+dir_name=$(dirname "$0")
+source "$dir_name"/moses-definitions.sh
 
 # This script prepares all directories and writes the description of the model hyperparameters to a file.
 mkdir -p $MODEL_DIR

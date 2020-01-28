@@ -6,7 +6,8 @@
 #SBATCH --time=3:00:00
 set -euxo
 
-source moses-definitions.sh
+dir_name=$(dirname "$0")
+source "$dir_name"/moses-definitions.sh
 
 # Tuning
 mkdir -p ${TUNE_DIR}

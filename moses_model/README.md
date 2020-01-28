@@ -21,9 +21,10 @@ Fyrir lista af útgefnum forþjálfuðum líkönum sjá [DockerHub](https://hub.
 sendir svo á þjálfað líkan.
 
 ## Þróun á líkönum
-Öll þróun á líkönum er gerð í gegnum `moses-train-model.sh` og yfirleitt keyrt á þjóni sem hefur
+Öll þróun á líkönum er gerð í gegnum margar bash skipanir, `moses-x.sh`, og yfirleitt keyrt á þjóni sem hefur
 aðgang að mörgum kjörnum.
-Enn fremur er öll vinnslan hjúpuð með `singularity` í stað `docker` að kröfum margra þjóna.
+Enn fremur er öll vinnslan hjúpuð með `singularity` og `slurm` í stað `docker` að kröfum margra þjóna.
+Sjá `moses-pipeline.sh` fyrir pípu.
 
 ## Útgáfa
 Keyra scriptu í þessari skrá með nafni á líkani. Sem dæmi: `docker-build.sh en-is-test`.

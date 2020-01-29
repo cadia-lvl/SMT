@@ -4,6 +4,7 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=1GB
 #SBATCH --time=0:01:00
+#SBATCH --output=/home/staff/haukurpj/%j-%x.out
 set -euxo
 
 dir_name=~/SMT/moses_model

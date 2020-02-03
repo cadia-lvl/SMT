@@ -11,15 +11,15 @@ source $1
 # Binarise
 mkdir -p ${BINARISED_DIR}
 run_in_singularity ${MOSESDECODER}/bin/processPhraseTableMin \
-        -in $BASE_PHRASE_TABLE \
-        -nscores 4 \
-        -out $BINARISED_PHRASE_TABLE \
-        -threads $THREADS
+  -in $BASE_PHRASE_TABLE \
+  -nscores 4 \
+  -out $BINARISED_PHRASE_TABLE \
+  -threads $THREADS
 
 run_in_singularity ${MOSESDECODER}/bin/processLexicalTableMin \
-        -in $BASE_REORDERING_TABLE \
-        -out $BINARISED_REORDERING_TABLE \
-        -threads $THREADS
+  -in $BASE_REORDERING_TABLE \
+  -out $BINARISED_REORDERING_TABLE \
+  -threads $THREADS
 
 cp $LM $BINARISED_LM
 cp $TUNED_MOSES_INI $BINARISED_MOSES_INI
@@ -28,5 +28,3 @@ sed -i "s|$LM|$BINARISED_LM|" $BINARISED_MOSES_INI
 sed -i "s|PhraseDictionaryMemory|PhraseDictionaryCompact|" $BINARISED_MOSES_INI
 sed -i "s|$BASE_PHRASE_TABLE|$BINARISED_PHRASE_TABLE|" $BINARISED_MOSES_INI
 sed -i "s|$BASE_REORDERING_TABLE|$BINARISED_REORDERING_TABLE|" $BINARISED_MOSES_INI
-
-

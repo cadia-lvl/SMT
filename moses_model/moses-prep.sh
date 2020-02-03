@@ -24,8 +24,7 @@ ground-truth=$GROUND_TRUTH
 clean_min=$CLEAN_MIN_LENGTH
 clean_max=$CLEAN_MAX_LENGTH
 lm_order=$LM_ORDER
-alignment=$ALIGNMENT" > $MODEL_DIR/description.txt
+alignment=$ALIGNMENT" >$MODEL_DIR/description.txt
 
 # Data prep
 run_in_singularity ${MOSESDECODER}/scripts/training/clean-corpus-n.perl $TRAINING_DATA $LANG_FROM $LANG_TO $CLEAN_DATA $CLEAN_MIN_LENGTH $CLEAN_MAX_LENGTH
-

@@ -11,11 +11,9 @@ source $1
 # Tuning
 mkdir -p ${TUNE_DIR}
 run_in_singularity ${MOSESDECODER}/scripts/training/mert-moses.pl \
-        "$DEV_DATA.$LANG_FROM" \
-        "$DEV_DATA.$LANG_TO" \
-        ${MOSESDECODER}/bin/moses $BASE_MOSES_INI \
-        --mertdir ${MOSESDECODER}/bin \
-        --working-dir $TUNE_DIR \
-        --decoder-flags="-threads $THREADS"
-
-
+  "$DEV_DATA.$LANG_FROM" \
+  "$DEV_DATA.$LANG_TO" \
+  ${MOSESDECODER}/bin/moses $BASE_MOSES_INI \
+  --mertdir ${MOSESDECODER}/bin \
+  --working-dir $TUNE_DIR \
+  --decoder-flags="-threads $THREADS"

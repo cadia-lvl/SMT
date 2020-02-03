@@ -13,18 +13,7 @@ mkdir -p $MODEL_DIR
 mkdir -p $MODEL_DATA
 mkdir -p $MODEL_RESULTS
 
-echo "name=$EXPERIMENT_NAME
-from=$LANG_FROM
-to=$LANG_TO
-lm_extra=$LM_EXTRA_DATA
-train=$TRAINING_DATA
-dev=$DEV_DATA
-test=$TEST_INPUT
-ground-truth=$GROUND_TRUTH
-clean_min=$CLEAN_MIN_LENGTH
-clean_max=$CLEAN_MAX_LENGTH
-lm_order=$LM_ORDER
-alignment=$ALIGNMENT" >$MODEL_DIR/description.txt
+cat $1 > $MODEL_DIR/definitions.sh
 
 # Data prep
 run_in_singularity ${MOSESDECODER}/scripts/training/clean-corpus-n.perl $TRAINING_DATA $LANG_FROM $LANG_TO $CLEAN_DATA $CLEAN_MIN_LENGTH $CLEAN_MAX_LENGTH

@@ -7,9 +7,7 @@
 #SBATCH --output=/home/staff/haukurpj/%j-%x.out
 set -euxo
 
-dir_name=~/SMT/moses_model
-source "$dir_name"/moses-definitions.sh
-
+source $1
 # This script prepares all directories and writes the description of the model hyperparameters to a file.
 mkdir -p $MODEL_DIR
 mkdir -p $MODEL_DATA

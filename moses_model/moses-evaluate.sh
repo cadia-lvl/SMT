@@ -7,9 +7,7 @@
 #SBATCH --output=/home/staff/haukurpj/%j-%x.out
 set -exo
 
-dir_name=~/SMT/moses_model
-source "$dir_name"/moses-definitions.sh
-
+source $1
 # Translate, post process and evaluate the test sets one by one.
 # Be sure to activate the correct environment
 source /data/tools/anaconda/etc/profile.d/conda.sh

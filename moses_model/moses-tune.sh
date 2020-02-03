@@ -7,9 +7,7 @@
 #SBATCH --output=/home/staff/haukurpj/%j-%x.out
 set -euxo
 
-dir_name=~/SMT/moses_model
-source "$dir_name"/moses-definitions.sh
-
+source $1
 # Tuning
 mkdir -p ${TUNE_DIR}
 run_in_singularity ${MOSESDECODER}/scripts/training/mert-moses.pl \

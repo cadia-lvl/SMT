@@ -7,9 +7,7 @@
 #SBATCH --output=/home/staff/haukurpj/%j-%x.out
 set -euxo
 
-dir_name=~/SMT/moses_model
-source "$dir_name"/moses-definitions.sh
-
+source $1
 # LM creation
 LM_DATA=${MODEL_DATA}/lm.${LANG_TO}
 cat ${CLEAN_DATA}.${LANG_TO} $LM_EXTRA_DATA > $LM_DATA

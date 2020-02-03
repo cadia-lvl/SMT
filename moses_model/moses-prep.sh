@@ -13,7 +13,7 @@ mkdir -p $MODEL_DIR
 mkdir -p $MODEL_DATA
 mkdir -p $MODEL_RESULTS
 
-cat $1 > $MODEL_DIR/definitions.sh
+cat $1 >$MODEL_DIR/definitions.sh
 
 # Data prep
 run_in_singularity ${MOSESDECODER}/scripts/training/clean-corpus-n.perl $TRAINING_DATA $LANG_FROM $LANG_TO $CLEAN_DATA $CLEAN_MIN_LENGTH $CLEAN_MAX_LENGTH

@@ -5,24 +5,21 @@ frontend/$py.class
 frontend/.mypy_cache/
 frontend/corpus.egg-info/
 .mypy_cache/
-.idea/
+.vscode/
 # Jupyter Notebook
 .ipynb_checkpoints
 
 # Project specific
+*/*.egg-info/
 server.out
 data/
 corpus/test_data/*.is
 corpus/test_data/*.en
 /frontend/tests/test_data/
-.idea/.gitignore
-.idea/SMT.iml
-.idea/encodings.xml
-.idea/inspectionProfiles/
-.idea/misc.xml
-.idea/modules.xml
-.idea/vcs.xml
 frontend/frontend/__pycache__/
 frontend/kvistur.py
 frontend/resources/
 frontend/tests/__pycache__/
+kvistur.py
+resources
+slurm-*

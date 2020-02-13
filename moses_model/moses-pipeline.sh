@@ -20,4 +20,6 @@ jid_lm=$(sbatch --partition=longrunning --dependency=afterok:$jid_prep $dir_name
 jid_train=$(sbatch --partition=longrunning --dependency=afterok:$jid_lm $dir_name/moses-train.sh $DEFINITIONS_LOCATION | awk -F' ' '{print $4}')
 jid_tune=$(sbatch --partition=longrunning --dependency=afterok:$jid_train $dir_name/moses-tune.sh $DEFINITIONS_LOCATION | awk -F' ' '{print $4}')
 jid_binarise=$(sbatch --partition=longrunning --dependency=afterok:$jid_tune $dir_name/moses-binarise.sh $DEFINITIONS_LOCATION | awk -F' ' '{print $4}')
-jid_evaluate=$(sbatch --partition=longrunning --dependency=afterok:$jid_binarise $dir_name/moses-evaluate.sh $DEFINITIONS_LOCATION | awk -F' ' '{print $4}')
+jid_translate=$(sbatch --partition=longrunning --dependency=afterok:$jid_binarise $dir_name/moses-translate.sh $DEFINITIONS_LOCATION | awk -F' ' '{print $4}')
+jid_evaluate=$(sbatch --partition=longrunning --dependency=afterok:$jid_translate $dir_name/moses-evaluate.sh $DEFINITIONS_LOCATION | awk -F' ' '{print $4}')
+echo "$jid_evaluate"

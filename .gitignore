@@ -1,5 +1,5 @@
 # Byte-compiled / optimized / DLL files
-frontend/__pycache__/
+*/**/__pycache__/
 corpus/*.py[cod]
 frontend/$py.class
 frontend/.mypy_cache/
@@ -16,10 +16,8 @@ data/
 corpus/test_data/*.is
 corpus/test_data/*.en
 /frontend/tests/test_data/
-frontend/frontend/__pycache__/
 frontend/kvistur.py
 frontend/resources/
-frontend/tests/__pycache__/
 kvistur.py
 resources
 slurm-*

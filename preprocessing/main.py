@@ -1,6 +1,7 @@
 import pathlib
 import logging
 import random
+from typing import cast
 
 import click
 
@@ -139,7 +140,7 @@ def read_p_corpora_to_pickle(p_en, p_is, pickle_out):
 @click.option('--chunksize', type=int, default=4000, help="Number of lines to process at once.")
 @click.option('--lines', type=int, default=0, help="For debugging, limit processing to x lines per corpus. 0 for all.")
 def enrich(pickle_in, pickle_out, chunksize: int, lines: int):
-    p_corpora: PCorpora = read_pickle(pickle_in)
+    p_corpora = cast(PCorpora, read_pickle(pickle_in))
     write_pickle(pickle_out, enrich_p(p_corpora, chunksize=chunksize, lines=lines))
 
 

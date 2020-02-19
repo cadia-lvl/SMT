@@ -63,7 +63,7 @@ def sample(pickle_in, sample_size):
     log.info(f'Reading pickle={pickle_in}')
     p_corpora: EnrichedPCorpora = read_pickle(pickle_in)
     assert len(p_corpora['en']) == len(p_corpora['is'])
-    while not input("Press any key to continue"):
+    while not input("Press ENTER to continue"):
         for is_sample, en_sample in _get_sample(p_corpora, sample_size=sample_size):
             log.info(f'IS: {is_sample}EN: {en_sample}')
 
@@ -153,6 +153,7 @@ cli.add_command(enrich)
 cli.add_command(sample)
 cli.add_command(train_truecase)
 cli.add_command(truecase)
+cli.add_command(split)
 
 if __name__ == "__main__":
     logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.DEBUG)

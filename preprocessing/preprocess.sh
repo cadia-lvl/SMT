@@ -6,7 +6,7 @@
 #SBATCH --time=8:10:00
 #SBATCH --output=%j-%x.out
 
-WORK_DIR=/work/haukurpj/data/mideind/
+WORK_DIR=/work/haukurpj/data/mideind
 DIR=/home/staff/haukurpj/SMT/preprocessing
 THREADS=$SLURM_CPUS_PER_TASK
 # MEMORY=$SLURM_MEM_PER_NODE
@@ -23,8 +23,8 @@ THREADS=$SLURM_CPUS_PER_TASK
 
 # Train truecase
 TRUECASE_PREFIX="$WORK_DIR"/truecase-model
-python "$DIR"/main.py train_truecase "$WORK_DIR"/train.pickle "$TRUECASE_PREFIX" --segment form --threads "$THREADS"
-python "$DIR"/main.py train_truecase "$WORK_DIR"/train.pickle "$TRUECASE_PREFIX" --segment lemma --threads "$THREADS"
+python "$DIR"/main.py train-truecase "$WORK_DIR"/train.pickle "$TRUECASE_PREFIX" --segment form --threads "$THREADS"
+python "$DIR"/main.py train-truecase "$WORK_DIR"/train.pickle "$TRUECASE_PREFIX" --segment lemma --threads "$THREADS"
 # These are the outputs
 TRUECASE_FORM_EN="$TRUECASE_PREFIX".form.en
 TRUECASE_FORM_IS="$TRUECASE_PREFIX".form.is

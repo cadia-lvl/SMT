@@ -9,7 +9,8 @@ import requests
 from nltk.corpus import wordnet as wn
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk import pos_tag
-from sacremoses import MosesTokenizer, MosesTruecaser
+from sacremoses import MosesTokenizer, MosesTruecaser, MosesDetokenizer
+import tokenizer as mideind_tok
 
 from .types import (Lang, Tokens, POS, Lemma,
                     TokCorpus,
@@ -26,6 +27,7 @@ tag_map['R'] = wn.ADV
 URL = 'http://malvinnsla.arnastofnun.is'
 
 m_tok = None
+m_detok = None
 
 
 def _lazy_load_moses_tokenizer():
@@ -33,6 +35,13 @@ def _lazy_load_moses_tokenizer():
     if not m_tok:
         m_tok = MosesTokenizer(lang='en')
     return m_tok
+
+
+def _lazy_load_moses_detokenizer():
+    global m_detok
+    if not m_detok:
+        m_detok = MosesDetokenizer(lang='en')
+    return m_detok
 
 
 def _make_chunks(sentences, chunksize: int, max_lines: int):
@@ -106,6 +115,15 @@ def tokenize(line: str, lang: Lang) -> Tokens:
         m_tok = _lazy_load_moses_tokenizer()
         return m_tok.tokenize(line, escape=False)
     raise NotImplementedError("Only English tokeniziation")
+
+
+def detokenize(line: str, lang: Lang) -> str:
+    if lang == 'en':
+        m_detok = _lazy_load_moses_detokenizer()
+        return m_detok.detokenize(line.split(' '), return_str=True, unescape=False)
+    else:
+        tokenized = list(mideind_tok.tokenize(line, normalize=False))
+        return mideind_tok.detokenize(tokenized, normalize=False)
 
 
 def split_corpora(corpora: Union[PCorpora, EnrichedPCorpora], test_size=2000, shuffle=True, seed=42) -> Union[Tuple[PCorpora, PCorpora], Tuple[EnrichedPCorpora, EnrichedPCorpora]]:

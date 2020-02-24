@@ -6,31 +6,10 @@ from typing import cast
 import click
 
 from preprocessing.file_handler import write_pickle, read_pickle, write_moses
-from preprocessing.pipeline import (enrich_p_corpora as enrich_p,
-                                    split_corpora as split_p,
-                                    train_truecase as train_truecase_p,
-                                    truecase as truecase_p)
+from preprocessing import pipeline
 from preprocessing.types import (PCorpora, EnrichedPCorpora)
 
 log = logging.getLogger()
-
-
-def get_index_of_segment(segment):
-    if segment == 'form':
-        return 0
-    elif segment == 'pos':
-        return 1
-    else:
-        return 2
-
-
-def _get_other_indices(segment):
-    if segment == 'form':
-        yield from (1, 2)
-    elif segment == 'pos':
-        yield from (0, 2)
-    else:
-        yield from (0, 1)
 
 
 def _get_sample(p_corpora, sample_size):
@@ -78,11 +57,11 @@ def train_truecase(pickle_in, save_to_prefix, segment, threads):
     """Trains two Moses truecase models, one for each language, and saves the model to {save_to_prefix}.{segment}.{lang}. Works on EnrichedPCorpora."""
     log.info(f'Reading pickle={pickle_in}')
     p_corpora: EnrichedPCorpora = read_pickle(pickle_in)
-    index = get_index_of_segment(segment=segment)
+    index = pipeline.get_index_of_segment(segment=segment)
     for lang in p_corpora:
         save_to = f'{save_to_prefix}.{segment}.{lang}'
         log.info(f'save_to={save_to}')
-        train_truecase_p([lines[index] for lines in p_corpora[lang]], save_to=save_to, threads=threads)
+        pipeline.train_truecase([lines[index] for lines in p_corpora[lang]], save_to=save_to, threads=threads)
     log.info('Done.')
 
 
@@ -95,9 +74,7 @@ def train_truecase(pickle_in, save_to_prefix, segment, threads):
 def truecase(pickle_in, pickle_out, load_from, lang, segment):
     log.info(f'Reading pickle={pickle_in}')
     p_corpora: EnrichedPCorpora = read_pickle(pickle_in)
-    index = get_index_of_segment(segment=segment)
-    p_corpora[lang] = [(form, pos, lemma) for form, pos, lemma in zip(truecase_p(corpus=[lines[index] for lines in p_corpora[lang]], load_from=load_from),
-                                                                      *[[lines[other_indicies] for lines in p_corpora[lang]] for other_indicies in _get_other_indices(segment)])]
+    p_corpora[lang] = pipeline.truecase_enriched_corpus(p_corpora[lang], load_from=load_from, segment=segment)
     log.info(f'Writing pickle={pickle_out}')
     write_pickle(pickle_out, p_corpora)
 
@@ -112,7 +89,7 @@ def truecase(pickle_in, pickle_out, load_from, lang, segment):
 def split(pickle_in, pickle_out_train, pickle_out_test, test_size, shuffle, seed):
     log.info(f'Reading pickle={pickle_in}')
     p_corpora: EnrichedPCorpora = read_pickle(pickle_in)
-    train, test = split_p(p_corpora, test_size=test_size, shuffle=shuffle, seed=seed)
+    train, test = pipeline.split_corpora(p_corpora, test_size=test_size, shuffle=shuffle, seed=seed)
     write_pickle(pickle_out_train, train)
     write_pickle(pickle_out_test, test)
     log.info('Done.')
@@ -140,8 +117,9 @@ def read_p_corpora_to_pickle(p_en, p_is, pickle_out):
 @click.option('--chunksize', type=int, default=4000, help="Number of lines to process at once.")
 @click.option('--lines', type=int, default=0, help="For debugging, limit processing to x lines per corpus. 0 for all.")
 def enrich(pickle_in, pickle_out, chunksize: int, lines: int):
+    # We assume a PCorpora has been given.
     p_corpora = cast(PCorpora, read_pickle(pickle_in))
-    write_pickle(pickle_out, enrich_p(p_corpora, chunksize=chunksize, lines=lines))
+    write_pickle(pickle_out, pipeline.enrich_p_corpora(p_corpora, chunksize=chunksize, lines=lines))
 
 
 @click.group()

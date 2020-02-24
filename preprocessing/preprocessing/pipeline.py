@@ -1,6 +1,6 @@
 from time import time
 from collections import defaultdict
-from typing import Dict, Callable, Union, Tuple
+from typing import Dict, Callable, Union, Tuple, List
 import logging
 
 import requests
@@ -28,6 +28,24 @@ URL = 'http://malvinnsla.arnastofnun.is'
 
 m_tok = None
 m_detok = None
+
+
+def get_index_of_segment(segment):
+    if segment == 'form':
+        return 0
+    elif segment == 'pos':
+        return 1
+    else:
+        return 2
+
+
+def _get_other_indices(segment):
+    if segment == 'form':
+        yield from (1, 2)
+    elif segment == 'pos':
+        yield from (0, 2)
+    else:
+        yield from (0, 1)
 
 
 def _lazy_load_moses_tokenizer():
@@ -141,4 +159,13 @@ def train_truecase(corpus: TokCorpus, save_to: str, threads=1) -> None:
 
 def truecase(corpus: TokCorpus, load_from: str) -> TokCorpus:
     truecaser = MosesTruecaser(load_from=load_from)
-    return [[truecaser.truecase(token) for token in tokens] for tokens in corpus]
+    return [[truecaser.truecase(token, return_str=True) for token in line] for line in corpus]
+
+
+def truecase_enriched_corpus(corpus: EnrichedCorpus, load_from: str, segment: str) -> EnrichedCorpus:
+    transposed: List[TokCorpus] = list(map(list, zip(*corpus)))
+    index = get_index_of_segment(segment)
+    log.info(f'Truecasing: load_from={load_from}, segment={segment}')
+    log.info(f'Input dim=({len(corpus)}, {len(corpus[0])}), Transposed=({len(transposed)}, {len(transposed[0])})')
+    transposed[index] = truecase(transposed[index], load_from=load_from)
+    return [(form, pos, lemma) for form, pos, lemma in zip(*transposed)]

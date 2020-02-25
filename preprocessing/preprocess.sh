@@ -24,22 +24,40 @@ THREADS=$SLURM_CPUS_PER_TASK
 # python "$DIR"/main.py split "$WORK_DIR"/enriched.pickle "$WORK_DIR"/train.enriched.pickle "$WORK_DIR"/dev.enriched.pickle
 
 # Train truecase
-TRUECASE_PREFIX="$WORK_DIR"/truecase-model
+# TRUECASE_PREFIX="$WORK_DIR"/truecase-model
 # python "$DIR"/main.py train-truecase "$WORK_DIR"/train.pickle "$TRUECASE_PREFIX" --segment form --threads "$THREADS"
 # python "$DIR"/main.py train-truecase "$WORK_DIR"/train.pickle "$TRUECASE_PREFIX" --segment lemma --threads "$THREADS"
 # These are the outputs
-TRUECASE_FORM_EN="$TRUECASE_PREFIX".form.en
-TRUECASE_FORM_IS="$TRUECASE_PREFIX".form.is
-TRUECASE_LEMMA_EN="$TRUECASE_PREFIX".lemma.en
-TRUECASE_LEMMA_IS="$TRUECASE_PREFIX".lemma.is
+# TRUECASE_FORM_EN="$TRUECASE_PREFIX".form.en
+# TRUECASE_FORM_IS="$TRUECASE_PREFIX".form.is
+# TRUECASE_LEMMA_EN="$TRUECASE_PREFIX".lemma.en
+# TRUECASE_LEMMA_IS="$TRUECASE_PREFIX".lemma.is
 
 # Apply truecase to all sets (as this is part of the preprocessing step)
+# DATA_SETS="dev train test-ees test-ema test-opensubtitles"
+# for set in $DATA_SETS; do
+#     python "$DIR"/main.py truecase "$WORK_DIR"/"$set".enriched.pickle --lang en --segment form "$WORK_DIR"/"$set"-true.pickle "$TRUECASE_FORM_EN"
+#     python "$DIR"/main.py truecase "$WORK_DIR"/"$set"-true.pickle --lang is --segment form "$WORK_DIR"/"$set"-true.pickle "$TRUECASE_FORM_IS"
+#     python "$DIR"/main.py truecase "$WORK_DIR"/"$set"-true.pickle --lang en --segment lemma "$WORK_DIR"/"$set"-true.pickle "$TRUECASE_LEMMA_EN"
+#     python "$DIR"/main.py truecase "$WORK_DIR"/"$set"-true.pickle --lang is --segment lemma "$WORK_DIR"/"$set"-true.pickle "$TRUECASE_LEMMA_IS"
+# done
+
+# Write to Moses format for training and LM training. 
+# Moses training
+# DATA_SETS="train dev test-ees test-ema test-opensubtitles"
+# for set in $DATA_SETS; do
+#     python "$DIR"/main.py write "$WORK_DIR"/"$set"-true.pickle "$WORK_DIR"/"$set" --lemma --pos --form --threads "$THREADS"
+# done
+# LM training
+stage=pos
 DATA_SETS="test-ees test-ema test-opensubtitles"
 for set in $DATA_SETS; do
-    python "$DIR"/main.py truecase "$WORK_DIR"/"$set".enriched.pickle --lang en --segment form "$WORK_DIR"/"$set"-true.pickle "$TRUECASE_FORM_EN"
-    python "$DIR"/main.py truecase "$WORK_DIR"/"$set"-true.pickle --lang is --segment form "$WORK_DIR"/"$set"-true.pickle "$TRUECASE_FORM_IS"
-    python "$DIR"/main.py truecase "$WORK_DIR"/"$set"-true.pickle --lang en --segment lemma "$WORK_DIR"/"$set"-true.pickle "$TRUECASE_LEMMA_EN"
-    python "$DIR"/main.py truecase "$WORK_DIR"/"$set"-true.pickle --lang is --segment lemma "$WORK_DIR"/"$set"-true.pickle "$TRUECASE_LEMMA_IS"
+    python "$DIR"/main.py write "$WORK_DIR"/"$set"-true.pickle "$WORK_DIR"/"$set" --$stage --threads "$THREADS"
 done
 
-# Write to Moses format and LM training. 
+# Detoknize
+DATA_SETS="test-ees test-ema test-opensubtitles"
+for set in $DATA_SETS; do
+    python "$DIR"/main.py detokenize "$WORK_DIR"/"$set"."$stage".en "$WORK_DIR"/"$set"."$stage".detok.en en
+    python "$DIR"/main.py detokenize "$WORK_DIR"/"$set"."$stage".is "$WORK_DIR"/"$set"."$stage".detok.is is
+done

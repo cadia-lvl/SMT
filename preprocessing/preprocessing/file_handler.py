@@ -61,7 +61,7 @@ def apply_regexps(sent: Tokens, regexps) -> Tokens:
 
 
 def write_moses(corpus: EnrichedCorpus, output_file, threads: int, chunksize: int, write_form: bool, write_pos: bool, write_lemma: bool) -> None:
-    with output_file.open('w+') as f_out:
+    with open(output_file, 'w+') as f_out:
         with ProcessPoolExecutor(max_workers=threads) as executor:
             results = tqdm(executor.map(
                 partial(get_moses_line, write_form=write_form, write_pos=write_pos, write_lemma=write_lemma),
@@ -71,7 +71,8 @@ def write_moses(corpus: EnrichedCorpus, output_file, threads: int, chunksize: in
                 f_out.write(result)
 
 
-def get_moses_line(form, pos, lemma, write_form: bool, write_pos: bool, write_lemma: bool) -> str:
+def get_moses_line(line, write_form: bool, write_pos: bool, write_lemma: bool) -> str:
+    form, pos, lemma = line
     if write_form:
         form = apply_regexps(form, second_reg)
     if write_pos:

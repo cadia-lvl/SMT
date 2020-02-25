@@ -122,6 +122,18 @@ def enrich(pickle_in, pickle_out, chunksize: int, lines: int):
     write_pickle(pickle_out, pipeline.enrich_p_corpora(p_corpora, chunksize=chunksize, lines=lines))
 
 
+@click.command()
+@click.argument('file_in')
+@click.argument('file_out')
+@click.argument('lang')
+def detokenize(file_in, file_out, lang):
+    with open(file_in) as f_in, open(file_out, mode='w+') as f_out:
+        log.info(f'Reading={file_in}, writing={file_out}')
+        for line in f_in:
+            f_out.write(pipeline.detokenize(line=line, lang=lang) + '\n')
+    log.info('Done.')
+
+
 @click.group()
 def cli():
     pass
@@ -133,6 +145,8 @@ cli.add_command(sample)
 cli.add_command(train_truecase)
 cli.add_command(truecase)
 cli.add_command(split)
+cli.add_command(write)
+cli.add_command(detokenize)
 
 if __name__ == "__main__":
     logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.DEBUG)

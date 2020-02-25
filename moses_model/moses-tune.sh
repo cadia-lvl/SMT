@@ -4,7 +4,7 @@
 #SBATCH --cpus-per-task=10
 #SBATCH --mem=16GB
 #SBATCH --time=2:00:00
-#SBATCH --output=/home/staff/haukurpj/%j-%x.out
+
 set -euxo
 
 source $1

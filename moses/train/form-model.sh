@@ -25,7 +25,7 @@ fi
 
 # Steps: 1=Prepare 2=LM 3=Train 4=Tune 5=Binarise 6=Translate 7=Evaluate
 FIRST_STEP=1
-LAST_STEP=4
+LAST_STEP=5
 # Constants
 MOSES_TAG="1.1.0"
 MOSESDECODER="/opt/moses"
@@ -40,7 +40,7 @@ CLEAN_MIN_LENGTH=1
 CLEAN_MAX_LENGTH=70
 LM_SURFACE_ORDER=3
 LM_POS_ORDER=3
-ALIGNMENT="grow diag"
+ALIGNMENT="grow-diag"
 REORDERING="msd-bidirectional-fe"
 
 TRAINING_DATA="$DATA_DIR"train/form-pos-lemma/data
@@ -84,24 +84,24 @@ check_dir_not_empty "$LM_POS_TEST_DIR"
 
 # Variables for subsequent steps.
 # 1. Prepare
-  MODEL_NAME="$EXPERIMENT_NAME"-"$LANG_FROM"-"$LANG_TO"
-  MODEL_DIR="$WORK_DIR""$MODEL_NAME"/
-  MODEL_DATA_DIR="$MODEL_DIR"data/
-  MODEL_RESULTS_DIR="$MODEL_DIR"results/
-  CLEAN_DATA="$MODEL_DATA_DIR"train
+MODEL_NAME="$EXPERIMENT_NAME"-"$LANG_FROM"-"$LANG_TO"
+MODEL_DIR="$WORK_DIR""$MODEL_NAME"/
+MODEL_DATA_DIR="$MODEL_DIR"data/
+MODEL_RESULTS_DIR="$MODEL_DIR"results/
+CLEAN_DATA="$MODEL_DATA_DIR"train
 
 # 2. Train LM
 LM_SURFACE="$MODEL_DATA_DIR"form."$LANG_TO".blm
 LM_POS="$MODEL_DATA_DIR"pos."$LANG_TO".blm
 
 # 3. Train Moses
-BASE_DIR="$MODEL_DIR"base
+BASE_DIR="$MODEL_DIR"base/
 BASE_MOSES_INI="$BASE_DIR"model/moses.ini
 BASE_PHRASE_TABLE="$BASE_DIR"model/phrase-table.gz
 BASE_REORDERING_TABLE="$BASE_DIR"model/reordering-table.wbe-msd-bidirectional-fe.gz
 
 # 4. Tune Moses
-TUNE_DIR="$MODEL_DIR"tuned
+TUNE_DIR="$MODEL_DIR"tuned/
 TUNED_MOSES_INI="$TUNE_DIR"moses.ini
 
 # 5. Binarise Moses
@@ -135,9 +135,9 @@ function train_lm() {
   LM="$2"
   LM_ORDER="$3"
   run_in_singularity "$MOSESDECODER"/bin/lmplz --order "$LM_ORDER" --temp_prefix "$WORK_DIR" -S 10G --discount_fallback <"$LM_DATA" >"$LM".arpa
-  # we use the trie structure to save about 1/2 the space, but almost twice as slow
-  # we use pointer compression to save more space, but slightly slower
-  run_in_singularity "$MOSESDECODER"/bin/build_binary trie -a 64 -S 10G "$LM".arpa "$LM"
+  # we use the trie structure to save about 1/2 the space, but almost twice as slow `trie`
+  # we use pointer compression to save more space, but slightly slower `-a 64`
+  run_in_singularity "$MOSESDECODER"/bin/build_binary -S 10G "$LM".arpa "$LM"
 }
 
 function eval_lm() {
@@ -171,8 +171,8 @@ if ((FIRST_STEP <= 3 && LAST_STEP >= 3)); then
     -lm 0:"$LM_SURFACE_ORDER":"$LM_SURFACE":8 \
     -alignment-factors 0-0 \
     -reordering-factors 0-0 \
-    -translation-factors 0-0 \
-    -decoding-steps t0 \
+    -translation-factors 0-0+1-1+2-2 \
+    -decoding-steps t0,t1,t2 \
     -mgiza \
     -mgiza-cpus "$THREADS" \
     -parallel \

@@ -35,12 +35,12 @@ MOSESDECODER_TOOLS="/opt/moses_tools"
 # Model variables
 LANG_FROM="en"
 LANG_TO="is"
-EXPERIMENT_NAME="form"
+EXPERIMENT_NAME="pos"
 
 CLEAN_MIN_LENGTH=1
 CLEAN_MAX_LENGTH=70
 LM_SURFACE_ORDER=3
-LM_POS_ORDER=3
+LM_POS_ORDER=6
 ALIGNMENT="grow-diag"
 REORDERING="msd-bidirectional-fe"
 
@@ -170,7 +170,8 @@ if ((FIRST_STEP <= 3 && LAST_STEP >= 3)); then
     -alignment "$ALIGNMENT" \
     -reordering "$REORDERING" \
     -lm 0:"$LM_SURFACE_ORDER":"$LM_SURFACE":8 \
-    -translation-factors 0-0 \
+    -lm 1:"$LM_POS_ORDER":"$LM_POS":8 \
+    -translation-factors 0-0+0,1-1 \
     -mgiza \
     -mgiza-cpus "$THREADS" \
     -parallel \

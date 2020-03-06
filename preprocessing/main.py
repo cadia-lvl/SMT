@@ -20,20 +20,19 @@ def _get_sample(p_corpora, sample_size):
 
 @click.command()
 @click.argument('pickle_in')
-@click.argument('save_to_prefix', type=str)
+@click.argument('lang')
+@click.argument('save_to', type=str)
 @click.option('--lemma', is_flag=True)
 @click.option('--pos', is_flag=True)
 @click.option('--form', is_flag=True)
 @click.option('--lines', type=int)
 @click.option('--threads', type=int, default=1)
 @click.option('--chunksize', type=int, default=4000)
-def write(pickle_in, save_to_prefix, lemma, pos, form, lines, threads, chunksize):
-    log.info(f'Reading pickle={pickle_in}')
+def write(pickle_in, lang, save_to, lemma, pos, form, lines, threads, chunksize):
+    log.info(f'Reading pickle={pickle_in}, lang={lang}')
     p_corpora: EnrichedPCorpora = read_pickle(pickle_in)
-    for lang in p_corpora:
-        output_file = f'{save_to_prefix}{".form" if form else ""}{".pos" if pos else ""}{".lemma" if lemma else ""}.{lang}'
-        log.info(f'Writing file={output_file}')
-        write_moses(p_corpora[lang], output_file=output_file, threads=threads, chunksize=chunksize, write_form=form, write_pos=pos, write_lemma=lemma)
+    log.info(f'Writing file={save_to}')
+    write_moses(p_corpora[lang], output_file=save_to, threads=threads, chunksize=chunksize, write_form=form, write_pos=pos, write_lemma=lemma)
 
 
 @click.command()

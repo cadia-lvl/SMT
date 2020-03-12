@@ -1,6 +1,6 @@
 from time import time
 from collections import defaultdict
-from typing import Dict, Callable, Union, Tuple, List
+from typing import Dict, Callable, Union, Tuple, List, Set
 import logging
 
 import requests
@@ -16,7 +16,7 @@ from .types import (Lang, Tokens, POS, Lemma,
                     TokCorpus,
                     PCorpora, EnrichedPCorpora,
                     Corpus, EnrichedCorpus)
-
+from preprocessing import file_handler
 
 log = logging.getLogger()
 
@@ -62,14 +62,6 @@ def _lazy_load_moses_detokenizer():
     return m_detok
 
 
-def _make_chunks(sentences, chunksize: int, max_lines: int):
-    length = len(sentences)
-    if max_lines:
-        length = min(length, max_lines)
-    for i in range(0, len(sentences), chunksize):
-        yield sentences[i:i + chunksize]
-
-
 def enrich_p_corpora(p_corpora: PCorpora, chunksize, lines: int) -> EnrichedPCorpora:
     """Enrich the given corpus with POS and lemma.
     English processing is offline.
@@ -80,7 +72,7 @@ def enrich_p_corpora(p_corpora: PCorpora, chunksize, lines: int) -> EnrichedPCor
         log.info(f'Working on lang={lang}')
         enriched_p_corpora[lang] = []
         function: Callable[[Corpus], EnrichedCorpus] = enrich_sentences_en if lang == 'en' else enrich_sentences_is
-        for chunk in _make_chunks(p_corpora[lang], chunksize=chunksize, max_lines=lines):
+        for chunk in file_handler.make_batches(p_corpora[lang], batch_size=chunksize, max_lines=lines):
             start = time()
             enriched_p_corpora[lang].extend(function(chunk))
             end = time()
@@ -142,6 +134,18 @@ def detokenize(line: str, lang: Lang) -> str:
     else:
         tokenized = list(mideind_tok.tokenize(line, normalize=False))
         return mideind_tok.detokenize(tokenized, normalize=False)
+
+
+def deduplicate(corpus: TokCorpus, known: Set[List[str]]) -> TokCorpus:
+    deduplicated = []
+    for sent in corpus:
+        if sent in known:
+            continue
+        else:
+            known.add(sent)
+            deduplicated.append(sent)
+    log.info(f'Total lines={len(corpus)}, unique={len(deduplicated)}, removed={len(corpus) - len(deduplicated)}')
+    return deduplicated
 
 
 def split_corpora(corpora: Union[PCorpora, EnrichedPCorpora], test_size=2000, shuffle=True, seed=42) -> Union[Tuple[PCorpora, PCorpora], Tuple[EnrichedPCorpora, EnrichedPCorpora]]:

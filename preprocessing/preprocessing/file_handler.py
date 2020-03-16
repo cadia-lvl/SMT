@@ -1,16 +1,16 @@
 import logging
 import pickle
-from typing import Union
+from typing import Union, List, Dict
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
+import itertools
 import re
-from typing import Dict, List
 from xml.etree import ElementTree as ET
 
 from tqdm import tqdm
 import ujson
 
-from .types import (TokCorpus, EnrichedCorpus, PCorpora, EnrichedPCorpora, Tokens)
+from .types import (iCorpus, iTokCorpus, EnrichedCorpus, PCorpora, EnrichedPCorpora, Tokens)
 
 log = logging.getLogger()
 
@@ -47,14 +47,20 @@ second_reg = [
 ]
 
 
-def serialize(path: str, corpus: Dict):
-    """We use json"""
-    write_json(path, corpus)
+def serialize(path: str, corpus: iCorpus):
+    """We use plain files"""
+    log.info(f'Writing txt={path}')
+    with open(path, 'w+') as f_out:
+        for line in corpus:
+            f_out.write(line)
 
 
-def deserialize(path: str) -> Dict:
-    """We use json"""
-    return read_json(path)
+def deserialize(path: str) -> iCorpus:
+    """We use plain files"""
+    log.info(f'Reading txt={path}')
+    with open(path) as f_in:
+        for line in f_in:
+            yield line
 
 
 def read_json(path: str) -> Dict:
@@ -63,7 +69,7 @@ def read_json(path: str) -> Dict:
         return ujson.load(f_in)
 
 
-def write_json(path: str, corpus: Dict) -> None:
+def write_json(path: str, corpus: Union[Dict, List]) -> None:
     log.info(f'Writing json={path}')
     with open(path, '+w') as f_out:
         ujson.dump(corpus, f_out)
@@ -82,11 +88,10 @@ def write_pickle(path: str, corpora: Union[PCorpora, EnrichedPCorpora]) -> None:
 
 
 def make_batches(sequence, batch_size: int, max_lines=0):
-    length = len(sequence)
-    if max_lines != 0:
-        length = min(length, max_lines)
-    for i in range(0, len(sequence), batch_size):
-        yield sequence[i:i + batch_size]
+    sourceiter = iter(sequence)
+    while True:
+        batchiter = itertools.islice(sourceiter, batch_size)
+        yield itertools.chain([batchiter.next()], batchiter)
 
 
 def read_rmh_file(path: str):
@@ -104,22 +109,17 @@ def read_rmh_file(path: str):
             for sentence_node in paragraph_node.findall('.//a:s', NS)]
 
 
-def rmh_2_corpus(files: List[str], threads=1, chunksize=100) -> TokCorpus:
+def rmh_2_corpus(files: List[str], threads=1, chunksize=100) -> iTokCorpus:
     """
     Reads RMH files and extracts the tokens, including punctuations. Returns a TokCorpus.
 
     Multiple threads are used to process batches (of size chunksize) of files together.
     """
-    ret: List[List[str]] = []
     with ProcessPoolExecutor(max_workers=threads) as executor:
-        results = tqdm(executor.map(
+        return tqdm(executor.map(
             read_rmh_file,
             files,
             chunksize=chunksize))
-        # We do it the dirty way, using itertools uses too much memory
-        for result in results:
-            ret.extend(result)
-    return ret
 
 
 def apply_regexps(sent: Tokens, regexps) -> Tokens:

@@ -2,7 +2,7 @@ from time import time
 from collections import defaultdict
 from typing import Dict, Callable, Tuple, Set, Generator
 import logging
-import itertools
+import re
 
 import requests
 # nltk.download('wordnet')
@@ -25,6 +25,16 @@ tag_map['J'] = wn.ADJ
 tag_map['V'] = wn.VERB
 tag_map['R'] = wn.ADV
 URL = 'http://malvinnsla.arnastofnun.is'
+
+
+m_true = None
+
+
+def _lazy_load_moses_truecaser(load_from):
+    global m_true
+    if not m_true:
+        m_true = MosesTruecaser(load_from=load_from)
+    return m_true
 
 
 def get_index_of_segment(segment):
@@ -50,6 +60,48 @@ def _lazy_load_moses_detokenizer():
     if not m_detok:
         m_detok = MosesDetokenizer(lang='en')
     return m_detok
+
+
+illegal_replace = [
+    {
+        # u'\u007c' - |
+        'pattern': "|",
+        'repl': '_pipe_'
+    },
+    {
+        # u'\u003c', u'\u003e' - <, >
+        'pattern': "<",
+        'repl': '_lt_'
+    },
+    {
+        'pattern': ">",
+        'repl': '_gt_'
+    },
+    {
+        # u'\u005b', u'\u005d' - [, ]
+        'pattern': r"\[",
+        'repl': '_bo_'
+    },
+    {
+        'pattern': r"\]",
+        'repl': '_bc_'
+    }
+]
+
+
+def escape_moses_chars(corpus: iCorpus) -> iCorpus:
+    for sent in corpus:
+        for keywords in illegal_replace:
+            print(keywords)
+            sent = re.sub(string=sent, pattern=keywords['pattern'], repl=keywords['repl'])
+        yield sent
+
+
+def de_escape_moses_chars(corpus: iCorpus) -> iCorpus:
+    for sent in corpus:
+        for keywords in illegal_replace:
+            sent = re.sub(string=sent, pattern=keywords['repl'], repl=keywords['pattern'])
+        yield sent
 
 
 def enrich(corpus: iCorpus, lang: str, chunksize: int, lines: int) -> iEnrichedCorpus:
@@ -142,16 +194,18 @@ def split(corpus: Corpus, test_size=2000, shuffle=True, seed=42) -> Tuple[Corpus
     return train_test_split(corpus, shuffle=shuffle, test_size=test_size, random_state=seed)
 
 
-def train_truecase(corpus: iTokCorpus, save_to: str, threads=1) -> None:
+def train_truecase(corpus: iCorpus, save_to: str, threads=1) -> None:
     truecaser = MosesTruecaser()
-    truecaser.train([tokens for tokens in corpus], save_to=save_to, possibly_use_first_token=True, processes=threads, progress_bar=True)
+    # Testing loading data beforehand.
+    data = [line.split(' ') for line in corpus]
+    truecaser.train(data, save_to=save_to, possibly_use_first_token=True, processes=threads, progress_bar=True)
 
 
 def truecase(corpus: iCorpus, load_from: str) -> iCorpus:
     """
     Input needs to be tokenized and provided as a list of sentences.
     """
-    truecaser = MosesTruecaser(load_from=load_from)
+    truecaser = _lazy_load_moses_truecaser(load_from=load_from)
     for line in corpus:
         yield truecaser.truecase(line, return_str=True)
 
@@ -163,3 +217,24 @@ def detruecase(corpus: iCorpus) -> iCorpus:
     detruecaser = MosesDetruecaser()
     for line in corpus:
         yield detruecaser.detruecase(line, return_str=True)
+
+
+def preprocess(corpus: Corpus, lang: str, truecase_model: str) -> Corpus:
+    # Tokenize
+    # Truecase
+    # Put Moses placeholders
+    tokenized = (" ".join(tokens) for tokens in tokenize((line for line in corpus), lang=lang))
+    truecased = truecase((line for line in tokenized), load_from=truecase_model)
+    escaped = escape_moses_chars(truecased)
+
+    return list(escaped)
+
+
+def postprocess(corpus: Corpus, lang: str) -> Corpus:
+    # Remove Moses placeholders
+    # Detruecase
+    # Detokenize
+    de_escaped = de_escape_moses_chars((line for line in corpus))
+    detruecased = detruecase(de_escaped)
+    detokenized = detokenize(detruecased, lang=lang)
+    return list(detokenized)

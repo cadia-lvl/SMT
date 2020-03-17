@@ -5,6 +5,7 @@
 #SBATCH --mem=16GB
 #SBATCH --time=8:10:00
 #SBATCH --output=%j-%x.out
+#SBATCH --chdir=/home/staff/haukurpj/SMT
 
 WORK_DIR=/work/haukurpj/data/mideind
 DIR=/home/staff/haukurpj/SMT/preprocessing

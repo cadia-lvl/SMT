@@ -4,47 +4,15 @@ from typing import Union, List, Dict
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 import itertools
-import re
 from xml.etree import ElementTree as ET
 
 from tqdm import tqdm
 import ujson
 
-from .types import (iCorpus, iTokCorpus, EnrichedCorpus, PCorpora, EnrichedPCorpora, Tokens)
+from .types import (iCorpus, iTokCorpus, EnrichedCorpus, PCorpora, EnrichedPCorpora, EnrichedSentence)
+from preprocessing import pipeline
 
 log = logging.getLogger()
-
-# u'\u007c' - |
-PIPE = re.compile(r"\u007c")
-# u'\u003c', u'\u003e' - <, >
-LT = re.compile(r"\u003c")
-GT = re.compile(r"\u003e")
-# u'\u005b', u'\u005d' - [, ]
-BRACKET_OPEN = re.compile(r"\u005b")
-BRACKET_CLOSE = re.compile(r"\u005d")
-
-second_reg = [
-    {
-        'pattern': PIPE,
-        'repl': '_pipe_'
-    },
-    {
-        'pattern': LT,
-        'repl': '_lt_'
-    },
-    {
-        'pattern': GT,
-        'repl': '_gt_'
-    },
-    {
-        'pattern': BRACKET_OPEN,
-        'repl': '_bo_'
-    },
-    {
-        'pattern': BRACKET_CLOSE,
-        'repl': '_bc_'
-    }
-]
 
 
 def serialize(path: str, corpus: iCorpus):
@@ -122,12 +90,6 @@ def rmh_2_corpus(files: List[str], threads=1, chunksize=100) -> iTokCorpus:
             chunksize=chunksize))
 
 
-def apply_regexps(sent: Tokens, regexps) -> Tokens:
-    for keywords in regexps:
-        sent = [re.sub(string=tok, **keywords) for tok in sent]
-    return sent
-
-
 def write_moses(corpus: EnrichedCorpus, output_file, threads: int, chunksize: int, write_form: bool, write_pos: bool, write_lemma: bool) -> None:
     with open(output_file, 'w+') as f_out:
         with ProcessPoolExecutor(max_workers=threads) as executor:
@@ -139,14 +101,14 @@ def write_moses(corpus: EnrichedCorpus, output_file, threads: int, chunksize: in
                 f_out.write(result)
 
 
-def get_moses_line(line, write_form: bool, write_pos: bool, write_lemma: bool) -> str:
+def get_moses_line(line: EnrichedSentence, write_form: bool, write_pos: bool, write_lemma: bool) -> str:
     form, pos, lemma = line
     if write_form:
-        form = apply_regexps(form, second_reg)
+        form = list(pipeline.escape_moses_chars((token for token in form)))
     if write_pos:
-        pos = apply_regexps(pos, second_reg)
+        pos = list(pipeline.escape_moses_chars((token for token in pos)))
     if write_lemma:
-        lemma = apply_regexps(lemma, second_reg)
+        lemma = list(pipeline.escape_moses_chars((token for token in lemma)))
     # Only form
     if write_form and not write_pos and not write_lemma:
         return " ".join(form) + "\n"

@@ -29,6 +29,23 @@ def write_factor(input, lang, save_to, lemma, pos, form, lines, threads, chunksi
 
 @click.command()
 @click.argument('input', type=click.File('r'))
+@click.argument('output', type=click.File('w+'))
+@click.argument('lang', type=str)
+@click.argument('truecase_model', type=str)
+def preprocess(input, output, lang, truecase_model):
+    output.write("\n".join(pipeline.preprocess(input, lang=lang, truecase_model=truecase_model)))
+
+
+@click.command()
+@click.argument('input', type=click.File('r'))
+@click.argument('output', type=click.File('w+'))
+@click.argument('lang', type=str)
+def postprocess(input, output, lang):
+    output.write("\n".join(pipeline.postprocess(input, lang=lang)))
+
+
+@click.command()
+@click.argument('input', type=click.File('r'))
 @click.argument('save_to', type=str)
 @click.argument('lang', type=str)
 @click.option('--threads', type=int, default=1)
@@ -37,7 +54,7 @@ def train_truecase(input, save_to, lang, threads):
     Trains Moses truecase model
     """
     log.info(f'save_to={save_to}')
-    pipeline.train_truecase(pipeline.tokenize(input, lang), save_to=save_to, threads=threads)
+    pipeline.train_truecase(input, save_to=save_to, threads=threads)
     log.info('Done.')
 
 
@@ -157,6 +174,8 @@ cli.add_command(read_rmh)
 cli.add_command(deduplicate)
 cli.add_command(pickle_to_json)
 cli.add_command(test)
+cli.add_command(preprocess)
+cli.add_command(postprocess)
 
 
 if __name__ == "__main__":

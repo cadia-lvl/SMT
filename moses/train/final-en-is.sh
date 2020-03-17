@@ -6,31 +6,32 @@
 #SBATCH --chdir=/home/staff/haukurpj/SMT
 #SBATCH --time=8:01:00
 #SBATCH --output=%j-%x.out
-set -euxo
+# e=fail on pipeline, u=fail on unset var, x=trace commands
+set -ex
 
 # check if script is started via SLURM or bash
 # if with SLURM: there variable '$SLURM_JOB_ID' will exist
 # `if [ -n $SLURM_JOB_ID ]` checks if $SLURM_JOB_ID is not an empty string
 if [ -n "$SLURM_JOB_ID" ];  then
-    # check the original location through scontrol and $SLURM_JOB_ID
-    SCRIPT_PATH=$(scontrol show job "$SLURM_JOBID" | awk -F= '/Command=/{print $2}')
     THREADS="$SLURM_CPUS_PER_TASK"
     MEMORY="$SLURM_MEM_PER_NODE"
     WORK_DIR="/work/haukurpj/"
     DATA_DIR="/work/haukurpj/data/"
-    MOSESDECODER="/home/staff/haukurpj/moses"
-    MOSESDECODER_TOOLS="/home/staff/haukurpj/moses_tools"
+    #MOSESDECODER="/home/staff/haukurpj/moses"
+    #MOSESDECODER_TOOLS="/home/staff/haukurpj/moses_tools"
+    # check the original location through scontrol and $SLURM_JOB_ID
+    # SCRIPT_PATH=$(scontrol show job "$SLURM_JOBID" | awk -F= '/Command=/{print $2}')
 else
     # otherwise: started with bash. Get the real location.
-    SCRIPT_PATH=$(realpath "$0")
+    # SCRIPT_PATH=$(realpath "$0")
     THREADS=4
     MEMORY=4096
     WORK_DIR="/home/haukur/work/"
 fi
 
-# Steps: 1=Prepare 2=LM 3=Train 4=Tune 5=Binarise 6=Translate 7=Evaluate
+# Steps: 1=Prepare 2=LM 3=Train 4=Tune 5=Binarise 6=Translate & Evaluate
 FIRST_STEP=1
-LAST_STEP=5
+LAST_STEP=6
 
 # Model variables
 LANG_FROM="en"
@@ -39,7 +40,7 @@ EXPERIMENT_NAME="final"
 
 CLEAN_MIN_LENGTH=1
 CLEAN_MAX_LENGTH=70
-LM_SURFACE_ORDER=4
+LM_SURFACE_ORDER=5
 ALIGNMENT="grow-diag"
 REORDERING="msd-bidirectional-fe"
 
@@ -49,8 +50,7 @@ DEV_DATA_OUT="$DATA_DIR"dev/form/data
 TEST_DIR_IN="$DATA_DIR"test/form/
 TEST_DIR_DETOK="$DATA_DIR"test/form-detok/
 
-LM_SURFACE_TRAINING_DATA="$DATA_DIR"train/form/data
-LM_SURFACE_ADDITIONAL_TRAINING_DATA="$DATA_DIR"mono/data-dedup
+LM_SURFACE_TRAINING_DATA="$DATA_DIR"train/form/data-lm.is
 LM_SURFACE_TEST_DIR="$DATA_DIR"test/form/
 
 # Test if data is there
@@ -77,8 +77,7 @@ check_data "$DEV_DATA_OUT"."$LANG_TO"
 check_dir_not_empty "$TEST_DIR_IN"
 check_dir_not_empty "$TEST_DIR_DETOK"
 
-check_data "$LM_SURFACE_TRAINING_DATA"."$LANG_TO"
-check_data "$LM_SURFACE_ADDITIONAL_TRAINING_DATA"."$LANG_TO"
+check_data "$LM_SURFACE_TRAINING_DATA"
 check_dir_not_empty "$LM_SURFACE_TEST_DIR"
 
 # Variables for subsequent steps.
@@ -137,8 +136,7 @@ function eval_lm() {
 }
 
 if ((FIRST_STEP <= 2 && LAST_STEP >= 2)); then
-  cat "$LM_SURFACE_TRAINING_DATA"."$LANG_TO" "$LM_SURFACE_ADDITIONAL_TRAINING_DATA"."$LANG_TO" > "$MODEL_DATA_DIR"lm.form.data."$LANG_TO"
-  train_lm "$MODEL_DATA_DIR"lm.form.data."$LANG_TO" "$LM_SURFACE" "$LM_SURFACE_ORDER"
+  train_lm "$LM_SURFACE_TRAINING_DATA" "$LM_SURFACE" "$LM_SURFACE_ORDER"
   eval_lm "$LM_SURFACE" "$LM_SURFACE_TEST_DIR"
 fi
 
@@ -204,7 +202,7 @@ function fix_paths() {
   # Adjust the path in the moses.ini file to point to the new files.
 }
 
-if ((FIRST_STEP <= 5 && LAST_STEP >= 5 && BINARISE)); then
+if ((FIRST_STEP <= 5 && LAST_STEP >= 5)); then
   mkdir -p "$BINARISED_DIR"
   # TODO: Use many LMs
   BINARISED_LM="$BINARISED_DIR"lm.blm
@@ -214,7 +212,7 @@ if ((FIRST_STEP <= 5 && LAST_STEP >= 5 && BINARISE)); then
   binarise_table "$BASE_PHRASE_TABLE" "$BINARISED_PHRASE_TABLE" "$BASE_REORDERING_TABLE" "$BINARISED_REORDERING_TABLE"
   cp "$LM_SURFACE" "$BINARISED_LM"
   cp "$TUNED_MOSES_INI" "$BINARISED_MOSES_INI"
-  fix_paths "$LM" $BINARISED_LM $BINARISED_MOSES_INI
+  fix_paths $LM_SURFACE $BINARISED_LM $BINARISED_MOSES_INI
   fix_paths $BASE_PHRASE_TABLE $BINARISED_PHRASE_TABLE $BINARISED_MOSES_INI
   fix_paths $BASE_REORDERING_TABLE $BINARISED_REORDERING_TABLE $BINARISED_MOSES_INI
   sed -i "s|PhraseDictionaryMemory|PhraseDictionaryCompact|" $BINARISED_MOSES_INI
@@ -222,36 +220,48 @@ fi
 
 # Step=6 Translate and post-process.
 # Be sure to activate the correct environment
-TEST_TRANSLATED_COMBINED="$MODEL_RESULTS_DIR"combined-translated-detok."$LANG_FROM"-"$LANG_TO"
 if ((FIRST_STEP <= 6 && LAST_STEP >= 6)); then
   source /data/tools/anaconda/etc/profile.d/conda.sh
   # TODO: Somehow check the environment to begin with
   conda activate notebook
-  for test_set in "$TEST_DIR"*."$LANG_FROM"; do
-    TEST_SET_NAME=$(basename "$test_set")
-    TEST_SET_TRANSLATED="$MODEL_RESULTS_DIR""$TEST_SET_NAME"-translated."$LANG_FROM"-"$LANG_TO"
-    TEST_SET_POSTPROCESSED="$MODEL_RESULTS_DIR""$TEST_SET_NAME"-translated-detok."$LANG_FROM"-"$LANG_TO"
+  TEST_SET_TRANSLATED_COMBINED="$MODEL_RESULTS_DIR"combined-translated-detok."$LANG_TO"
+  TEST_SET_CORRECT_COMBINED="$MODEL_RESULTS_DIR"combined-detok."$LANG_TO"
+  TEST_SET_COMBINED_BLUE_SCORE="$MODEL_RESULTS_DIR"combined."$LANG_FROM"-"$LANG_TO".bleu
+  rm "$TEST_SET_CORRECT_COMBINED" || true
+  rm "$TEST_SET_TRANSLATED_COMBINED" || true
+  declare -a test_sets=(
+        "test-ees"
+        "test-ema"
+        "test-opensubtitles"
+  )
+  for test_set in "${test_sets[@]}"; do
+    TEST_SET_CORRECT="$TEST_DIR_IN""$test_set"."$LANG_TO"
+    TEST_SET_CORRECT_POSTPROCESSED="$MODEL_RESULTS_DIR""$test_set"-detok."$LANG_TO"
+    TEST_SET_IN="$TEST_DIR_IN""$test_set"."$LANG_FROM"
+    TEST_SET_TRANSLATED="$MODEL_RESULTS_DIR""$test_set"-translated."$LANG_FROM"-"$LANG_TO"
+    TEST_SET_TRANSLATED_POSTPROCESSED="$MODEL_RESULTS_DIR""$test_set"-translated-detok."$LANG_FROM"-"$LANG_TO"
+    TEST_SET_BLUE_SCORE="$MODEL_RESULTS_DIR""$test_set"."$LANG_FROM"-"$LANG_TO".bleu
+    # Translate
     /opt/moses/bin/moses -f "$BINARISED_DIR"moses.ini \
       -threads "$THREADS" \
-      <"$test_set" \
+      < "$TEST_SET_IN" \
       >"$TEST_SET_TRANSLATED"
+    # Postprocess
+    preprocessing/main.py postprocess "$TEST_SET_TRANSLATED" "$TEST_SET_TRANSLATED_POSTPROCESSED" $LANG_TO
+    preprocessing/main.py postprocess "$TEST_SET_CORRECT" "$TEST_SET_CORRECT_POSTPROCESSED" $LANG_TO
 
-    frontend postprocess "$TEST_SET_TRANSLATED" "$LANG_TO" v3 > "$TEST_SET_POSTPROCESSED"
-    cat "$TEST_SET_POSTPROCESSED" >> "$TEST_TRANSLATED_COMBINED"
-  done
-fi
-
-# Step=7. Evaluate translations
-TEST_COMBINED="$MODEL_RESULTS_DIR"combined."$LANG_TO"
-if ((FIRST_STEP <= 7 && LAST_STEP >= 7)); then
-  for test_set in "$TEST_DIR"*."$LANG_TO"; do
-    TEST_SET_NAME=$(basename "$test_set")
-    # TODO: Fix ground truth
+    # Combine
+    cat "$TEST_SET_TRANSLATED_POSTPROCESSED" >> "$TEST_SET_TRANSLATED_COMBINED"
+    cat "$TEST_SET_CORRECT_POSTPROCESSED" >> "$TEST_SET_CORRECT_COMBINED"
+    # Evaluate
     /opt/moses/scripts/generic/multi-bleu-detok.perl -lc \
-      $test_set < "$MODEL_RESULTS_DIR""$TEST_SET_NAME"-translated-detok."$LANG_FROM"-"$LANG_TO" >"$MODEL_RESULTS_DIR""$TEST_SET_NAME"-"$LANG_FROM"-"$LANG_TO".bleu
-    cat $test_set >>"$MODEL_RESULTS_DIR"/test-combined."$LANG_TO"
+      "$TEST_SET_TRANSLATED_POSTPROCESSED" \
+       < "$TEST_SET_CORRECT_POSTPROCESSED" \
+       > "$TEST_SET_BLUE_SCORE"
   done
-  # Score the combined translations
+  # The combined
   /opt/moses/scripts/generic/multi-bleu-detok.perl -lc \
-    "$MODEL_RESULTS_DIR"test-combined."$LANG_TO" <"$MODEL_RESULTS_DIR"combined-translated-detok."$LANG_FROM"-"$LANG_TO" >"$MODEL_RESULTS_DIR"combined-"$LANG_FROM"-"$LANG_TO".bleu
+    "$TEST_SET_TRANSLATED_COMBINED" \
+     < "$TEST_SET_CORRECT_COMBINED" \
+     > "$TEST_SET_COMBINED_BLUE_SCORE"
 fi

@@ -31,3 +31,10 @@ def test_enriched_corpus_truecase():
     ]
     assert expected_form == pipeline.truecase_enriched_corpus(corpus=test, load_from=truecase_model_form, segment='form')
     assert expected_lemma == pipeline.truecase_enriched_corpus(corpus=test, load_from=truecase_model_lemma, segment='lemma')
+
+
+def test_preprocessing():
+    test = ['Þetta er setning sem ætti að vera í lÁGSTÖFum. < |']
+    lang = 'is'
+    result = pipeline.preprocess(test, lang=lang, truecase_model='/work/haukurpj/data/train/truecase-model.form.en')
+    assert result == ['þetta er setning sem ætti að vera í lágstöfum . _lt_ _pipe_'] 

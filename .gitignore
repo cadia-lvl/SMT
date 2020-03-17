@@ -1,23 +1,7 @@
 # Byte-compiled / optimized / DLL files
-*/**/__pycache__/
-corpus/*.py[cod]
-frontend/$py.class
-frontend/.mypy_cache/
-frontend/corpus.egg-info/
-.mypy_cache/
-.vscode/
-# Jupyter Notebook
-.ipynb_checkpoints
+*/**/__pycache__
+.*
 
 # Project specific
 */*.egg-info/
-server.out
-data/
-corpus/test_data/*.is
-corpus/test_data/*.en
-/frontend/tests/test_data/
-frontend/kvistur.py
-frontend/resources/
-kvistur.py
-resources
-slurm-*
+kvistur/

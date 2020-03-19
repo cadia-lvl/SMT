@@ -7,5 +7,7 @@ def test_read_rmh():
     files = [xml_file for xml_file in glob(f'{dir}/**/*.xml', recursive=True) if not (xml_file.endswith('rmh2Hdr.xml') or xml_file.endswith('rmh1Hdr.xml'))]
     for xml_file in files:
         assert 'Hdr' not in xml_file
-    corpus = file_handler.rmh_2_corpus(files[:2], threads=1, chunksize=1)
+    assert len(files) == 666
+    corpus = list(file_handler.rmh_2_corpus(files[:2], threads=1, chunksize=1))
+    print(corpus)
     assert len(corpus) == 9

@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 import logging
-from typing import cast
 from glob import glob
 
 import click
 
 from preprocessing import file_handler
 from preprocessing import pipeline
-from preprocessing.types import (Corpus, EnrichedPCorpora)
+from preprocessing.types import (EnrichedPCorpora)
+from preprocessing import server as p_server
 
 log = logging.getLogger()
 
@@ -115,6 +115,20 @@ def enrich(input, output, lang, chunksize: int, lines: int):
 @click.argument('input', type=click.File('r'))
 @click.argument('output', type=click.File('w+'))
 @click.argument('lang')
+@click.option('--threads', type=int, default=1)
+@click.option('--batch_size', type=int, default=100000)
+@click.option('--chunksize', type=int, default=100000)
+def tokenize(input, output, lang, threads, batch_size, chunksize):
+    log.info('Tokenizing')
+    for tokens in pipeline.tokenize(input, lang, threads=threads, batch_size=batch_size, chunksize=chunksize):
+        output.write(' '.join(tokens) + '\n')
+    log.info('Done.')
+
+
+@click.command()
+@click.argument('input', type=click.File('r'))
+@click.argument('output', type=click.File('w+'))
+@click.argument('lang')
 def detokenize(input, output, lang):
     corpus = file_handler.deserialize(input)
     file_handler.serialize(output, pipeline.detokenize(corpus, lang))
@@ -124,11 +138,11 @@ def detokenize(input, output, lang):
 @click.command()
 @click.argument('input', type=click.File('r'))
 @click.argument('output', type=click.File('w+'))
-def deduplicate(file_in, file_out):
+def deduplicate(input, output):
     known_sent = set()
-    corpus = cast(Corpus, file_handler.deserialize(file_in))
     log.info('Deduplicating')
-    file_handler.serialize(file_out, pipeline.deduplicate(corpus, known=known_sent))
+    for line in pipeline.deduplicate(input, known=known_sent):
+        output.write(line)
     log.info('Done.')
 
 
@@ -158,6 +172,12 @@ def read_rmh(dir, output, threads, chunksize):
     log.info('Done.')
 
 
+@click.command()
+@click.option('--debug', is_flag=True)
+def server(debug: bool) -> None:
+    p_server.app.run(debug=debug, host='0.0.0.0')
+
+
 @click.group()
 def cli():
     pass
@@ -170,14 +190,20 @@ cli.add_command(detruecase)
 cli.add_command(split)
 cli.add_command(write_factor)
 cli.add_command(detokenize)
+cli.add_command(tokenize)
 cli.add_command(read_rmh)
 cli.add_command(deduplicate)
 cli.add_command(pickle_to_json)
 cli.add_command(test)
 cli.add_command(preprocess)
 cli.add_command(postprocess)
+cli.add_command(server)
 
 
 if __name__ == "__main__":
+    import nltk
+    # We need to do this somewhere
+    nltk.download('wordnet')
+    nltk.download('averaged_perceptron_tagger')
     logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
     cli()

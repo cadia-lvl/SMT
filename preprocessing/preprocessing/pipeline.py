@@ -3,19 +3,19 @@ from collections import defaultdict
 from typing import Dict, Callable, Tuple, Set, Generator
 import logging
 import re
+from concurrent.futures import ProcessPoolExecutor
 
 import requests
-# nltk.download('wordnet')
-# nltk.download('averaged_perceptron_tagger')
 from nltk.corpus import wordnet as wn
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk import pos_tag
 from sacremoses import MosesTokenizer, MosesTruecaser, MosesDetokenizer, MosesDetruecaser
 import tokenizer as mideind_tok
+from tqdm import tqdm
 
-from .types import (Lang, Tokens, POS, Lemma,
-                    iTokCorpus, iCorpus, iEnrichedCorpus,
-                    Corpus, EnrichedCorpus)
+from preprocessing.types import (Lang, Tokens, POS, Lemma,
+                                 iTokCorpus, iCorpus, iEnrichedCorpus,
+                                 Corpus, EnrichedCorpus)
 from preprocessing import file_handler
 
 log = logging.getLogger()
@@ -28,6 +28,8 @@ URL = 'http://malvinnsla.arnastofnun.is'
 
 
 m_true = None
+m_tok = None
+m_detok = None
 
 
 def _lazy_load_moses_truecaser(load_from):
@@ -55,6 +57,13 @@ def _get_other_indices(segment):
         yield from (0, 1)
 
 
+def _lazy_load_moses_tokenizer():
+    global m_tok
+    if not m_tok:
+        m_tok = MosesTokenizer(lang='en')
+    return m_tok
+
+
 def _lazy_load_moses_detokenizer():
     global m_detok
     if not m_detok:
@@ -65,26 +74,31 @@ def _lazy_load_moses_detokenizer():
 illegal_replace = [
     {
         # u'\u007c' - |
-        'pattern': "|",
-        'repl': '_pipe_'
+        'pattern': re.compile(r"\u007c"),
+        'unicode': "\u007c",
+        'repl': re.compile('_pipe_')
     },
     {
         # u'\u003c', u'\u003e' - <, >
-        'pattern': "<",
-        'repl': '_lt_'
+        'pattern': re.compile(r"\u003c"),
+        'unicode': "\u003c",
+        'repl': re.compile('_lt_')
     },
     {
-        'pattern': ">",
-        'repl': '_gt_'
+        'pattern': re.compile(r"\u003e"),
+        'unicode': "\u003e",
+        'repl': re.compile('_gt_')
     },
     {
         # u'\u005b', u'\u005d' - [, ]
-        'pattern': r"\[",
-        'repl': '_bo_'
+        'pattern': re.compile(r"\u005b"),
+        'unicode': "\u005b",
+        'repl': re.compile('_bo_')
     },
     {
-        'pattern': r"\]",
-        'repl': '_bc_'
+        'pattern': re.compile(r"\u005d"),
+        'unicode': "\u005d",
+        'repl': re.compile('_bc_')
     }
 ]
 
@@ -92,15 +106,14 @@ illegal_replace = [
 def escape_moses_chars(corpus: iCorpus) -> iCorpus:
     for sent in corpus:
         for keywords in illegal_replace:
-            print(keywords)
-            sent = re.sub(string=sent, pattern=keywords['pattern'], repl=keywords['repl'])
+            sent = keywords['pattern'].sub(string=sent, repl=keywords['repl'].pattern)
         yield sent
 
 
 def de_escape_moses_chars(corpus: iCorpus) -> iCorpus:
     for sent in corpus:
         for keywords in illegal_replace:
-            sent = re.sub(string=sent, pattern=keywords['repl'], repl=keywords['pattern'])
+            sent = keywords['repl'].sub(string=sent, repl=keywords['unicode'])
         yield sent
 
 
@@ -111,7 +124,7 @@ def enrich(corpus: iCorpus, lang: str, chunksize: int, lines: int) -> iEnrichedC
     """
     log.info(f'Enriching')
     function: Callable[[iCorpus], EnrichedCorpus] = enrich_sentences_en if lang == 'en' else enrich_sentences_is
-    for chunk in file_handler.make_batches(corpus, batch_size=chunksize, max_lines=lines):
+    for chunk in file_handler.make_batches(corpus, batch_size=chunksize):
         start = time()
         yield from function(chunk)
         end = time()
@@ -156,19 +169,36 @@ def enrich_sentences_en(corpus: iCorpus) -> EnrichedCorpus:
     return enriched_sentences
 
 
-def tokenize(corpus: iCorpus, lang: Lang) -> iTokCorpus:
+def is_tok(line):
+    return [token for sent in mideind_tok.split_into_sentences(line) for token in sent.split(' ')]
+
+
+def en_tok(line):
+    return m_tok.tokenize(line, escape=False)
+
+
+def tokenize(corpus: iCorpus, lang: Lang, threads=1, batch_size=100000, chunksize=10000) -> iTokCorpus:
     if lang == 'en':
-        m_tok = MosesTokenizer(lang='en')
-        for line in corpus:
-            yield m_tok.tokenize(line, escape=False)
+        _ = _lazy_load_moses_tokenizer()
+        f = en_tok
     else:
+        f = is_tok
+
+    if threads == 1:
         for line in corpus:
-            yield [token for sent in mideind_tok.split_into_sentences(line) for token in sent.split(' ')]
+            yield f(line)
+    else:
+        with ProcessPoolExecutor(max_workers=threads) as worker:
+            for chunk in file_handler.make_batches(corpus, batch_size=batch_size):
+                chunk = list(chunk)
+                results = tqdm(worker.map(f, chunk, chunksize=chunksize), total=len(chunk))
+                for result in results:
+                    yield result
 
 
 def detokenize(corpus: iCorpus, lang: Lang) -> iCorpus:
     if lang == 'en':
-        m_detok = MosesDetokenizer(lang='en')
+        m_detok = _lazy_load_moses_detokenizer()
         return (m_detok.detokenize(line.split(' '), return_str=True, unescape=False) for line in corpus)
     else:
         return (mideind_tok.detokenize(list(mideind_tok.tokenize(line, normalize=False)), normalize=False) for line in corpus)

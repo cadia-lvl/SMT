@@ -55,11 +55,14 @@ def write_pickle(path: str, corpora: Union[PCorpora, EnrichedPCorpora]) -> None:
         pickle.dump(corpora, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-def make_batches(sequence, batch_size: int, max_lines=0):
+def make_batches(sequence, batch_size: int):
     sourceiter = iter(sequence)
     while True:
-        batchiter = itertools.islice(sourceiter, batch_size)
-        yield itertools.chain([batchiter.next()], batchiter)
+        try:
+            batchiter = itertools.islice(sourceiter, int(batch_size))
+            yield itertools.chain([next(batchiter)], batchiter)
+        except StopIteration:
+            return
 
 
 def read_rmh_file(path: str):
@@ -84,10 +87,12 @@ def rmh_2_corpus(files: List[str], threads=1, chunksize=100) -> iTokCorpus:
     Multiple threads are used to process batches (of size chunksize) of files together.
     """
     with ProcessPoolExecutor(max_workers=threads) as executor:
-        return tqdm(executor.map(
+        results = tqdm(executor.map(
             read_rmh_file,
             files,
             chunksize=chunksize))
+        for result in results:
+            yield from result
 
 
 def write_moses(corpus: EnrichedCorpus, output_file, threads: int, chunksize: int, write_form: bool, write_pos: bool, write_lemma: bool) -> None:

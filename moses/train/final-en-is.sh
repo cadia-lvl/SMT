@@ -30,8 +30,8 @@ else
 fi
 
 # Steps: 1=Prepare 2=LM 3=Train 4=Tune 5=Binarise 6=Translate & Evaluate
-FIRST_STEP=1
-LAST_STEP=6
+FIRST_STEP=5
+LAST_STEP=5
 
 # Model variables
 LANG_FROM="en"
@@ -49,6 +49,7 @@ DEV_DATA_IN="$DATA_DIR"dev/form/data
 DEV_DATA_OUT="$DATA_DIR"dev/form/data
 TEST_DIR_IN="$DATA_DIR"test/form/
 TEST_DIR_DETOK="$DATA_DIR"test/form-detok/
+TRUECASE_MODEL="$DATA_DIR"train/truecase-model.form
 
 LM_SURFACE_TRAINING_DATA="$DATA_DIR"train/form/data-lm.is
 LM_SURFACE_TEST_DIR="$DATA_DIR"test/form/
@@ -72,6 +73,7 @@ function check_dir_not_empty() {
 }
 check_data "$TRAINING_DATA".en
 check_data "$TRAINING_DATA".is
+check_data "$TRUECASE_MODEL"."$LANG_FROM"
 check_data "$DEV_DATA_IN"."$LANG_FROM"
 check_data "$DEV_DATA_OUT"."$LANG_TO"
 check_dir_not_empty "$TEST_DIR_IN"
@@ -212,6 +214,7 @@ if ((FIRST_STEP <= 5 && LAST_STEP >= 5)); then
   binarise_table "$BASE_PHRASE_TABLE" "$BINARISED_PHRASE_TABLE" "$BASE_REORDERING_TABLE" "$BINARISED_REORDERING_TABLE"
   cp "$LM_SURFACE" "$BINARISED_LM"
   cp "$TUNED_MOSES_INI" "$BINARISED_MOSES_INI"
+  cp "$TRUECASE_MODEL"."$LANG_FROM" "$BINARISED_DIR"
   fix_paths $LM_SURFACE $BINARISED_LM $BINARISED_MOSES_INI
   fix_paths $BASE_PHRASE_TABLE $BINARISED_PHRASE_TABLE $BINARISED_MOSES_INI
   fix_paths $BASE_REORDERING_TABLE $BINARISED_REORDERING_TABLE $BINARISED_MOSES_INI

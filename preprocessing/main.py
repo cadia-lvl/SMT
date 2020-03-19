@@ -201,9 +201,5 @@ cli.add_command(server)
 
 
 if __name__ == "__main__":
-    import nltk
-    # We need to do this somewhere
-    nltk.download('wordnet')
-    nltk.download('averaged_perceptron_tagger')
     logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
     cli()

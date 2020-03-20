@@ -3,7 +3,7 @@ To package a trained Moses model along with required dependencies:
 - Phrase tables
 - Reordering tables
 - Language model
-- Truecasing model
+- Configuration file for Moses
 
 ## Requirements
 - Docker

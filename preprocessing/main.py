@@ -79,24 +79,16 @@ def detruecase(input, output):
 
 @click.command()
 @click.argument('input', type=click.File('r'))
-@click.argument('output', type=click.File('w'))
-def test(input, output):
-    for line in input:
-        output.write(line)
-
-
-@click.command()
-@click.argument('input', type=click.File('r'))
 @click.argument('output_train', type=click.File('w+'))
 @click.argument('output_test', type=click.File('w+'))
 @click.option('--test_size', type=int, default=2000)
 @click.option('--shuffle/--no-shuffle', default=True)
 @click.option('--seed', type=int, default=42)
 def split(input, output_train, output_test, test_size, shuffle, seed):
-    corpus = list(file_handler.deserialize(input))
-    train, test = pipeline.split(corpus, test_size=test_size, shuffle=shuffle, seed=seed)
-    file_handler.serialize(output_train, train)
-    file_handler.serialize(output_test, test)
+    log.info('Splitting')
+    train, test = pipeline.split([line for line in input], test_size=test_size, shuffle=shuffle, seed=seed)
+    output_train.writelines(train)
+    output_test.writelines(test)
     log.info('Done.')
 
 
@@ -117,8 +109,8 @@ def enrich(input, output, lang, chunksize: int, lines: int):
 @click.argument('output', type=click.File('w+'))
 @click.argument('lang')
 @click.option('--threads', type=int, default=1)
-@click.option('--batch_size', type=int, default=100000)
-@click.option('--chunksize', type=int, default=100000)
+@click.option('--batch_size', type=int, default=5000000)
+@click.option('--chunksize', type=int, default=10000)
 def tokenize(input, output, lang, threads, batch_size, chunksize):
     log.info('Tokenizing')
     for tokens in pipeline.tokenize(input, lang, threads=threads, batch_size=batch_size, chunksize=chunksize):
@@ -180,7 +172,7 @@ def read_rmh(dir, output, threads, chunksize):
 @click.argument('lang_to', type=str)
 @click.argument('model', default='moses')
 @click.argument('url', default='https://nlp.cs.ru.is/moses/translateText')
-@click.option('--batch_size', default=100)
+@click.option('--batch_size', default=20)
 def translate(input, output, lang_from, lang_to, model, url, batch_size):
     for translated in client.translate_bulk((line for line in input),
                                             url=url,
@@ -213,7 +205,6 @@ cli.add_command(tokenize)
 cli.add_command(read_rmh)
 cli.add_command(deduplicate)
 cli.add_command(pickle_to_json)
-cli.add_command(test)
 cli.add_command(preprocess)
 cli.add_command(postprocess)
 cli.add_command(server)

@@ -30,8 +30,8 @@ else
 fi
 
 # Steps: 1=Prepare 2=LM 3=Train 4=Tune 5=Binarise 6=Translate & Evaluate
-FIRST_STEP=1
-LAST_STEP=6
+FIRST_STEP=2
+LAST_STEP=2
 
 # Model variables
 LANG_FROM="is"
@@ -120,9 +120,9 @@ function train_lm() {
   LM="$2"
   LM_ORDER="$3"
   "$MOSESDECODER"/bin/lmplz --order "$LM_ORDER" --temp_prefix "$WORK_DIR" -S 30G --discount_fallback <"$LM_DATA" >"$LM".arpa
-  # we use the trie structure to save about 1/2 the space, but almost twice as slow `trie`
-  # we use pointer compression to save more space, but slightly slower `-a 64`
-  "$MOSESDECODER"/bin/build_binary trie -a 64 -S 30G "$LM".arpa "$LM"
+  # we *can* use the trie structure to save about 1/2 the space, but almost twice as slow `trie`
+  # we *can* use pointer compression to save more space, but slightly slower `-a 64`
+  "$MOSESDECODER"/bin/build_binary -S 30G "$LM".arpa "$LM"
 }
 
 function eval_lm() {

@@ -30,12 +30,12 @@ else
 fi
 
 # Steps: 1=Prepare 2=LM 3=Train 4=Tune 5=Binarise 6=Translate & Evaluate
-FIRST_STEP=5
-LAST_STEP=5
+FIRST_STEP=1
+LAST_STEP=6
 
 # Model variables
-LANG_FROM="en"
-LANG_TO="is"
+LANG_FROM="is"
+LANG_TO="en"
 EXPERIMENT_NAME="final"
 
 CLEAN_MIN_LENGTH=1

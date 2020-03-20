@@ -8,6 +8,7 @@ from preprocessing import file_handler
 from preprocessing import pipeline
 from preprocessing.types import (EnrichedPCorpora)
 from preprocessing import server as p_server
+from preprocessing import client
 
 log = logging.getLogger()
 
@@ -173,6 +174,24 @@ def read_rmh(dir, output, threads, chunksize):
 
 
 @click.command()
+@click.argument('input', type=click.File('r'))
+@click.argument('output', type=click.File('w+'))
+@click.argument('lang_from', type=str)
+@click.argument('lang_to', type=str)
+@click.argument('model', default='moses')
+@click.argument('url', default='https://nlp.cs.ru.is/moses/translateText')
+@click.option('--batch_size', default=100)
+def translate(input, output, lang_from, lang_to, model, url, batch_size):
+    for translated in client.translate_bulk((line for line in input),
+                                            url=url,
+                                            s_lang=lang_from,
+                                            t_lang=lang_to,
+                                            model=model,
+                                            batch_size=batch_size):
+        output.write(translated + '\n')
+
+
+@click.command()
 @click.option('--debug', is_flag=True)
 def server(debug: bool) -> None:
     p_server.app.run(debug=debug, host='0.0.0.0')
@@ -198,8 +217,9 @@ cli.add_command(test)
 cli.add_command(preprocess)
 cli.add_command(postprocess)
 cli.add_command(server)
+cli.add_command(translate)
 
 
 if __name__ == "__main__":
-    logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
+    logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.DEBUG)
     cli()

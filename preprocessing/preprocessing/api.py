@@ -8,6 +8,7 @@ import asyncio
 import os
 import logging
 from time import time
+import pathlib
 
 from aiohttp import ClientTimeout
 from aiohttp_xmlrpc.client import ServerProxy
@@ -26,15 +27,23 @@ for key in os.environ:
     if "MODEL" in key:
         MODELS['-'.join(key.split('_')[1:])] = os.environ.get(key)
 
+log.info(f'Defined translation models: {MODELS}')
+
 TRUECASERS = dict()
 """Holds the truecasing models paths.
-Set using environment variables. To define a truecasing model for "is" with path "/here/it/is" set:
+We first load the models from the resources package; {'en':'path'}
+Additional models can be set via environment variables or overwritten. To define a truecasing model for "is" with path "/here/it/is" set:
 
 export TRUECASE_is=/here/it/is
 """
+for lang in ['en', 'is']:
+    path = pathlib.Path(os.path.realpath(__file__)).parent.joinpath('resources').joinpath(f'truecase-model.{lang}')
+    if path.exists():
+        TRUECASERS[lang] = str(path)
 for key in os.environ:
     if "TRUECASE" in key:
         TRUECASERS[key.split('_')[1]] = os.environ.get(key)
+log.info(f'Defined truecasing models: {MODELS}')
 
 
 def preprocess(sent: str, lang: str) -> str:

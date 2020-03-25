@@ -32,9 +32,6 @@ lazy-object-proxy==1.4.3
 lxml==4.5.0
 MarkupSafe==1.1.1
 mccabe==0.6.1
-mkl-fft==1.0.15
-mkl-random==1.1.0
-mkl-service==2.3.0
 multidict==4.7.3
 mypy==0.750
 mypy-extensions==0.4.3

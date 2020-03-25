@@ -34,7 +34,10 @@ def write_factor(input, lang, save_to, lemma, pos, form, lines, threads, chunksi
 @click.argument('lang', type=str)
 @click.argument('truecase_model', type=str)
 def preprocess(input, output, lang, truecase_model):
-    output.write("\n".join(pipeline.preprocess(input, lang=lang, truecase_model=truecase_model)))
+    log.info('Preprocessing')
+    for line in pipeline.preprocess(input, lang=lang, truecase_model=truecase_model):
+        output.write(line + '\n')
+    log.info('Done!')
 
 
 @click.command()
@@ -42,14 +45,20 @@ def preprocess(input, output, lang, truecase_model):
 @click.argument('output', type=click.File('w+'))
 @click.argument('lang', type=str)
 def postprocess(input, output, lang):
-    output.write("\n".join(pipeline.postprocess(input, lang=lang)))
+    log.info('Postprocessing')
+    for line in pipeline.postprocess(input, lang=lang):
+        output.write(line + '\n')
+    log.info('Done!')
 
 
 @click.command()
 @click.argument('input', type=click.File('r'))
 @click.argument('output', type=click.File('w+'))
 def extract_known_tokens(input, output):
-    output.write("\n".join(pipeline.extract_known_tokens(input)))
+    log.info('Extracting known tokens')
+    for tok in pipeline.extract_known_tokens(input):
+        output.write(tok + '\n')
+    log.info('Done!')
 
 
 @click.command()
@@ -57,8 +66,10 @@ def extract_known_tokens(input, output):
 @click.argument('known', type=click.File('r'))
 @click.argument('output', type=click.File('w+'))
 def unknown_tokens(input, known, output):
-    unknown_tokens = set(tok for line in pipeline.unknown_tokens(input, set(tok.strip() for tok in known)) for tok in line)
-    output.write("\n".join(unknown_tokens))
+    log.info('Finding unknown tokens')
+    for unknown_token in set(tok for line in pipeline.unknown_tokens(input, set(tok.strip() for tok in known)) for tok in line):
+        output.write(unknown_token + '\n')
+    log.info('Done!')
 
 
 @click.command()
@@ -70,9 +81,9 @@ def train_truecase(input, save_to, lang, threads):
     """
     Trains Moses truecase model
     """
-    log.info(f'save_to={save_to}')
+    log.info(f'Training truecase model, save_to={save_to}')
     pipeline.train_truecase(input, save_to=save_to, threads=threads)
-    log.info('Done.')
+    log.info('Done!')
 
 
 @click.command()
@@ -81,14 +92,17 @@ def train_truecase(input, save_to, lang, threads):
 @click.argument('load_from')
 def truecase(input, output, load_from):
     # The truecaser removes newlines
+    log.info('Truecasing')
     for line in pipeline.truecase(input, load_from=load_from):
         output.write(line + '\n')
+    log.info('Done!')
 
 
 @click.command()
 @click.argument('input', type=click.File('r'))
 @click.argument('output', type=click.File('w+'))
 def detruecase(input, output):
+    # TODO: remove deserialize and test
     corpus = file_handler.deserialize(input)
     file_handler.serialize(output, (line + '\n' for line in pipeline.detruecase(corpus)))
 
@@ -115,6 +129,7 @@ def split(input, output_train, output_test, test_size, shuffle, seed):
 @click.option('--chunksize', type=int, default=4000, help="Number of lines to process at once.")
 @click.option('--lines', type=int, default=0, help="For debugging, limit processing to x lines per corpus. 0 for all.")
 def enrich(input, output, lang, chunksize: int, lines: int):
+    # TODO: remove deserialize and test
     corpus = file_handler.deserialize(input)
     file_handler.write_json(output, [*pipeline.enrich(corpus, lang=lang, chunksize=chunksize, lines=lines)])
     log.info('Done.')
@@ -153,15 +168,6 @@ def deduplicate(input, output):
     log.info('Deduplicating')
     for line in pipeline.deduplicate(input, known=known_sent):
         output.write(line)
-    log.info('Done.')
-
-
-@click.command()
-@click.argument('input', type=click.File('r'))
-@click.argument('output', type=click.File('w+'))
-# TODO: Fix new handling of files
-def pickle_to_json(input, output):
-    file_handler.write_json(input, file_handler.read_pickle(output))
     log.info('Done.')
 
 
@@ -223,7 +229,6 @@ cli.add_command(detokenize)
 cli.add_command(tokenize)
 cli.add_command(read_rmh)
 cli.add_command(deduplicate)
-cli.add_command(pickle_to_json)
 cli.add_command(preprocess)
 cli.add_command(postprocess)
 cli.add_command(server)

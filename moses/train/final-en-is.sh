@@ -30,7 +30,7 @@ else
 fi
 
 # Steps: 1=Prepare 2=LM 3=Train 4=Tune 5=Binarise 6=Translate & Evaluate
-FIRST_STEP=6
+FIRST_STEP=1
 LAST_STEP=6
 
 # Model variables
@@ -228,8 +228,8 @@ if ((FIRST_STEP <= 6 && LAST_STEP >= 6)); then
   TEST_SET_COMBINED_BLUE_SCORE="$MODEL_RESULTS_DIR"combined."$LANG_FROM"-"$LANG_TO".bleu
   TEST_SET_CORRECT_DETOK_COMBINED="$MODEL_RESULTS_DIR"combined-detok."$LANG_TO"
   rm "$TEST_SET_CORRECT_COMBINED" || true
-  rm "$TEST_SET_TRANSLATED_COMBINED" || true
   rm "$TEST_SET_CORRECT_DETOK_COMBINED" || true
+  rm "$TEST_SET_TRANSLATED_COMBINED" || true
   declare -a test_sets=(
         "ees"
         "ema"

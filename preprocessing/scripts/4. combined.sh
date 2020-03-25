@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=combined
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=10
-#SBATCH --mem=40G
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=16G
 #SBATCH --time=16:10:00
 #SBATCH --output=%x-%j.out
 #SBATCH --chdir=/home/staff/haukurpj/SMT
@@ -12,8 +12,8 @@ THREADS=$SLURM_CPUS_PER_TASK
 # MEMORY=$SLURM_MEM_PER_NODE
 
 # 1=Train truecase IS, 2=Train truecase EN, 3=Process EN mono, 4=Process IS mono, 5=Process train & dev, 6=Create LM data
-FIRST_STEP=4
-LAST_STEP=4
+FIRST_STEP=3
+LAST_STEP=6
 
 LANGS="en is"
 TRUECASE_MODEL=preprocessing/preprocessing/resources/truecase-model
@@ -37,7 +37,7 @@ fi
 
 function preprocess_mono() {
     LANG=$1
-    preprocessing/main.py preprocess "$WORK_DIR"/mono/data-dedup-6578547."$LANG" "$WORK_DIR"/intermediary/lm-data."$LANG" "$LANG" "$WORK_DIR"/train/truecase-model.form."$LANG"
+    preprocessing/main.py preprocess "$WORK_DIR"/mono/data-dedup-6578547."$LANG" "$WORK_DIR"/intermediary/lm-data."$LANG" "$LANG" "$TRUECASE_MODEL"."$LANG"
 }
 
 # Preprocess EN mono
@@ -55,7 +55,7 @@ if ((FIRST_STEP <= 5 && LAST_STEP >= 5)); then
     SPLITS="train dev"
     for LANG in $LANGS; do
         for SPLIT in $SPLITS; do
-            preprocessing/main.py preprocess "$WORK_DIR"/intermediary/"$SPLIT"."$LANG" "$WORK_DIR"/"$SPLIT"/form/data."$LANG" "$LANG" "$WORK_DIR"/train/truecase-model.form."$LANG"
+            preprocessing/main.py preprocess "$WORK_DIR"/intermediary/"$SPLIT"."$LANG" "$WORK_DIR"/"$SPLIT"/form/data."$LANG" "$LANG" "$TRUECASE_MODEL"."$LANG"
         done
     done
 fi

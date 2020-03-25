@@ -47,6 +47,22 @@ def postprocess(input, output, lang):
 
 @click.command()
 @click.argument('input', type=click.File('r'))
+@click.argument('output', type=click.File('w+'))
+def extract_known_tokens(input, output):
+    output.write("\n".join(pipeline.extract_known_tokens(input)))
+
+
+@click.command()
+@click.argument('input', type=click.File('r'))
+@click.argument('known', type=click.File('r'))
+@click.argument('output', type=click.File('w+'))
+def unknown_tokens(input, known, output):
+    unknown_tokens = set(tok for line in pipeline.unknown_tokens(input, set(tok.strip() for tok in known)) for tok in line)
+    output.write("\n".join(unknown_tokens))
+
+
+@click.command()
+@click.argument('input', type=click.File('r'))
 @click.argument('save_to', type=str)
 @click.argument('lang', type=str)
 @click.option('--threads', type=int, default=1)
@@ -123,8 +139,9 @@ def tokenize(input, output, lang, threads, batch_size, chunksize):
 @click.argument('output', type=click.File('w+'))
 @click.argument('lang')
 def detokenize(input, output, lang):
-    corpus = file_handler.deserialize(input)
-    file_handler.serialize(output, pipeline.detokenize(corpus, lang))
+    log.info('Detokenizing')
+    for line in pipeline.detokenize(input, lang=lang):
+        output.write(line + '\n')
     log.info('Done.')
 
 
@@ -198,6 +215,8 @@ cli.add_command(enrich)
 cli.add_command(train_truecase)
 cli.add_command(truecase)
 cli.add_command(detruecase)
+cli.add_command(extract_known_tokens)
+cli.add_command(unknown_tokens)
 cli.add_command(split)
 cli.add_command(write_factor)
 cli.add_command(detokenize)

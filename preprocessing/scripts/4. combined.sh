@@ -12,8 +12,8 @@ THREADS=$SLURM_CPUS_PER_TASK
 # MEMORY=$SLURM_MEM_PER_NODE
 
 # 1=Train truecase IS, 2=Train truecase EN, 3=Process EN mono, 4=Process IS mono, 5=Process train & dev, 6=Create LM data
-FIRST_STEP=2
-LAST_STEP=2
+FIRST_STEP=4
+LAST_STEP=4
 
 LANGS="en is"
 TRUECASE_MODEL=preprocessing/preprocessing/resources/truecase-model
@@ -42,7 +42,7 @@ function preprocess_mono() {
 
 # Preprocess EN mono
 if ((FIRST_STEP <= 3 && LAST_STEP >= 3)); then
-    preprocess_mono is
+    preprocess_mono en
 fi
 
 # Preprocess IS mono
@@ -63,6 +63,6 @@ fi
 # Create LM-data
 if ((FIRST_STEP <= 6 && LAST_STEP >= 6)); then
     for LANG in $LANGS; do
-        cat "$WORK_DIR"/train/form/data."$LANG" "$WORK_DIR"/intermediary/lm-data."$LANG" "$WORK_DIR"/train/form/lm-data."$LANG"
+        cat "$WORK_DIR"/train/form/data."$LANG" "$WORK_DIR"/intermediary/lm-data."$LANG" > "$WORK_DIR"/train/form/lm-data."$LANG"
     done
 fi

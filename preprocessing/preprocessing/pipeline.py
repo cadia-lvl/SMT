@@ -249,12 +249,28 @@ def detruecase(corpus: iCorpus) -> iCorpus:
         yield detruecaser.detruecase(line, return_str=True)
 
 
+def extract_known_tokens(corpus: iCorpus) -> Set[str]:
+    """
+    Input needs to be tokenized and provided as a list of sentences.
+    """
+    return set(tok.strip() for line in corpus for tok in line.split(' ') if (tok is not None and tok != '\n'))
+
+
+def unknown_tokens(corpus: iCorpus, known: Set[str]) -> Generator[Set[str], None, None]:
+    """
+    Input needs to be tokenized and provided as a list of sentences.
+    """
+    for line in corpus:
+        tokens = set(tok.strip() for tok in line.split(' '))
+        yield set(tok for tok in tokens if tok not in known)
+
+
 def preprocess(corpus: Corpus, lang: str, truecase_model: str) -> Corpus:
     # Tokenize
     # Truecase
     # Put Moses placeholders
     tokenized = (" ".join(tokens) for tokens in tokenize((line for line in corpus), lang=lang))
-    truecased = truecase((line for line in tokenized), load_from=truecase_model)
+    truecased = truecase(tokenized, load_from=truecase_model)
     escaped = escape_moses_chars(truecased)
 
     return list(escaped)

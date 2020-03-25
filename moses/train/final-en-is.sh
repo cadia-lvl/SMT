@@ -5,7 +5,7 @@
 #SBATCH --mem=32G
 #SBATCH --chdir=/home/staff/haukurpj/SMT
 #SBATCH --time=8:01:00
-#SBATCH --output=%j-%x.out
+#SBATCH --output=%x %j.out
 # e=fail on pipeline, u=fail on unset var, x=trace commands
 set -ex
 
@@ -30,8 +30,8 @@ else
 fi
 
 # Steps: 1=Prepare 2=LM 3=Train 4=Tune 5=Binarise 6=Translate & Evaluate
-FIRST_STEP=2
-LAST_STEP=2
+FIRST_STEP=6
+LAST_STEP=6
 
 # Model variables
 LANG_FROM="en"
@@ -45,12 +45,12 @@ ALIGNMENT="grow-diag"
 REORDERING="msd-bidirectional-fe"
 
 TRAINING_DATA="$DATA_DIR"train/form/data
-DEV_DATA_IN="$DATA_DIR"dev/form/data
-DEV_DATA_OUT="$DATA_DIR"dev/form/data
-TEST_DIR_IN="$DATA_DIR"test/form/
-TEST_DIR_DETOK="$DATA_DIR"test/form-detok/
+DEV_DATA="$DATA_DIR"dev/form/data
+TEST_DIR="$DATA_DIR"test/raw/
 
-LM_SURFACE_TRAINING_DATA="$DATA_DIR"train/form/data-lm."$LANG_TO"
+TRUECASE_MODEL=preprocessing/preprocessing/resources/truecase-model
+
+LM_SURFACE_TRAINING_DATA="$DATA_DIR"train/form/lm-data."$LANG_TO"
 LM_SURFACE_TEST_DIR="$DATA_DIR"test/form/
 
 # Test if data is there
@@ -72,10 +72,9 @@ function check_dir_not_empty() {
 }
 check_data "$TRAINING_DATA".en
 check_data "$TRAINING_DATA".is
-check_data "$DEV_DATA_IN"."$LANG_FROM"
-check_data "$DEV_DATA_OUT"."$LANG_TO"
-check_dir_not_empty "$TEST_DIR_IN"
-check_dir_not_empty "$TEST_DIR_DETOK"
+check_data "$DEV_DATA"."$LANG_FROM"
+check_data "$DEV_DATA"."$LANG_TO"
+check_dir_not_empty "$TEST_DIR"
 
 check_data "$LM_SURFACE_TRAINING_DATA"
 check_dir_not_empty "$LM_SURFACE_TEST_DIR"
@@ -128,8 +127,8 @@ function train_lm() {
 function eval_lm() {
   # LM evaluation, we evaluate on
   LM="$1"
-  TEST_DIR="$2"
-  for test_set in "$TEST_DIR"*."$LANG_TO"; do
+  TEST_SET_DIR="$2"
+  for test_set in "$TEST_SET_DIR"*."$LANG_TO"; do
     TEST_SET_NAME=$(basename "$test_set")
     "$MOSESDECODER"/bin/query "$LM" <"$test_set" | tail -n 4 >"$MODEL_RESULTS_DIR""$TEST_SET_NAME".ppl
   done
@@ -167,8 +166,8 @@ if ((FIRST_STEP <= 4 && LAST_STEP >= 4)); then
   mkdir -p "$TUNE_DIR"
   # When tuning over factors, it is best to skip the filtering.
   "$MOSESDECODER"/scripts/training/mert-moses.pl \
-    "$DEV_DATA_IN"."$LANG_FROM" \
-    "$DEV_DATA_OUT"."$LANG_TO" \
+    "$DEV_DATA"."$LANG_FROM" \
+    "$DEV_DATA"."$LANG_TO" \
     "$MOSESDECODER"/bin/moses "$BASE_MOSES_INI" \
     --mertdir "$MOSESDECODER"/bin \
     --working-dir "$TUNE_DIR" \
@@ -225,43 +224,62 @@ if ((FIRST_STEP <= 6 && LAST_STEP >= 6)); then
   # TODO: Somehow check the environment to begin with
   conda activate notebook
   TEST_SET_TRANSLATED_COMBINED="$MODEL_RESULTS_DIR"combined-translated-detok."$LANG_TO"
-  TEST_SET_CORRECT_COMBINED="$MODEL_RESULTS_DIR"combined-detok."$LANG_TO"
+  TEST_SET_CORRECT_COMBINED="$MODEL_RESULTS_DIR"combined."$LANG_TO"
   TEST_SET_COMBINED_BLUE_SCORE="$MODEL_RESULTS_DIR"combined."$LANG_FROM"-"$LANG_TO".bleu
+  TEST_SET_CORRECT_DETOK_COMBINED="$MODEL_RESULTS_DIR"combined-detok."$LANG_TO"
   rm "$TEST_SET_CORRECT_COMBINED" || true
   rm "$TEST_SET_TRANSLATED_COMBINED" || true
+  rm "$TEST_SET_CORRECT_DETOK_COMBINED" || true
   declare -a test_sets=(
-        "test-ees"
-        "test-ema"
-        "test-opensubtitles"
+        "ees"
+        "ema"
+        "opensubtitles"
   )
   for test_set in "${test_sets[@]}"; do
-    TEST_SET_CORRECT="$TEST_DIR_IN""$test_set"."$LANG_TO"
-    TEST_SET_CORRECT_POSTPROCESSED="$MODEL_RESULTS_DIR""$test_set"-detok."$LANG_TO"
-    TEST_SET_IN="$TEST_DIR_IN""$test_set"."$LANG_FROM"
+    TEST_SET_CORRECT="$TEST_DIR""$test_set"."$LANG_TO"
+    TEST_SET_CORRECT_DETOK="$TEST_DIR""$test_set"-detok."$LANG_TO"
+    TEST_SET_IN="$TEST_DIR""$test_set"."$LANG_FROM"
+    TEST_SET_IN_PROCESSED="$TEST_DIR""$test_set"-processed."$LANG_FROM"
     TEST_SET_TRANSLATED="$MODEL_RESULTS_DIR""$test_set"-translated."$LANG_FROM"-"$LANG_TO"
     TEST_SET_TRANSLATED_POSTPROCESSED="$MODEL_RESULTS_DIR""$test_set"-translated-detok."$LANG_FROM"-"$LANG_TO"
     TEST_SET_BLUE_SCORE="$MODEL_RESULTS_DIR""$test_set"."$LANG_FROM"-"$LANG_TO".bleu
+    # Preprocess
+    preprocessing/main.py preprocess "$TEST_SET_IN" "$TEST_SET_IN_PROCESSED" "$LANG_FROM" "$TRUECASE_MODEL"."$LANG_FROM"
+
     # Translate
     /opt/moses/bin/moses -f "$BINARISED_DIR"moses.ini \
       -threads "$THREADS" \
-      < "$TEST_SET_IN" \
+      < "$TEST_SET_IN_PROCESSED" \
       >"$TEST_SET_TRANSLATED"
     # Postprocess
     preprocessing/main.py postprocess "$TEST_SET_TRANSLATED" "$TEST_SET_TRANSLATED_POSTPROCESSED" $LANG_TO
-    preprocessing/main.py postprocess "$TEST_SET_CORRECT" "$TEST_SET_CORRECT_POSTPROCESSED" $LANG_TO
 
-    # Combine
-    cat "$TEST_SET_TRANSLATED_POSTPROCESSED" >> "$TEST_SET_TRANSLATED_COMBINED"
-    cat "$TEST_SET_CORRECT_POSTPROCESSED" >> "$TEST_SET_CORRECT_COMBINED"
     # Evaluate
     /opt/moses/scripts/generic/multi-bleu-detok.perl -lc \
       "$TEST_SET_TRANSLATED_POSTPROCESSED" \
-       < "$TEST_SET_CORRECT_POSTPROCESSED" \
+       < "$TEST_SET_CORRECT" \
        > "$TEST_SET_BLUE_SCORE"
+
+    # Evaluate + detok (the original text looks different than what Tokenizer gives)
+    preprocessing/main.py tokenize "$TEST_SET_CORRECT" "$TEST_SET_CORRECT_DETOK" "$LANG_TO"
+    /opt/moses/scripts/generic/multi-bleu-detok.perl -lc \
+      "$TEST_SET_TRANSLATED_POSTPROCESSED" \
+       < "$TEST_SET_CORRECT_DETOK"\
+       > "$TEST_SET_BLUE_SCORE"-detok
+    
+    # Combine
+    cat "$TEST_SET_TRANSLATED_POSTPROCESSED" >> "$TEST_SET_TRANSLATED_COMBINED"
+    cat "$TEST_SET_CORRECT" >> "$TEST_SET_CORRECT_COMBINED"
+    cat "$TEST_SET_CORRECT_DETOK" >> "$TEST_SET_CORRECT_DETOK_COMBINED"
   done
   # The combined
   /opt/moses/scripts/generic/multi-bleu-detok.perl -lc \
     "$TEST_SET_TRANSLATED_COMBINED" \
      < "$TEST_SET_CORRECT_COMBINED" \
      > "$TEST_SET_COMBINED_BLUE_SCORE"
+  /opt/moses/scripts/generic/multi-bleu-detok.perl -lc \
+    "$TEST_SET_TRANSLATED_COMBINED" \
+     < "$TEST_SET_CORRECT_DETOK_COMBINED" \
+     > "$TEST_SET_COMBINED_BLUE_SCORE"-detok
+
 fi

@@ -34,9 +34,9 @@ FIRST_STEP=1
 LAST_STEP=6
 
 # Model variables
-LANG_FROM="is"
-LANG_TO="en"
-EXPERIMENT_NAME="final"
+LANG_FROM="en"
+LANG_TO="is"
+EXPERIMENT_NAME="final-no-mono"
 
 CLEAN_MIN_LENGTH=1
 CLEAN_MAX_LENGTH=70
@@ -50,7 +50,7 @@ TEST_DIR="$DATA_DIR"test/raw/
 
 TRUECASE_MODEL=preprocessing/preprocessing/resources/truecase-model
 
-LM_SURFACE_TRAINING_DATA="$DATA_DIR"train/form/lm-data."$LANG_TO"
+LM_SURFACE_TRAINING_DATA="$DATA_DIR"train/form/data."$LANG_TO"
 LM_SURFACE_TEST_DIR="$DATA_DIR"test/form/
 
 # Test if data is there
@@ -228,7 +228,6 @@ if ((FIRST_STEP <= 6 && LAST_STEP >= 6)); then
   TEST_SET_COMBINED_BLUE_SCORE="$MODEL_RESULTS_DIR"combined."$LANG_FROM"-"$LANG_TO".bleu
   TEST_SET_CORRECT_DETOK_COMBINED="$MODEL_RESULTS_DIR"combined-detok."$LANG_TO"
   rm "$TEST_SET_CORRECT_COMBINED" || true
-  rm "$TEST_SET_CORRECT_DETOK_COMBINED" || true
   rm "$TEST_SET_TRANSLATED_COMBINED" || true
   declare -a test_sets=(
         "ees"

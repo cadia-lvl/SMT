@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import logging
 from glob import glob
+import pathlib
 
 import click
 
@@ -32,9 +33,16 @@ def write_factor(input, lang, save_to, lemma, pos, form, lines, threads, chunksi
 @click.argument('input', type=click.File('r'))
 @click.argument('output', type=click.File('w+'))
 @click.argument('lang', type=str)
+# TODO: Make an option
 @click.argument('truecase_model', type=str)
 def preprocess(input, output, lang, truecase_model):
     log.info('Preprocessing')
+    if truecase_model is None:
+        path = pathlib.Path(__file__).resolve().parent.joinpath('preprocessing').joinpath('resources').joinpath(f'truecase-model.{lang}')
+        if path.exists():
+            truecase_model = str(path)
+        else:
+            raise ValueError(f'Unable to find default truecase_model, path={path}')
     for line in pipeline.preprocess(input, lang=lang, truecase_model=truecase_model):
         output.write(line + '\n')
     log.info('Done!')

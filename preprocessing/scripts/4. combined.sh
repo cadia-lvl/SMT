@@ -12,7 +12,7 @@ THREADS=$SLURM_CPUS_PER_TASK
 # MEMORY=$SLURM_MEM_PER_NODE
 
 # 1=Train truecase IS, 2=Train truecase EN, 3=Process EN mono, 4=Process IS mono, 5=Process train & dev, 6=Create LM data
-FIRST_STEP=3
+FIRST_STEP=5
 LAST_STEP=6
 
 LANGS="en is"

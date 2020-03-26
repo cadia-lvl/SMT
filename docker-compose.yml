@@ -11,7 +11,7 @@ services:
       - "8082:8080"
     command: /opt/moses/bin/moses -threads 2 -f /work/moses.ini --server
   proxy:
-    image: haukurp/moses-lvl:3.0.0
+    image: haukurp/moses-lvl:3.0.1
     links:
       - moses-en-is
       - moses-is-en

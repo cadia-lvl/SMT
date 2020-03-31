@@ -1,4 +1,4 @@
-from typing import List, Tuple, Dict, Generator
+from typing import List, Tuple, Dict, Iterable
 
 
 Corpus = List[str]
@@ -17,6 +17,6 @@ EnrichedCorpus = List[EnrichedSentence]
 EnrichedPCorpora = Dict[Lang, EnrichedCorpus]
 
 # Streaming
-iCorpus = Generator[str, None, None]
-iEnrichedCorpus = Generator[EnrichedSentence, None, None]
-iTokCorpus = Generator[List[str], None, None]
+iCorpus = Iterable[str]
+iEnrichedCorpus = Iterable[EnrichedSentence]
+iTokCorpus = Iterable[List[str]]

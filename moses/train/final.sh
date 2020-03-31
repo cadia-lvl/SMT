@@ -1,11 +1,4 @@
 #!/bin/bash
-#SBATCH --job-name=moses-train
-#SBATCH --nodes=1
-#SBATCH --cpus-per-task=10
-#SBATCH --mem=32G
-#SBATCH --chdir=/home/staff/haukurpj/SMT
-#SBATCH --time=8:01:00
-#SBATCH --output=%x %j.out
 # e=fail on pipeline, u=fail on unset var, x=trace commands
 set -ex
 
@@ -15,32 +8,24 @@ set -ex
 if [ -n "$SLURM_JOB_ID" ];  then
     THREADS="$SLURM_CPUS_PER_TASK"
     MEMORY="$SLURM_MEM_PER_NODE"
-    WORK_DIR="/work/haukurpj/"
-    DATA_DIR="/work/haukurpj/data/"
-    #MOSESDECODER="/home/staff/haukurpj/moses"
-    #MOSESDECODER_TOOLS="/home/staff/haukurpj/moses_tools"
-    # check the original location through scontrol and $SLURM_JOB_ID
-    # SCRIPT_PATH=$(scontrol show job "$SLURM_JOBID" | awk -F= '/Command=/{print $2}')
 else
-    # otherwise: started with bash. Get the real location.
-    # SCRIPT_PATH=$(realpath "$0")
     THREADS=4
     MEMORY=4096
-    WORK_DIR="/home/haukur/work/"
 fi
 
-# Steps: 1=Prepare 2=LM 3=Train 4=Tune 5=Binarise 6=Translate & Evaluate
+source environment.sh
+
+# Steps: 1=Prepare 2= 3=Train 4=Tune 5=Binarise 6=Translate & Evaluate
 FIRST_STEP=1
 LAST_STEP=6
 
 # Model variables
-LANG_FROM="en"
-LANG_TO="is"
+LANG_FROM="$1"
+LANG_TO="$2"
 EXPERIMENT_NAME="final"
 
 CLEAN_MIN_LENGTH=1
 CLEAN_MAX_LENGTH=70
-LM_SURFACE_ORDER=5
 ALIGNMENT="grow-diag"
 REORDERING="msd-bidirectional-fe"
 
@@ -48,10 +33,8 @@ TRAINING_DATA="$DATA_DIR"train/form/data
 DEV_DATA="$DATA_DIR"dev/form/data
 TEST_DIR="$DATA_DIR"test/raw/
 
-TRUECASE_MODEL=preprocessing/preprocessing/resources/truecase-model
-
-LM_SURFACE_TRAINING_DATA="$DATA_DIR"train/form/lm-data."$LANG_TO"
-LM_SURFACE_TEST_DIR="$DATA_DIR"test/form/
+LM="$LM_SURFACE_5"."$LANG_TO"
+LM_ORDER=5
 
 # Test if data is there
 function check_data() {
@@ -75,9 +58,7 @@ check_data "$TRAINING_DATA".is
 check_data "$DEV_DATA"."$LANG_FROM"
 check_data "$DEV_DATA"."$LANG_TO"
 check_dir_not_empty "$TEST_DIR"
-
-check_data "$LM_SURFACE_TRAINING_DATA"
-check_dir_not_empty "$LM_SURFACE_TEST_DIR"
+check_data "$LM"
 
 # Variables for subsequent steps.
 # 1. Prepare
@@ -86,9 +67,6 @@ MODEL_DIR="$WORK_DIR""$MODEL_NAME"/
 MODEL_DATA_DIR="$MODEL_DIR"data/
 MODEL_RESULTS_DIR="$MODEL_DIR"results/
 CLEAN_DATA="$MODEL_DATA_DIR"train
-
-# 2. Train LM
-LM_SURFACE="$MODEL_DATA_DIR"form."$LANG_TO".blm
 
 # 3. Train Moses
 BASE_DIR="$MODEL_DIR"base/
@@ -113,30 +91,8 @@ if ((FIRST_STEP <= 1 && LAST_STEP >= 1)); then
   "$MOSESDECODER"/scripts/training/clean-corpus-n.perl "$TRAINING_DATA" "$LANG_FROM" "$LANG_TO" "$CLEAN_DATA" "$CLEAN_MIN_LENGTH" "$CLEAN_MAX_LENGTH"
 fi
 
-# Step=2. Train LM
-function train_lm() {
-  LM_DATA="$1"
-  LM="$2"
-  LM_ORDER="$3"
-  "$MOSESDECODER"/bin/lmplz --order "$LM_ORDER" --temp_prefix "$WORK_DIR" -S 30G --discount_fallback <"$LM_DATA" >"$LM".arpa
-  # we *can* use the trie structure to save about 1/2 the space, but almost twice as slow `trie`
-  # we *can* use pointer compression to save more space, but slightly slower `-a 64`
-  "$MOSESDECODER"/bin/build_binary -S 30G "$LM".arpa "$LM"
-}
-
-function eval_lm() {
-  # LM evaluation, we evaluate on
-  LM="$1"
-  TEST_SET_DIR="$2"
-  for test_set in "$TEST_SET_DIR"*."$LANG_TO"; do
-    TEST_SET_NAME=$(basename "$test_set")
-    "$MOSESDECODER"/bin/query "$LM" <"$test_set" | tail -n 4 >"$MODEL_RESULTS_DIR""$TEST_SET_NAME".ppl
-  done
-}
-
 if ((FIRST_STEP <= 2 && LAST_STEP >= 2)); then
-  train_lm "$LM_SURFACE_TRAINING_DATA" "$LM_SURFACE" "$LM_SURFACE_ORDER"
-  eval_lm "$LM_SURFACE" "$LM_SURFACE_TEST_DIR"
+  echo "Not training LM here"
 fi
 
 # Step=3. Train Moses model
@@ -149,7 +105,7 @@ if ((FIRST_STEP <= 3 && LAST_STEP >= 3)); then
     -e "$LANG_TO" \
     -alignment "$ALIGNMENT" \
     -reordering "$REORDERING" \
-    -lm 0:"$LM_SURFACE_ORDER":"$LM_SURFACE":8 \
+    -lm 0:"$LM_ORDER":"$LM":8 \
     -mgiza \
     -mgiza-cpus "$THREADS" \
     -parallel \
@@ -209,12 +165,12 @@ if ((FIRST_STEP <= 5 && LAST_STEP >= 5)); then
   BINARISED_PHRASE_TABLE="$BINARISED_DIR"phrase-table
   BINARISED_REORDERING_TABLE="$BINARISED_DIR"reordering-table
   binarise_table "$BASE_PHRASE_TABLE" "$BINARISED_PHRASE_TABLE" "$BASE_REORDERING_TABLE" "$BINARISED_REORDERING_TABLE"
-  cp "$LM_SURFACE" "$BINARISED_LM"
+  cp "$LM" "$BINARISED_LM"
   cp "$TUNED_MOSES_INI" "$BINARISED_MOSES_INI"
-  fix_paths $LM_SURFACE $BINARISED_LM $BINARISED_MOSES_INI
-  fix_paths $BASE_PHRASE_TABLE $BINARISED_PHRASE_TABLE $BINARISED_MOSES_INI
-  fix_paths $BASE_REORDERING_TABLE $BINARISED_REORDERING_TABLE $BINARISED_MOSES_INI
-  sed -i "s|PhraseDictionaryMemory|PhraseDictionaryCompact|" $BINARISED_MOSES_INI
+  fix_paths "$LM" "$BINARISED_LM" "$BINARISED_MOSES_INI"
+  fix_paths "$BASE_PHRASE_TABLE" "$BINARISED_PHRASE_TABLE" "$BINARISED_MOSES_INI"
+  fix_paths "$BASE_REORDERING_TABLE" "$BINARISED_REORDERING_TABLE" "$BINARISED_MOSES_INI"
+  sed -i "s|PhraseDictionaryMemory|PhraseDictionaryCompact|" "$BINARISED_MOSES_INI"
 fi
 
 # Step=6 Translate and post-process.
@@ -226,9 +182,7 @@ if ((FIRST_STEP <= 6 && LAST_STEP >= 6)); then
   TEST_SET_TRANSLATED_COMBINED="$MODEL_RESULTS_DIR"combined-translated-detok."$LANG_TO"
   TEST_SET_CORRECT_COMBINED="$MODEL_RESULTS_DIR"combined."$LANG_TO"
   TEST_SET_COMBINED_BLUE_SCORE="$MODEL_RESULTS_DIR"combined."$LANG_FROM"-"$LANG_TO".bleu
-  TEST_SET_CORRECT_DETOK_COMBINED="$MODEL_RESULTS_DIR"combined-detok."$LANG_TO"
   rm "$TEST_SET_CORRECT_COMBINED" || true
-  rm "$TEST_SET_CORRECT_DETOK_COMBINED" || true
   rm "$TEST_SET_TRANSLATED_COMBINED" || true
   declare -a test_sets=(
         "ees"
@@ -237,14 +191,13 @@ if ((FIRST_STEP <= 6 && LAST_STEP >= 6)); then
   )
   for test_set in "${test_sets[@]}"; do
     TEST_SET_CORRECT="$TEST_DIR""$test_set"."$LANG_TO"
-    TEST_SET_CORRECT_DETOK="$TEST_DIR""$test_set"-detok."$LANG_TO"
     TEST_SET_IN="$TEST_DIR""$test_set"."$LANG_FROM"
     TEST_SET_IN_PROCESSED="$TEST_DIR""$test_set"-processed."$LANG_FROM"
     TEST_SET_TRANSLATED="$MODEL_RESULTS_DIR""$test_set"-translated."$LANG_FROM"-"$LANG_TO"
     TEST_SET_TRANSLATED_POSTPROCESSED="$MODEL_RESULTS_DIR""$test_set"-translated-detok."$LANG_FROM"-"$LANG_TO"
     TEST_SET_BLUE_SCORE="$MODEL_RESULTS_DIR""$test_set"."$LANG_FROM"-"$LANG_TO".bleu
     # Preprocess
-    preprocessing/main.py preprocess "$TEST_SET_IN" "$TEST_SET_IN_PROCESSED" "$LANG_FROM" "$TRUECASE_MODEL"."$LANG_FROM"
+    preprocessing/main.py preprocess "$TEST_SET_IN" "$TEST_SET_IN_PROCESSED" "$LANG_FROM"
 
     # Translate
     /opt/moses/bin/moses -f "$BINARISED_DIR"moses.ini \
@@ -252,7 +205,7 @@ if ((FIRST_STEP <= 6 && LAST_STEP >= 6)); then
       < "$TEST_SET_IN_PROCESSED" \
       >"$TEST_SET_TRANSLATED"
     # Postprocess
-    preprocessing/main.py postprocess "$TEST_SET_TRANSLATED" "$TEST_SET_TRANSLATED_POSTPROCESSED" $LANG_TO
+    preprocessing/main.py postprocess "$TEST_SET_TRANSLATED" "$TEST_SET_TRANSLATED_POSTPROCESSED" "$LANG_TO"
 
     # Evaluate
     /opt/moses/scripts/generic/multi-bleu-detok.perl -lc \
@@ -260,26 +213,14 @@ if ((FIRST_STEP <= 6 && LAST_STEP >= 6)); then
        < "$TEST_SET_CORRECT" \
        > "$TEST_SET_BLUE_SCORE"
 
-    # Evaluate + detok (the original text looks different than what Tokenizer gives)
-    preprocessing/main.py tokenize "$TEST_SET_CORRECT" "$TEST_SET_CORRECT_DETOK" "$LANG_TO"
-    /opt/moses/scripts/generic/multi-bleu-detok.perl -lc \
-      "$TEST_SET_TRANSLATED_POSTPROCESSED" \
-       < "$TEST_SET_CORRECT_DETOK"\
-       > "$TEST_SET_BLUE_SCORE"-detok
-    
     # Combine
     cat "$TEST_SET_TRANSLATED_POSTPROCESSED" >> "$TEST_SET_TRANSLATED_COMBINED"
     cat "$TEST_SET_CORRECT" >> "$TEST_SET_CORRECT_COMBINED"
-    cat "$TEST_SET_CORRECT_DETOK" >> "$TEST_SET_CORRECT_DETOK_COMBINED"
   done
   # The combined
   /opt/moses/scripts/generic/multi-bleu-detok.perl -lc \
     "$TEST_SET_TRANSLATED_COMBINED" \
      < "$TEST_SET_CORRECT_COMBINED" \
      > "$TEST_SET_COMBINED_BLUE_SCORE"
-  /opt/moses/scripts/generic/multi-bleu-detok.perl -lc \
-    "$TEST_SET_TRANSLATED_COMBINED" \
-     < "$TEST_SET_CORRECT_DETOK_COMBINED" \
-     > "$TEST_SET_COMBINED_BLUE_SCORE"-detok
 
 fi

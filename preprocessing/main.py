@@ -33,17 +33,24 @@ def write_factor(input, lang, save_to, lemma, pos, form, lines, threads, chunksi
 @click.argument('input', type=click.File('r'))
 @click.argument('output', type=click.File('w+'))
 @click.argument('lang', type=str)
-# TODO: Make an option
-@click.argument('truecase_model', type=str)
-def preprocess(input, output, lang, truecase_model):
+@click.option('--truecase_model', type=str, default=None)
+@click.option('--known_tokens', type=str, default=None)
+def preprocess(input, output, lang, truecase_model, known_tokens):
     log.info('Preprocessing')
     if truecase_model is None:
         path = pathlib.Path(__file__).resolve().parent.joinpath('preprocessing').joinpath('resources').joinpath(f'truecase-model.{lang}')
         if path.exists():
+            log.info('Found default truecase_model.')
             truecase_model = str(path)
         else:
             raise ValueError(f'Unable to find default truecase_model, path={path}')
-    for line in pipeline.preprocess(input, lang=lang, truecase_model=truecase_model):
+    if known_tokens is not None:
+        # The known tokens should be a token per line.
+        with open(known_tokens, 'r') as f_in:
+            known_tokens = set(line.strip() for line in f_in)
+            log.info(f'Found known tokens, len={len(known_tokens)}')
+
+    for line in pipeline.preprocess(input, lang=lang, truecase_model=truecase_model, known_tokens=known_tokens):
         output.write(line + '\n')
     log.info('Done!')
 

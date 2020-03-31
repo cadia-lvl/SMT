@@ -1,5 +1,6 @@
 import logging
 import pickle
+import pathlib
 from typing import Union, List, Dict
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
@@ -63,6 +64,15 @@ def make_batches(sequence, batch_size: int):
             yield itertools.chain([next(batchiter)], batchiter)
         except StopIteration:
             return
+
+
+def get_kvistur_resources():
+    return {
+        "modifiers": str(pathlib.Path(__file__).resolve().parent.parent.joinpath('kvistur').joinpath('resources').joinpath('modifiers.dawg')),
+        "heads": str(pathlib.Path(__file__).resolve().parent.parent.joinpath('kvistur').joinpath('resources').joinpath('heads.dawg')),
+        "templates": str(pathlib.Path(__file__).resolve().parent.parent.joinpath('kvistur').joinpath('resources').joinpath('templates.dawg')),
+        "splits": str(pathlib.Path(__file__).resolve().parent.parent.joinpath('kvistur').joinpath('resources').joinpath('splits.dawg')),
+    }
 
 
 def read_rmh_file(path: str):

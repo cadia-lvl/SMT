@@ -18,7 +18,7 @@ def test_truecase():
 def test_pre_and_postprocessing():
     test = ['Þetta er setning sem ætti að vera í lÁGSTÖFum. < | [ ] >']
     lang = 'is'
-    result = pipeline.preprocess(test, lang=lang, truecase_model='/work/haukurpj/data/train/truecase-model.form.is')
+    result = [pipeline.preprocess(test, lang=lang, truecase_model='/work/haukurpj/data/train/truecase-model.form.is')][0]
     assert result == ['þetta er setning sem ætti að vera í lágstöfum . _lt_ _pipe_ _bo_ _bc_ _gt_']
     result = pipeline.postprocess(result, lang=lang)
     assert result == ['Þetta er setning sem ætti að vera í lágstöfum. < | []>']

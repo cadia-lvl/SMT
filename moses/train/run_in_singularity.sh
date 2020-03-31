@@ -2,7 +2,7 @@
 #SBATCH --job-name=moses-train
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=10
-#SBATCH --mem=32G
+#SBATCH --mem=16G
 #SBATCH --chdir=/home/staff/haukurpj/SMT
 #SBATCH --time=8:01:00
 #SBATCH --output=%j-%x.out

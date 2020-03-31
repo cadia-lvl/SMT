@@ -1,6 +1,6 @@
 from time import time
 from collections import defaultdict
-from typing import Dict, Callable, Tuple, Set, Generator
+from typing import Dict, Callable, Tuple, Set, Iterable
 import logging
 import re
 from concurrent.futures import ProcessPoolExecutor
@@ -17,6 +17,7 @@ from preprocessing.types import (Lang, Tokens, POS, Lemma,
                                  iTokCorpus, iCorpus, iEnrichedCorpus,
                                  Corpus, EnrichedCorpus)
 from preprocessing import file_handler
+from kvistur.kvistur import Kvistur
 
 log = logging.getLogger()
 
@@ -30,6 +31,7 @@ URL = 'http://malvinnsla.arnastofnun.is'
 m_true = None
 m_tok = None
 m_detok = None
+kvistur = None
 
 
 def _lazy_load_moses_truecaser(load_from):
@@ -37,6 +39,13 @@ def _lazy_load_moses_truecaser(load_from):
     if not m_true:
         m_true = MosesTruecaser(load_from=load_from)
     return m_true
+
+
+def _lazy_load_kvistur():
+    global kvistur
+    if not kvistur:
+        kvistur = Kvistur(**file_handler.get_kvistur_resources())
+    return kvistur
 
 
 def get_index_of_segment(segment):
@@ -204,7 +213,7 @@ def detokenize(corpus: iCorpus, lang: Lang) -> iCorpus:
         return (mideind_tok.detokenize(list(mideind_tok.tokenize(line, normalize=False)), normalize=False) for line in corpus)
 
 
-def deduplicate(corpus: Generator[str, None, None], known: Set[str]) -> Generator[str, None, None]:
+def deduplicate(corpus: iCorpus, known: Set[str]) -> iCorpus:
     total = 0
     removed = 0
     for sent in corpus:
@@ -256,7 +265,7 @@ def extract_known_tokens(corpus: iCorpus) -> Set[str]:
     return set(tok.strip() for line in corpus for tok in line.split(' ') if (tok is not None and tok != '\n'))
 
 
-def unknown_tokens(corpus: iCorpus, known: Set[str]) -> Generator[Set[str], None, None]:
+def unknown_tokens(corpus: iCorpus, known: Set[str]) -> Iterable[Set[str]]:
     """
     Input needs to be tokenized and provided as a list of sentences.
     """
@@ -265,15 +274,36 @@ def unknown_tokens(corpus: iCorpus, known: Set[str]) -> Generator[Set[str], None
         yield set(tok for tok in tokens if tok not in known)
 
 
-def preprocess(corpus: Corpus, lang: str, truecase_model: str) -> Corpus:
+def preprocess_line(line: str, lang: str, truecase_model: str, known_tokens: Set[str]) -> str:
     # Tokenize
     # Truecase
     # Put Moses placeholders
-    tokenized = (" ".join(tokens) for tokens in tokenize((line for line in corpus), lang=lang))
+    # Find unkown tokens and substitute with binary split
+    tokenized = (" ".join(tokens) for tokens in tokenize([line], lang=lang))
     truecased = truecase(tokenized, load_from=truecase_model)
-    escaped = escape_moses_chars(truecased)
+    # Now a string
+    escaped = list(escape_moses_chars(truecased))[0]
+    # If we are given known_tokens and Icelandic, we use them.
+    if known_tokens is not None and len(known_tokens) != 0 and lang == 'is':
+        # We go through the unkown tokens in the line
+        tokens = [tok.strip() for tok in escaped.split(' ')]
+        processed_tokens = []
+        for token in tokens:
+            # If it is not known
+            if token not in known_tokens:
+                # Either this does nothing, and the token is the same
+                # or the token is split s.t. "x_y" -> "x y"
+                token = re.sub("_", " ", _lazy_load_kvistur().re_split(token))
+            processed_tokens.append(token)
+        return " ".join(processed_tokens)
 
-    return list(escaped)
+    else:
+        return escaped
+
+
+def preprocess(corpus: iCorpus, lang: str, truecase_model: str, known_tokens: Set[str]) -> iCorpus:
+    for line in corpus:
+        yield preprocess_line(line, lang=lang, truecase_model=truecase_model, known_tokens=known_tokens)
 
 
 def postprocess(corpus: Corpus, lang: str) -> Corpus:

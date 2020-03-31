@@ -58,7 +58,8 @@ def preprocess(sent: str, lang: str) -> str:
         truecase_model = TRUECASERS[lang]
     except KeyError:
         raise ValueError(f'Truecase model not specified for lang={lang}')
-    return pipeline.preprocess([sent], lang=lang, truecase_model=truecase_model)[0]
+    # TODO: Maybe we want to have some known tokens in production
+    return pipeline.preprocess_line(sent, lang=lang, truecase_model=truecase_model, known_tokens=set())
 
 
 def postprocess(sent: str, lang: str) -> str:

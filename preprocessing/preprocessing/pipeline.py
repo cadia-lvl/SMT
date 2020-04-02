@@ -4,6 +4,7 @@ from typing import Dict, Callable, Tuple, Set, Iterable
 import logging
 import re
 from concurrent.futures import ProcessPoolExecutor
+from functools import partial
 
 import requests
 from nltk.corpus import wordnet as wn
@@ -28,24 +29,21 @@ tag_map['R'] = wn.ADV
 URL = 'http://malvinnsla.arnastofnun.is'
 
 
-m_true = None
-m_tok = None
-m_detok = None
-kvistur = None
+lazy_objects: Dict[str, object] = dict()
 
 
 def _lazy_load_moses_truecaser(load_from):
-    global m_true
-    if not m_true:
-        m_true = MosesTruecaser(load_from=load_from)
-    return m_true
+    global lazy_objects
+    if load_from not in lazy_objects:
+        lazy_objects[load_from] = MosesTruecaser(load_from=load_from)
+    return lazy_objects[load_from]
 
 
 def _lazy_load_kvistur():
-    global kvistur
-    if not kvistur:
-        kvistur = Kvistur(**file_handler.get_kvistur_resources())
-    return kvistur
+    global lazy_objects
+    if 'kvistur' not in lazy_objects:
+        lazy_objects['kvistur'] = Kvistur(**file_handler.get_kvistur_resources())
+    return lazy_objects['kvistur']
 
 
 def get_index_of_segment(segment):
@@ -66,18 +64,18 @@ def _get_other_indices(segment):
         yield from (0, 1)
 
 
-def _lazy_load_moses_tokenizer():
-    global m_tok
-    if not m_tok:
-        m_tok = MosesTokenizer(lang='en')
-    return m_tok
+def _lazy_load_moses_tokenizer(lang):
+    global lazy_objects
+    if f'tok_moses_{lang}' not in lazy_objects:
+        lazy_objects[f'tok_moses_{lang}'] = MosesTokenizer(lang=lang)
+    return lazy_objects[f'tok_moses_{lang}']
 
 
-def _lazy_load_moses_detokenizer():
-    global m_detok
-    if not m_detok:
-        m_detok = MosesDetokenizer(lang='en')
-    return m_detok
+def _lazy_load_moses_detokenizer(lang):
+    global lazy_objects
+    if f'detok_moses_{lang}' not in lazy_objects:
+        lazy_objects[f'detok_moses_{lang}'] = MosesDetokenizer(lang=lang)
+    return lazy_objects[f'detok_moses_{lang}']
 
 
 illegal_replace = [
@@ -178,20 +176,24 @@ def enrich_sentences_en(corpus: iCorpus) -> EnrichedCorpus:
     return enriched_sentences
 
 
-def is_tok(line):
-    return [token for sent in mideind_tok.split_into_sentences(line) for token in sent.split(' ')]
+def is_tok(line, tokenizer):
+    if tokenizer is None or tokenizer == "":
+        return [token for sent in mideind_tok.split_into_sentences(line) for token in sent.split(' ')]
+    elif tokenizer == 'moses':
+        return _lazy_load_moses_tokenizer('is').tokenize(line, escape=False)
 
 
 def en_tok(line):
-    return m_tok.tokenize(line, escape=False)
+    return _lazy_load_moses_tokenizer('en').tokenize(line, escape=False)
 
 
-def tokenize(corpus: iCorpus, lang: Lang, threads=1, batch_size=100000, chunksize=10000) -> iTokCorpus:
+def tokenize(corpus: iCorpus, lang: Lang, tokenizer=str, threads=1, batch_size=100000, chunksize=10000) -> iTokCorpus:
     if lang == 'en':
-        _ = _lazy_load_moses_tokenizer()
         f = en_tok
+    elif lang == 'is':
+        f = partial(is_tok, tokenizer=tokenizer)
     else:
-        f = is_tok
+        raise ValueError(f'Unknown language={lang}')
 
     if threads == 1:
         for line in corpus:
@@ -205,12 +207,16 @@ def tokenize(corpus: iCorpus, lang: Lang, threads=1, batch_size=100000, chunksiz
                     yield result
 
 
-def detokenize(corpus: iCorpus, lang: Lang) -> iCorpus:
+def detokenize(corpus: iCorpus, lang: Lang, tokenizer=str) -> iCorpus:
     if lang == 'en':
-        m_detok = _lazy_load_moses_detokenizer()
-        return (m_detok.detokenize(line.split(' '), return_str=True, unescape=False) for line in corpus)
+        return (_lazy_load_moses_detokenizer('en').detokenize(line.split(' '), return_str=True, unescape=False) for line in corpus)
+    elif lang == 'is':
+        if tokenizer is None or tokenizer == "":
+            return (mideind_tok.detokenize(list(mideind_tok.tokenize(line, normalize=False)), normalize=False) for line in corpus)
+        else:
+            return (_lazy_load_moses_detokenizer('is').detokenize(line.split(' '), return_str=True, unescape=False) for line in corpus)
     else:
-        return (mideind_tok.detokenize(list(mideind_tok.tokenize(line, normalize=False)), normalize=False) for line in corpus)
+        raise ValueError(f'Unkown language={lang}')
 
 
 def deduplicate(corpus: iCorpus, known: Set[str]) -> iCorpus:
@@ -274,12 +280,12 @@ def unknown_tokens(corpus: iCorpus, known: Set[str]) -> Iterable[Set[str]]:
         yield set(tok for tok in tokens if tok not in known)
 
 
-def preprocess_line(line: str, lang: str, truecase_model: str, known_tokens: Set[str]) -> str:
+def preprocess_line(line: str, lang: str, tokenizer: str, truecase_model: str, known_tokens: Set[str]) -> str:
     # Tokenize
     # Truecase
     # Put Moses placeholders
     # Find unkown tokens and substitute with binary split
-    tokenized = (" ".join(tokens) for tokens in tokenize([line], lang=lang))
+    tokenized = (" ".join(tokens) for tokens in tokenize([line], lang=lang, tokenizer=tokenizer))
     truecased = truecase(tokenized, load_from=truecase_model)
     # Now a string
     escaped = list(escape_moses_chars(truecased))[0]
@@ -301,16 +307,25 @@ def preprocess_line(line: str, lang: str, truecase_model: str, known_tokens: Set
         return escaped
 
 
-def preprocess(corpus: iCorpus, lang: str, truecase_model: str, known_tokens: Set[str]) -> iCorpus:
-    for line in corpus:
-        yield preprocess_line(line, lang=lang, truecase_model=truecase_model, known_tokens=known_tokens)
+def preprocess(corpus: iCorpus, lang: str, tokenizer: str, truecase_model: str, known_tokens: Set[str], threads=1, batch_size=500000, chunksize=10000) -> iCorpus:
+    f = partial(preprocess_line, lang=lang, tokenizer=tokenizer, truecase_model=truecase_model, known_tokens=known_tokens)
+    if threads == 1:
+        for line in tqdm(corpus):
+            yield f(line)
+    else:
+        with ProcessPoolExecutor(max_workers=threads) as worker:
+            for chunk in file_handler.make_batches(corpus, batch_size=batch_size):
+                chunk = list(chunk)
+                results = tqdm(worker.map(f, chunk, chunksize=chunksize), total=len(chunk))
+                for result in results:
+                    yield result
 
 
-def postprocess(corpus: Corpus, lang: str) -> Corpus:
+def postprocess(corpus: Corpus, lang: str, tokenizer: str) -> Corpus:
     # Remove Moses placeholders
     # Detruecase
     # Detokenize
     de_escaped = de_escape_moses_chars((line for line in corpus))
     detruecased = detruecase(de_escaped)
-    detokenized = detokenize(detruecased, lang=lang)
+    detokenized = detokenize(detruecased, lang=lang, tokenizer=tokenizer)
     return list(detokenized)

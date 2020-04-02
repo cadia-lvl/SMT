@@ -7,6 +7,9 @@
 #SBATCH --output=%x-%j.out
 #SBATCH --chdir=/home/staff/haukurpj/SMT
 
+# e=fail on pipeline, u=fail on unset var, x=trace commands
+set -ex
+
 WORK_DIR=/work/haukurpj/data
 THREADS=$SLURM_CPUS_PER_TASK
 # MEMORY=$SLURM_MEM_PER_NODE

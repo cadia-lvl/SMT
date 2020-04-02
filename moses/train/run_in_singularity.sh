@@ -1,11 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name=moses-train
+#SBATCH --job-name=moses
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=10
 #SBATCH --mem=16G
 #SBATCH --chdir=/home/staff/haukurpj/SMT
 #SBATCH --time=8:01:00
-#SBATCH --output=%j-%x.out
+#SBATCH --output=%x-%j.out
 
 WORK_DIR="/work/haukurpj"
 export MOSESDECODER="/opt/moses"

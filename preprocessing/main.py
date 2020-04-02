@@ -33,9 +33,11 @@ def write_factor(input, lang, save_to, lemma, pos, form, lines, threads, chunksi
 @click.argument('input', type=click.File('r'))
 @click.argument('output', type=click.File('w+'))
 @click.argument('lang', type=str)
+@click.option('--tokenizer', type=str, default=None)
 @click.option('--truecase_model', type=str, default=None)
 @click.option('--known_tokens', type=str, default=None)
-def preprocess(input, output, lang, truecase_model, known_tokens):
+@click.option('--threads', type=int, default=1)
+def preprocess(input, output, lang, tokenizer, truecase_model, known_tokens, threads):
     log.info('Preprocessing')
     if truecase_model is None:
         path = pathlib.Path(__file__).resolve().parent.joinpath('preprocessing').joinpath('resources').joinpath(f'truecase-model.{lang}')
@@ -50,7 +52,7 @@ def preprocess(input, output, lang, truecase_model, known_tokens):
             known_tokens = set(line.strip() for line in f_in)
             log.info(f'Found known tokens, len={len(known_tokens)}')
 
-    for line in pipeline.preprocess(input, lang=lang, truecase_model=truecase_model, known_tokens=known_tokens):
+    for line in pipeline.preprocess(input, lang=lang, tokenizer=tokenizer, truecase_model=truecase_model, known_tokens=known_tokens, threads=threads):
         output.write(line + '\n')
     log.info('Done!')
 
@@ -59,9 +61,10 @@ def preprocess(input, output, lang, truecase_model, known_tokens):
 @click.argument('input', type=click.File('r'))
 @click.argument('output', type=click.File('w+'))
 @click.argument('lang', type=str)
-def postprocess(input, output, lang):
+@click.option('--tokenizer', type=str, default=None)
+def postprocess(input, output, lang, tokenizer):
     log.info('Postprocessing')
-    for line in pipeline.postprocess(input, lang=lang):
+    for line in pipeline.postprocess(input, lang=lang, tokenizer=tokenizer):
         output.write(line + '\n')
     log.info('Done!')
 
@@ -154,12 +157,13 @@ def enrich(input, output, lang, chunksize: int, lines: int):
 @click.argument('input', type=click.File('r'))
 @click.argument('output', type=click.File('w+'))
 @click.argument('lang')
+@click.option('--tokenizer', type=str, default=None)
 @click.option('--threads', type=int, default=1)
 @click.option('--batch_size', type=int, default=5000000)
 @click.option('--chunksize', type=int, default=10000)
-def tokenize(input, output, lang, threads, batch_size, chunksize):
+def tokenize(input, output, lang, tokenizer, threads, batch_size, chunksize):
     log.info('Tokenizing')
-    for tokens in pipeline.tokenize(input, lang, threads=threads, batch_size=batch_size, chunksize=chunksize):
+    for tokens in pipeline.tokenize(input, lang, tokenizer=tokenizer, threads=threads, batch_size=batch_size, chunksize=chunksize):
         output.write(' '.join(tokens) + '\n')
     log.info('Done.')
 

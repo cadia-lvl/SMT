@@ -1,28 +1,33 @@
 #!/bin/bash
 #SBATCH --job-name=combined
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=16G
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=32G
 #SBATCH --time=16:10:00
 #SBATCH --output=%x-%j.out
 #SBATCH --chdir=/home/staff/haukurpj/SMT
+# e=fail on pipeline, u=fail on unset var, x=trace commands
+set -ex
 
-WORK_DIR=/work/haukurpj/data
-THREADS=$SLURM_CPUS_PER_TASK
-# MEMORY=$SLURM_MEM_PER_NODE
+source environment.sh
 
-# 1=Train truecase IS, 2=Train truecase EN, 3=Process EN mono, 4=Process IS mono, 5=Process train & dev, 6=Create LM data
-FIRST_STEP=5
+# 1=Train truecase EN, 2=Train truecase IS, 3=Process EN mono, 4=Process IS mono, 5=Process train & dev, 6=Create LM data
+FIRST_STEP=6
 LAST_STEP=6
 
 LANGS="en is"
-TRUECASE_MODEL=preprocessing/preprocessing/resources/truecase-model
+# TODO: Remove -moses
+EXTENSION="-moses"
+TRUECASE_MODEL="$TRUECASE_MODEL"$EXTENSION
+TRUECASE_DATA="$TRUECASE_DATA"$EXTENSION
 function train_truecase() {
     LANG=$1
-    TRUECASE_DATA="$WORK_DIR"/intermediary/truecase-data."$LANG"
-    echo "Created truecase data: $TRUECASE_DATA"
-    cat "$WORK_DIR"/intermediary/train-tok."$LANG" "$WORK_DIR"/mono/data-dedup-6578547."$LANG" > "$TRUECASE_DATA"
-    sacremoses train-truecase -m "$TRUECASE_MODEL"."$LANG" -j "$THREADS" < "$TRUECASE_DATA"
+    echo "Writing truecase data: $TRUECASE_DATA"
+    # TODO: Remove tokenizer --moses
+    cat "$TRAIN"."$LANG" "$MONO_DETOK"."$LANG" | \
+    preprocessing/main.py tokenize - "$TRUECASE_DATA"."$LANG" "$LANG" --tokenizer moses --threads "$THREADS" --batch_size 5000000 --chunksize 10000
+    # We just use the truecaser from Moses, sacremoses is not good for this.
+    ../mosesdecoder/scripts/recaser/train-truecaser.perl --model "$TRUECASE_MODEL"."$LANG" --corpus "$TRUECASE_DATA"."$LANG"
 }
 
 # Train truecase EN
@@ -37,7 +42,8 @@ fi
 
 function preprocess_mono() {
     LANG=$1
-    preprocessing/main.py preprocess "$WORK_DIR"/mono/data-dedup-6578547."$LANG" "$WORK_DIR"/intermediary/lm-data."$LANG" "$LANG" "$TRUECASE_MODEL"."$LANG"
+    # TODO: Remove -moses
+    preprocessing/main.py preprocess "$MONO_DETOK"."$LANG" "$MONO_READY""$EXTENSION"."$LANG" "$LANG" --tokenizer moses --truecase_model "$TRUECASE_MODEL"."$LANG" --threads "$THREADS"
 }
 
 # Preprocess EN mono
@@ -55,7 +61,8 @@ if ((FIRST_STEP <= 5 && LAST_STEP >= 5)); then
     SPLITS="train dev"
     for LANG in $LANGS; do
         for SPLIT in $SPLITS; do
-            preprocessing/main.py preprocess "$WORK_DIR"/intermediary/"$SPLIT"."$LANG" "$WORK_DIR"/"$SPLIT"/form/data."$LANG" "$LANG" "$TRUECASE_MODEL"."$LANG"
+            # TODO: Remove -moses
+            preprocessing/main.py preprocess "$DATA_DIR"intermediary/"$SPLIT"."$LANG" "$DATA_DIR""$SPLIT"/form/data"$EXTENSION"."$LANG" "$LANG" --tokenizer moses --truecase_model "$TRUECASE_MODEL"."$LANG" --threads "$THREADS"
         done
     done
 fi
@@ -63,6 +70,6 @@ fi
 # Create LM-data
 if ((FIRST_STEP <= 6 && LAST_STEP >= 6)); then
     for LANG in $LANGS; do
-        cat "$WORK_DIR"/train/form/data."$LANG" "$WORK_DIR"/intermediary/lm-data."$LANG" > "$WORK_DIR"/train/form/lm-data."$LANG"
+        cat "$TRAINING_DATA"$EXTENSION."$LANG" "$MONO_READY"$EXTENSION."$LANG" > "$LM_SURFACE_TRAIN"$EXTENSION."$LANG"
     done
 fi

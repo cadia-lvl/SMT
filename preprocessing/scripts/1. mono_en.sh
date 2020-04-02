@@ -7,13 +7,16 @@
 #SBATCH --output=%x-%j.out
 #SBATCH --chdir=/home/staff/haukurpj/SMT
 
+# e=fail on pipeline, u=fail on unset var, x=trace commands
+set -ex
+
 WORK_DIR=/work/haukurpj/data/
 THREADS=$SLURM_CPUS_PER_TASK
 # MEMORY=$SLURM_MEM_PER_NODE
 
-# 1=Clean, 2=Tokenize, 3=Deduplicate, 4=Shrink
-FIRST_STEP=1
-LAST_STEP=4
+# 1=Clean, 2=Tokenize, 3=Deduplicate, 4=Shrink, 5=Detokenize
+FIRST_STEP=5
+LAST_STEP=5
 
 TARGET_DIR="$WORK_DIR"mono/
 mkdir -p "$TARGET_DIR"
@@ -37,5 +40,12 @@ fi
 if ((FIRST_STEP <= 4 && LAST_STEP >= 4)); then
     wc -l "$TARGET_DIR"data-dedup.en # =65785474
     shuf "$TARGET_DIR"data-dedup.en | head -n 6578547 > "$TARGET_DIR"data-dedup-6578547.en
+    echo "Done!"
+fi
+
+# Detok - for tokenization experiments 
+if ((FIRST_STEP <= 5 && LAST_STEP >= 5)); then
+    echo "Detokenizing"
+    preprocessing/main.py detokenize "$TARGET_DIR"data-dedup-6578547.en "$TARGET_DIR"data-dedup-6578547-detok.en en
     echo "Done!"
 fi

@@ -15,7 +15,7 @@ TRUECASE_MODEL=preprocessing/preprocessing/resources/truecase-model."$LANG"
 # Find unknowns
 if ((FIRST_STEP <= 2 && LAST_STEP >= 2)); then
     for set in $TEST_SETS; do
-        preprocessing/main.py preprocess $WORK_DIR/test/raw/"$set".$LANG - $LANG $TRUECASE_MODEL  | preprocessing/main.py unknown-tokens - /work/haukurpj/data/train/form/tok.is "$set"-unknown.is
+        preprocessing/main.py preprocess $WORK_DIR/test/raw/"$set".$LANG - $LANG | preprocessing/main.py unknown-tokens - /work/haukurpj/data/train/form/tok.is "$set"-unknown.is
         wc -l "$set"-unknown.is
     done
     cat {ees,ema,opensubtitles}-unknown.is | sort | uniq > unknown.is

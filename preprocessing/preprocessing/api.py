@@ -59,7 +59,7 @@ def preprocess(sent: str, lang: str) -> str:
     except KeyError:
         raise ValueError(f'Truecase model not specified for lang={lang}')
     # TODO: Maybe we want to have some known tokens in production
-    return pipeline.preprocess_line(sent, lang=lang, truecase_model=truecase_model, known_tokens=set())
+    return pipeline.preprocess_line(sent, lang=lang, truecase_model=truecase_model, known_tokens=set(), tokenizer="")
 
 
 def postprocess(sent: str, lang: str) -> str:
@@ -70,7 +70,7 @@ def postprocess(sent: str, lang: str) -> str:
     :param lang: The language of the sentence.\n
     :return: The processed sentence.
     """
-    return pipeline.postprocess([sent], lang=lang)[0]
+    return pipeline.postprocess([sent], lang=lang, tokenizer="")[0]
 
 
 def translate_bulk(sentences: List[str], s_lang: str, t_lang: str, model: str, id: str) -> List[str]:

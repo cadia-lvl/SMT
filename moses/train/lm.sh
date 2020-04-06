@@ -3,7 +3,7 @@
 source environment.sh
  
 LANG="$1"
-
+EXTENSION="-uni-30"
 # Train LM
 function train_lm() {
   LM_DATA="$1"
@@ -27,5 +27,5 @@ function eval_lm() {
 }
 
 # remove -moses
-train_lm "$LM_SURFACE_TRAIN"-moses."$LANG" "$LM_SURFACE_5"-moses."$LANG" 5
-eval_lm "$LM_SURFACE_5"-moses."$LANG" "$LM_SURFACE_TEST"
+train_lm "$LM_SURFACE_TRAIN""$EXTENSION"."$LANG" "$LM_SURFACE_5""$EXTENSION"."$LANG" 5
+# eval_lm "$LM_SURFACE_5"-moses."$LANG" "$LM_SURFACE_TEST"

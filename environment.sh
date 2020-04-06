@@ -11,7 +11,7 @@ fi
 export WORK_DIR=/work/haukurpj/
 export DATA_DIR=/work/haukurpj/data/
 # Don't use language endings.
-
+export LANGS="en is"
 # Mono data
 export MONO_DETOK="$DATA_DIR"mono/data-dedup-6578547-detok
 export MONO_READY="$DATA_DIR"intermediary/lm-data

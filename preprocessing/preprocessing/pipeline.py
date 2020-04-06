@@ -1,10 +1,11 @@
 from time import time
 from collections import defaultdict
-from typing import Dict, Callable, Tuple, Set, Iterable
+from typing import Dict, Callable, Tuple, Set, Iterable, List
 import logging
 import re
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
+import pathlib
 
 import requests
 from nltk.corpus import wordnet as wn
@@ -13,6 +14,7 @@ from nltk import pos_tag
 from sacremoses import MosesTokenizer, MosesTruecaser, MosesDetokenizer, MosesDetruecaser
 import tokenizer as mideind_tok
 from tqdm import tqdm
+import sentencepiece as spm
 
 from preprocessing.types import (Lang, Tokens, POS, Lemma,
                                  iTokCorpus, iCorpus, iEnrichedCorpus,
@@ -39,20 +41,17 @@ def _lazy_load_moses_truecaser(load_from):
     return lazy_objects[load_from]
 
 
-def _lazy_load_kvistur():
+def _lazy_load_bpe_tokenizer(lang, model=""):
     global lazy_objects
-    if 'kvistur' not in lazy_objects:
-        lazy_objects['kvistur'] = Kvistur(**file_handler.get_kvistur_resources())
-    return lazy_objects['kvistur']
-
-
-def get_index_of_segment(segment):
-    if segment == 'form':
-        return 0
-    elif segment == 'pos':
-        return 1
-    else:
-        return 2
+    if f'tok_bpe_{lang}' not in lazy_objects:
+        if model == "":
+            path = pathlib.Path(__file__).resolve().parent.joinpath('resources').joinpath(f'{lang}-bpe.model')
+        else:
+            path = pathlib.Path(model)
+        sp = spm.SentencePieceProcessor()
+        sp.Load(str(path))
+        lazy_objects[f'tok_bpe_{lang}'] = sp
+    return lazy_objects[f'tok_bpe_{lang}']
 
 
 def _get_other_indices(segment):
@@ -76,6 +75,22 @@ def _lazy_load_moses_detokenizer(lang):
     if f'detok_moses_{lang}' not in lazy_objects:
         lazy_objects[f'detok_moses_{lang}'] = MosesDetokenizer(lang=lang)
     return lazy_objects[f'detok_moses_{lang}']
+
+
+def _lazy_load_kvistur():
+    global lazy_objects
+    if 'kvistur' not in lazy_objects:
+        lazy_objects['kvistur'] = Kvistur(**file_handler.get_kvistur_resources())
+    return lazy_objects['kvistur']
+
+
+def get_index_of_segment(segment):
+    if segment == 'form':
+        return 0
+    elif segment == 'pos':
+        return 1
+    else:
+        return 2
 
 
 illegal_replace = [
@@ -176,27 +191,36 @@ def enrich_sentences_en(corpus: iCorpus) -> EnrichedCorpus:
     return enriched_sentences
 
 
-def is_tok(line, tokenizer):
+def is_tok(line: str, tokenizer: str, model="") -> List[str]:
     if tokenizer is None or tokenizer == "":
         return [token for sent in mideind_tok.split_into_sentences(line) for token in sent.split(' ')]
     elif tokenizer == 'moses':
         return _lazy_load_moses_tokenizer('is').tokenize(line, escape=False)
+    elif tokenizer == 'bpe':
+        return _lazy_load_bpe_tokenizer('is', model).EncodeAsPieces(line)
+    else:
+        raise ValueError(f'Unknown tokenizer={tokenizer}')
 
 
-def en_tok(line):
-    return _lazy_load_moses_tokenizer('en').tokenize(line, escape=False)
+def en_tok(line, tokenizer: str, model=""):
+    if tokenizer is None or tokenizer == "" or tokenizer == 'moses':
+        return _lazy_load_moses_tokenizer('en').tokenize(line, escape=False)
+    elif tokenizer == 'bpe':
+        return _lazy_load_bpe_tokenizer('en', model).EncodeAsPieces(line)
+    else:
+        raise ValueError(f'Unknown tokenizer={tokenizer}')
 
 
-def tokenize(corpus: iCorpus, lang: Lang, tokenizer=str, threads=1, batch_size=100000, chunksize=10000) -> iTokCorpus:
+def tokenize(corpus: iCorpus, lang: Lang, tokenizer="", model="", threads=1, batch_size=100000, chunksize=10000) -> iTokCorpus:
     if lang == 'en':
-        f = en_tok
+        f = partial(en_tok, tokenizer=tokenizer, model=model)
     elif lang == 'is':
-        f = partial(is_tok, tokenizer=tokenizer)
+        f = partial(is_tok, tokenizer=tokenizer, model=model)
     else:
         raise ValueError(f'Unknown language={lang}')
 
     if threads == 1:
-        for line in corpus:
+        for line in tqdm(corpus):
             yield f(line)
     else:
         with ProcessPoolExecutor(max_workers=threads) as worker:
@@ -209,12 +233,21 @@ def tokenize(corpus: iCorpus, lang: Lang, tokenizer=str, threads=1, batch_size=1
 
 def detokenize(corpus: iCorpus, lang: Lang, tokenizer=str) -> iCorpus:
     if lang == 'en':
-        return (_lazy_load_moses_detokenizer('en').detokenize(line.split(' '), return_str=True, unescape=False) for line in corpus)
+        if tokenizer is None or tokenizer == "" or tokenizer == 'moses':
+            return (_lazy_load_moses_detokenizer('en').detokenize(line.split(' '), return_str=True, unescape=False) for line in corpus)
+        elif tokenizer == 'bpe':
+            return (_lazy_load_bpe_tokenizer('en').DecodePieces(line.split(' ')).replace('▁', ' ') for line in corpus)
+        else:
+            raise ValueError(f'Unknown tokenizer={tokenizer}')
     elif lang == 'is':
         if tokenizer is None or tokenizer == "":
             return (mideind_tok.detokenize(list(mideind_tok.tokenize(line, normalize=False)), normalize=False) for line in corpus)
-        else:
+        elif tokenizer == 'bpe':
+            return (_lazy_load_bpe_tokenizer('is').DecodePieces(line.split(' ')).replace('▁', ' ') for line in corpus)
+        elif tokenizer == 'moses':
             return (_lazy_load_moses_detokenizer('is').detokenize(line.split(' '), return_str=True, unescape=False) for line in corpus)
+        else:
+            raise ValueError(f'Unknown tokenizer={tokenizer}')
     else:
         raise ValueError(f'Unkown language={lang}')
 

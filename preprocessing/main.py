@@ -91,6 +91,13 @@ def unknown_tokens(input, known, output):
 
 
 @click.command()
+@click.argument('argument', type=str)
+def train_bpe(argument):
+    import sentencepiece as spm
+    spm.SentencePieceTrainer.Train(argument.replace('|', ' '))
+
+
+@click.command()
 @click.argument('input', type=click.File('r'))
 @click.argument('save_to', type=str)
 @click.argument('lang', type=str)
@@ -158,12 +165,13 @@ def enrich(input, output, lang, chunksize: int, lines: int):
 @click.argument('output', type=click.File('w+'))
 @click.argument('lang')
 @click.option('--tokenizer', type=str, default=None)
+@click.option('--model', type=str, default=None)
 @click.option('--threads', type=int, default=1)
 @click.option('--batch_size', type=int, default=5000000)
 @click.option('--chunksize', type=int, default=10000)
-def tokenize(input, output, lang, tokenizer, threads, batch_size, chunksize):
+def tokenize(input, output, lang, tokenizer, model, threads, batch_size, chunksize):
     log.info('Tokenizing')
-    for tokens in pipeline.tokenize(input, lang, tokenizer=tokenizer, threads=threads, batch_size=batch_size, chunksize=chunksize):
+    for tokens in pipeline.tokenize(input, lang, tokenizer=tokenizer, model=model, threads=threads, batch_size=batch_size, chunksize=chunksize):
         output.write(' '.join(tokens) + '\n')
     log.info('Done.')
 
@@ -172,9 +180,10 @@ def tokenize(input, output, lang, tokenizer, threads, batch_size, chunksize):
 @click.argument('input', type=click.File('r'))
 @click.argument('output', type=click.File('w+'))
 @click.argument('lang')
-def detokenize(input, output, lang):
+@click.option('--tokenizer', type=str, default=None)
+def detokenize(input, output, lang, tokenizer):
     log.info('Detokenizing')
-    for line in pipeline.detokenize(input, lang=lang):
+    for line in pipeline.detokenize(input, lang=lang, tokenizer=tokenizer):
         output.write(line + '\n')
     log.info('Done.')
 
@@ -252,6 +261,7 @@ cli.add_command(preprocess)
 cli.add_command(postprocess)
 cli.add_command(server)
 cli.add_command(translate)
+cli.add_command(train_bpe)
 
 
 if __name__ == "__main__":

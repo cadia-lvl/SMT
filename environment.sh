@@ -8,6 +8,7 @@ else
     export THREADS=4
     export MEMORY=4096
 fi
+export REPO_DIR=/home/staff/haukurpj/SMT/
 export WORK_DIR=/work/haukurpj/
 export DATA_DIR=/work/haukurpj/data/
 # Don't use language endings.

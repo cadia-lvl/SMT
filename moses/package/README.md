@@ -1,24 +1,29 @@
-# Package Moses model
-To package a trained Moses model along with required dependencies:
-- Phrase tables
-- Reordering tables
-- Language model
-- Configuration file for Moses
+# Pakka Moses líkani
+Til þess að pakka Moses líkani þarf að bæta við öllum nauðsynlegum gögnum.
+- "Phrase tables"
+- "Reordering tables"
+- Mállíkani
+- Moses stillingum (moses.ini)
 
-## Requirements
+Fyrir lista af útgefnum forþjálfuðum líkönum sjá [DockerHub](https://hub.docker.com/r/haukurp/moses-smt).
+Þjálfaða líkanið gerir ráð fyrir því að fá setningar forunnar á sambærilegan hátt og í þjálfun.
+## Nauðsynlegur hugbúnaður
 - Docker
-- Logged in to DockerHub
-- A trained model. The script downloads a directory from a remote server which should have all the dependencies.
+- Skrá inn í DockerHub
+- Þjálfað líkan
 
-## Package
+## `docker-build.sh`
+Skriftan sækir skrá með `scp`, byggir docker geymi (eftir `Dockerfile`) og hleður honum upp.
 ```
 ./docker-build.sh user@remote.server:/path/on/remote/server docker-image:docker-tag
 ```
-This will copy all the files from the `/path/on/remote/server` to the `trained_model` directory 
 
-Example
+- Skráin verður að innihalda öll nauðsynlegt gögn. Sjá að ofan.
+- Skráin `/path/on/remote/server` er sett í skrána `trained_model` og er eytt eftir að líkan hefur verið verið hlaðið upp.
+
+Dæmi:
 ```
 ./docker-build.sh haukurpj@torpaq:/work/haukurpj/final-en-is/binarised haukurp/moses-smt:final-en-is
 ```
-## To Run
-For and example to run the image see `docker-run.sh`
+## `docker-run.sh`
+Skriftan er dæmi um hvernig er hægt að keyra þjálfað líkan.

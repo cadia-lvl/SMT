@@ -3,7 +3,7 @@
 source environment.sh
  
 LANG="$1"
-EXTENSION="-uni-30"
+EXTENSION="-en-bpe"
 # Train LM
 function train_lm() {
   LM_DATA="$1"
@@ -13,6 +13,7 @@ function train_lm() {
   # we *can* use the trie structure to save about 1/2 the space, but almost twice as slow `trie`
   # we *can* use pointer compression to save more space, but slightly slower `-a 64`
   "$MOSESDECODER"/bin/build_binary -S 30G "$LM".arpa "$LM"
+  rm "$LM".arpa
 }
 
 function eval_lm() {
@@ -26,6 +27,5 @@ function eval_lm() {
   done
 }
 
-# remove -moses
 train_lm "$LM_SURFACE_TRAIN""$EXTENSION"."$LANG" "$LM_SURFACE_5""$EXTENSION"."$LANG" 5
 # eval_lm "$LM_SURFACE_5"-moses."$LANG" "$LM_SURFACE_TEST"

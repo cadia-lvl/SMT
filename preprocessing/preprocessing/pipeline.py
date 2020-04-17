@@ -231,19 +231,21 @@ def tokenize(corpus: iCorpus, lang: Lang, tokenizer="", model="", threads=1, bat
                     yield result
 
 
-def detokenize(corpus: iCorpus, lang: Lang, tokenizer=str) -> iCorpus:
+def detokenize(corpus: iCorpus, lang: Lang, tokenizer=str, model=str) -> iCorpus:
     if lang == 'en':
         if tokenizer is None or tokenizer == "" or tokenizer == 'moses':
             return (_lazy_load_moses_detokenizer('en').detokenize(line.split(' '), return_str=True, unescape=False) for line in corpus)
         elif tokenizer == 'bpe':
-            return (_lazy_load_bpe_tokenizer('en').DecodePieces(line.split(' ')).replace('▁', ' ') for line in corpus)
+            # The bpe tokenizer will not remove \n, but the others will. Make BPE remove \n
+            return (_lazy_load_bpe_tokenizer('en', model=model).DecodePieces(line.split(' ')).replace('▁', ' ').replace('\n', '') for line in corpus)
         else:
             raise ValueError(f'Unknown tokenizer={tokenizer}')
     elif lang == 'is':
         if tokenizer is None or tokenizer == "":
             return (mideind_tok.detokenize(list(mideind_tok.tokenize(line, normalize=False)), normalize=False) for line in corpus)
         elif tokenizer == 'bpe':
-            return (_lazy_load_bpe_tokenizer('is').DecodePieces(line.split(' ')).replace('▁', ' ') for line in corpus)
+            # The bpe tokenizer will not remove \n, but the others will. Make BPE remove \n
+            return (_lazy_load_bpe_tokenizer('is', model=model).DecodePieces(line.split(' ')).replace('▁', ' ').replace('\n', '') for line in corpus)
         elif tokenizer == 'moses':
             return (_lazy_load_moses_detokenizer('is').detokenize(line.split(' '), return_str=True, unescape=False) for line in corpus)
         else:

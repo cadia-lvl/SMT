@@ -1,38 +1,16 @@
-# Moses model
-Eftir að þjálfun á Moses líkani þá er hægt að vista líkanið og dreifa því með Docker.
+# Þjálfa Moses líkan
+Í þessari skrá eru ýmsar skriftur til þess að þjálfa mismunandi Moses líkön og aðrar skriftur sem koma að Moses þjálfun.
 
-## Keyrsla
-```shell script
-docker run -p 8080:8080 haukurp/moses-smt:en-is /opt/moses/bin/moses \
-  -threads 4 \
-  -f /work/moses.ini \
-  --server
-# eða
-./docker-run.sh
-```
-Þetta keyrir `moses` forritið með 4 þráðum (til að flýta þýðingum), vísar í skrá þar sem forþjálfað líkan er geymt
-og ræsir `moses` sem XMLRPC þýðingarþjón á porti 8080.
-Til þess að keyra líkanið á einstökum setningum þar bara að sleppa `--server`.
+- Skrifturnar vísa í gögn sem verða að vera til staðar.
+- Skrifturnar gera ráð fyrir því að Moses og önnur tilheyrandi tól séu uppsett.
+- Skrifturnar þjálfa, fínpússa, pakka og meta Moses líkan.
 
-Fyrir lista af útgefnum forþjálfuðum líkönum sjá [DockerHub](https://hub.docker.com/r/haukurp/moses-smt).
+## `run_in_singularity`
+Skriftan hjúpar aðrar skriftur með því að keyra þær í gegnum docker/singularity geymi með Moses uppsett.
+Það mikilvægasta sem hún gerir er að setja kerfisbreyturnar `MOSESDECODER` og `MOSESDECODER_TOOLS` sem vísa á uppsett Moses og önnur nauðsynleg tól fyrir Moses.
 
-Þjálfaða líkanið gerir ráð fyrir því að fá setningar forunnar á sambærilegan hátt og í þjálfun.
-Þess vegna var skrifaður sérstakur [framendi](../frontend/README.md) sem vinnur setningar og 
-sendir svo á þjálfað líkan.
+## `lm.sh`
+Skriftan þjálfar og pakka KenLM mállíkani og nýtir sér KenLM forrit sem er innbyggt í Moses.
 
-## Þróun á líkönum
-Öll þróun á líkönum er gerð í gegnum margar bash skipanir, `moses-x.sh`, og yfirleitt keyrt á þjóni sem hefur
-aðgang að mörgum kjörnum.
-Enn fremur er öll vinnslan hjúpuð með `singularity` og `slurm` í stað `docker` að kröfum margra þjóna.
-Sjá `moses-pipeline.sh` fyrir pípu.
-
-## Útgáfa
-Keyra scriptu í þessari skrá með nafni á líkani. Sem dæmi: `docker-build.sh en-is-test`.
-Þetta mun þýða Moses og ýta myndinni á [DockerHub](https://hub.docker.com/r/haukurp/moses-smt) 
-með nafni á líkani sem tagi.
-Notandinn þarf að hafa aðgang að DockerHub geymslunni.
-Til að skrá sig inn í DockerHub þarf að gera `docker login` fyrst.
-
-Þessi scripta gerir ráð fyrir því að sækja þurfi líkanið á aðra vél.
-Breytið eftir þörf.
-Hafið þó í huga að í `moses.ini` eru vísanir á skráar staðsetningar sem þarf laga.
+## Aðrar skriftur
+Aðrar skriftur eru skilgreiningar á Moses líkönum sem hafa verið þjálfaðar.

@@ -181,9 +181,10 @@ def tokenize(input, output, lang, tokenizer, model, threads, batch_size, chunksi
 @click.argument('output', type=click.File('w+'))
 @click.argument('lang')
 @click.option('--tokenizer', type=str, default=None)
-def detokenize(input, output, lang, tokenizer):
+@click.option('--model', type=str, default=None)
+def detokenize(input, output, lang, tokenizer, model):
     log.info('Detokenizing')
-    for line in pipeline.detokenize(input, lang=lang, tokenizer=tokenizer):
+    for line in pipeline.detokenize(input, lang=lang, tokenizer=tokenizer, model=model):
         output.write(line + '\n')
     log.info('Done.')
 

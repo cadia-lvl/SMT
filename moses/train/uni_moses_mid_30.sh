@@ -5,7 +5,7 @@ set -ex
 source environment.sh
 
 # Steps: 1=Prepare 2= 3=Train 4=Tune 5=Binarise 6=Translate & Evaluate
-FIRST_STEP=1
+FIRST_STEP=6
 LAST_STEP=6
 
 # Model variables
@@ -190,8 +190,8 @@ if ((FIRST_STEP <= 6 && LAST_STEP >= 6)); then
     TEST_SET_TRANSLATED_POSTPROCESSED="$MODEL_RESULTS_DIR""$test_set"-translated-detok."$LANG_FROM"-"$LANG_TO"
     TEST_SET_BLUE_SCORE="$MODEL_RESULTS_DIR""$test_set"."$LANG_FROM"-"$LANG_TO".bleu
     # Preprocess
-    preprocessing/main.py preprocess "$TEST_SET_IN" - "$LANG_FROM" --truecase_model "$TRUECASE_MODEL"."$LANG_FROM" | \
-    preprocessing/main.py tokenize - "$TEST_SET_IN_PROCESSED" "$LANG_FROM" --tokenizer bpe --model preprocessing/preprocessing/resources/"$LANG_FROM"-uni-30.model
+    preprocessing/main.py preprocess "$TEST_SET_IN" "$TEST_SET_IN"-tmp "$LANG_FROM" --truecase_model "$TRUECASE_MODEL"."$LANG_FROM"
+    preprocessing/main.py tokenize "$TEST_SET_IN"-tmp "$TEST_SET_IN_PROCESSED" "$LANG_FROM" --tokenizer bpe --model preprocessing/preprocessing/resources/"$LANG_FROM"-uni-30.model
 
     # Translate
     /opt/moses/bin/moses -f "$BINARISED_DIR"moses.ini \
@@ -199,8 +199,8 @@ if ((FIRST_STEP <= 6 && LAST_STEP >= 6)); then
       < "$TEST_SET_IN_PROCESSED" \
       >"$TEST_SET_TRANSLATED"
     # Postprocess
-    preprocessing/main.py detokenize "$TEST_SET_TRANSLATED_POSTPROCESSED" - "$LANG_TO" --tokenizer bpe --model preprocessing/preprocessing/resources/"$LANG_TO"-uni-30.model
-    preprocessing/main.py postprocess - "$TEST_SET_TRANSLATED" "$LANG_TO" | \
+    preprocessing/main.py detokenize "$TEST_SET_TRANSLATED" "$TEST_SET_IN"-tmp "$LANG_TO" --tokenizer bpe --model preprocessing/preprocessing/resources/"$LANG_TO"-uni-30.model
+    preprocessing/main.py postprocess "$TEST_SET_IN"-tmp "$TEST_SET_TRANSLATED_POSTPROCESSED" "$LANG_TO"
 
     # Evaluate
     /opt/moses/scripts/generic/multi-bleu-detok.perl -lc \

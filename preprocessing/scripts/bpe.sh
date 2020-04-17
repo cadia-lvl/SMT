@@ -10,18 +10,18 @@
 set -ex
 
 source environment.sh
-FIRST_STEP=3
+FIRST_STEP=1
 LAST_STEP=3
 
-EXTENSION="-uni-30"
-BPE_TRAIN="$LM_SURFACE_TRAIN"
+EXTENSION="-bpe-train-30"
+BPE_TRAIN="$TRAINING_DATA"
 BPE_TRAINING_DATA="$TRAINING_DATA""$EXTENSION"
 BPE_DEV_DATA="$DEV_DATA""$EXTENSION"
 BPE_SURFACE_TRAIN="$LM_SURFACE_TRAIN""$EXTENSION"
 
 function train_bpe() {
     LANG="$1"
-    ARGUMENT="|--input=$BPE_TRAIN.$LANG|--model_prefix=preprocessing/preprocessing/resources/$LANG$EXTENSION|--input_sentence_size=5000000|--vocab_size=$VOCAB_SIZE|--character_coverage=1.0"
+    ARGUMENT="|--input=$BPE_TRAIN.$LANG|--model_prefix=preprocessing/preprocessing/resources/$LANG$EXTENSION|--model_type=bpe|--input_sentence_size=5000000|--vocab_size=$VOCAB_SIZE|--character_coverage=1.0"
     # We don't want to install the C++ version, so we need the Python version
     preprocessing/main.py train-bpe "$ARGUMENT"
 }

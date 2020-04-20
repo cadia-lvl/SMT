@@ -17,8 +17,11 @@ export LANGS="en is"
 export MONO_DETOK="$DATA_DIR"mono/data-dedup-6578547-detok
 export MONO_READY="$DATA_DIR"intermediary/lm-data
 
-# Paralell
+# Parallel
 export TRAIN="$DATA_DIR"intermediary/train
+
+# Dictionary
+export DICT_DIR="$REPO_DIR"/data/formatted/dictionary
 
 # Truecasing
 export TRUECASE_DATA="$DATA_DIR"intermediary/truecase-data

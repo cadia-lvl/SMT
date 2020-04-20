@@ -12,5 +12,5 @@ TRG_DIR="$SCRIPT_DIR"/../formatted/dictionary
 
 # Get all the .tsv files
 for f in "$SRC_DIR"/*.tsv; do
-  "$SCRIPT_DIR"/extract_dict.sh $f "$TRG_DIR"
+  "$SCRIPT_DIR"/extract_dict.sh "$f" "$TRG_DIR"
 done

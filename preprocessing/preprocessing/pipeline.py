@@ -211,7 +211,7 @@ def en_tok(line, tokenizer: str, model=""):
         raise ValueError(f'Unknown tokenizer={tokenizer}')
 
 
-def tokenize(corpus: iCorpus, lang: Lang, tokenizer="", model="", threads=1, batch_size=100000, chunksize=10000) -> iTokCorpus:
+def tokenize(corpus: iCorpus, lang: Lang, tokenizer="", model="", threads=1, batch_size=100000, chunksize=10000, progress=True) -> iTokCorpus:
     if lang == 'en':
         f = partial(en_tok, tokenizer=tokenizer, model=model)
     elif lang == 'is':
@@ -220,7 +220,9 @@ def tokenize(corpus: iCorpus, lang: Lang, tokenizer="", model="", threads=1, bat
         raise ValueError(f'Unknown language={lang}')
 
     if threads == 1:
-        for line in tqdm(corpus):
+        if progress:
+            corpus = tqdm(corpus)
+        for line in corpus:
             yield f(line)
     else:
         with ProcessPoolExecutor(max_workers=threads) as worker:
@@ -320,7 +322,7 @@ def preprocess_line(line: str, lang: str, tokenizer: str, truecase_model: str, k
     # Truecase
     # Put Moses placeholders
     # Find unkown tokens and substitute with binary split
-    tokenized = (" ".join(tokens) for tokens in tokenize([line], lang=lang, tokenizer=tokenizer))
+    tokenized = (" ".join(tokens) for tokens in tokenize([line], lang=lang, tokenizer=tokenizer, progress=False))
     truecased = truecase(tokenized, load_from=truecase_model)
     # Now a string
     escaped = list(escape_moses_chars(truecased))[0]

@@ -10,9 +10,7 @@
 # e=fail on pipeline, u=fail on unset var, x=trace commands
 set -ex
 
-WORK_DIR=/work/haukurpj/data/
-THREADS=$SLURM_CPUS_PER_TASK
-# MEMORY=$SLURM_MEM_PER_NODE
+source environment.sh
 
 # 1=Clean, 2=Tokenize, 3=Deduplicate, 4=Shrink, 5=Detokenize
 FIRST_STEP=5

@@ -37,7 +37,9 @@ def write_factor(input, lang, save_to, lemma, pos, form, lines, threads, chunksi
 @click.option('--truecase_model', type=str, default=None)
 @click.option('--known_tokens', type=str, default=None)
 @click.option('--threads', type=int, default=1)
-def preprocess(input, output, lang, tokenizer, truecase_model, known_tokens, threads):
+@click.option('--batch_size', type=int, default=5000000)
+@click.option('--chunksize', type=int, default=10000)
+def preprocess(input, output, lang, tokenizer, truecase_model, known_tokens, threads, batch_size, chunksize):
     log.info('Preprocessing')
     if truecase_model is None:
         path = pathlib.Path(__file__).resolve().parent.joinpath('preprocessing').joinpath('resources').joinpath(f'truecase-model.{lang}')
@@ -52,7 +54,7 @@ def preprocess(input, output, lang, tokenizer, truecase_model, known_tokens, thr
             known_tokens = set(line.strip() for line in f_in)
             log.info(f'Found known tokens, len={len(known_tokens)}')
 
-    for line in pipeline.preprocess(input, lang=lang, tokenizer=tokenizer, truecase_model=truecase_model, known_tokens=known_tokens, threads=threads):
+    for line in pipeline.preprocess(input, lang=lang, tokenizer=tokenizer, truecase_model=truecase_model, known_tokens=known_tokens, threads=threads, batch_size=batch_size, chunksize=chunksize):
         output.write(line + '\n')
     log.info('Done!')
 

@@ -3,7 +3,7 @@
 source environment.sh
  
 LANG="$1"
-EXTENSION="-en-bpe"
+EXTENSION=""
 # Train LM
 function train_lm() {
   LM_DATA="$1"
@@ -28,4 +28,4 @@ function eval_lm() {
 }
 
 train_lm "$LM_SURFACE_TRAIN""$EXTENSION"."$LANG" "$LM_SURFACE_5""$EXTENSION"."$LANG" 5
-# eval_lm "$LM_SURFACE_5"-moses."$LANG" "$LM_SURFACE_TEST"
+eval_lm "$LM_SURFACE_5""$EXTENSION"."$LANG" "$LM_SURFACE_TEST"

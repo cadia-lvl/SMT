@@ -5,6 +5,7 @@ Hér er líst gagnaskipan sem er æskileg fyrir forvinnslu og þjálfun.
 
 - `raw` inniheldur ýmsar óunnar málheildir og önnur gögn.
   - `dictionary` inniheldur `.tsv` skrár sem hægt er að nota til að auka og sérsníða orðaforða fyrir kerfi. Allar skrárnar eru lesnar.
+  Þessi gögn eru líka notuð til þess að þjálfa Truecasing líkan, svo huga þarf að réttum há- og lágstöfum í gögnunum.
 TODO:
   - `parice` inniheldur afpökkuð ParIce gögn eins og er dreift á malföng.is.
   - `rmh` inniheldur Risamálheildina í tveimur skrám `rmh1` og `rmh2`, afpakkaðar.

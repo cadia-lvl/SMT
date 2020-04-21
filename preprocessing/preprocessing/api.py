@@ -43,7 +43,28 @@ for lang in ['en', 'is']:
 for key in os.environ:
     if "TRUECASE" in key:
         TRUECASERS[key.split('_')[1]] = os.environ.get(key)
-log.info(f'Defined truecasing models: {MODELS}')
+log.info(f'Defined truecasing models: {TRUECASERS}')
+
+TOKENS = dict()
+"""Holds the known tokens paths, only IS supported in preprocessing. Used for splitting unkown compounds.
+We first load from the resources package; {'is':'path'}
+Additional models can be set via environment variables or overwritten. To define known tokens for "is" with path "/here/it/is" set:
+
+export TOKENS_is=/here/it/is
+"""
+for lang in ['is', 'en']:
+    path = pathlib.Path(os.path.realpath(__file__)).parent.joinpath('resources').joinpath(f'tok.{lang}')
+    if path.exists():
+        with path.open() as f_in:
+            TOKENS[lang] = set(line.strip() for line in f_in)
+    else:
+        TOKENS[lang] = set()
+for key in os.environ:
+    if "TOKENS" in key:
+        path = pathlib.Path(os.environ.get(key))
+        with path.open() as f_in:
+            TOKENS[key.split('_')[1]] = set(line.strip() for line in f_in)
+log.info(f'Defined known tokens: {(lang, len(TOKENS[lang])) for lang in TOKENS}')
 
 
 def preprocess(sent: str, lang: str) -> str:
@@ -59,7 +80,7 @@ def preprocess(sent: str, lang: str) -> str:
     except KeyError:
         raise ValueError(f'Truecase model not specified for lang={lang}')
     # TODO: Maybe we want to have some known tokens in production
-    return pipeline.preprocess_line(sent, lang=lang, truecase_model=truecase_model, known_tokens=set(), tokenizer="")
+    return pipeline.preprocess_line(sent, lang=lang, truecase_model=truecase_model, known_tokens=TOKENS[lang], tokenizer="")
 
 
 def postprocess(sent: str, lang: str) -> str:

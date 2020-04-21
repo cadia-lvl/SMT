@@ -2,12 +2,14 @@
 WORK_DIR=/work/haukurpj/data
 LANG=is
 
-FIRST_STEP=3
-LAST_STEP=3
+FIRST_STEP=1
+LAST_STEP=1
+
+KNOWN_TOKENS=preprocessing/preprocessing/resources/tok.is
 
 if ((FIRST_STEP <= 1 && LAST_STEP >= 1)); then
-    preprocessing/main.py extract-known-tokens "$WORK_DIR"/train/form/data.is "$WORK_DIR"/train/form/tok.is
-    wc -l "$WORK_DIR"/train/form/tok.is
+    preprocessing/main.py extract-known-tokens "$WORK_DIR"/train/form/data.is "$KNOWN_TOKENS"
+    wc -l "$KNOWN_TOKENS"
 fi
 TEST_SETS="ees ema opensubtitles"
 TRUECASE_MODEL=preprocessing/preprocessing/resources/truecase-model."$LANG"

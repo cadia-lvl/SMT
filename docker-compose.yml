@@ -1,22 +1,19 @@
 version: '3'
 services:
   moses-en-is:
-    image: haukurp/moses-smt:final-en-is
+    image: haukurp/moses-smt:dict-en-is
     ports:
       - "8081:8080"
     command: /opt/moses/bin/moses -threads 2 -f /work/moses.ini --server
     restart: unless-stopped
   moses-is-en:
-    image: haukurp/moses-smt:final-is-en
+    image: haukurp/moses-smt:dict-is-en
     ports:
       - "8082:8080"
     command: /opt/moses/bin/moses -threads 2 -f /work/moses.ini --server
     restart: unless-stopped
   proxy:
-    image: haukurp/moses-lvl:3.0.1
-    links:
-      - moses-en-is
-      - moses-is-en
+    image: haukurp/moses-lvl:3.1.0
     environment:
       - MODEL_en_is_moses=http://moses-en-is:8080/RPC2
       - MODEL_is_en_moses=http://moses-is-en:8080/RPC2

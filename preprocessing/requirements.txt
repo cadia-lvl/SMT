@@ -50,6 +50,7 @@ pytz==2019.3
 regex==2020.2.20
 requests==2.23.0
 sacrebleu==1.4.4
+sentencepiece==0.1.85
 sacremoses==0.0.38
 scikit-learn==0.22.1
 scipy==1.4.1

@@ -2,7 +2,6 @@ FROM python:3.7.5
 WORKDIR /usr/src/app
 
 EXPOSE 5000
-ENV PYTHONPATH "${PYTHONPATH}:/usr/src/app/kvistur"
 
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt && \

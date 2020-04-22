@@ -20,7 +20,6 @@ from preprocessing.types import (Lang, Tokens, POS, Lemma,
                                  iTokCorpus, iCorpus, iEnrichedCorpus,
                                  Corpus, EnrichedCorpus)
 from preprocessing import file_handler
-from kvistur.kvistur import Kvistur
 
 log = logging.getLogger()
 
@@ -78,6 +77,7 @@ def _lazy_load_moses_detokenizer(lang):
 
 
 def _lazy_load_kvistur():
+    from kvistur.kvistur import Kvistur
     global lazy_objects
     if 'kvistur' not in lazy_objects:
         lazy_objects['kvistur'] = Kvistur(**file_handler.get_kvistur_resources())
@@ -317,7 +317,12 @@ def unknown_tokens(corpus: iCorpus, known: Set[str]) -> Iterable[Set[str]]:
         yield set(tok for tok in tokens if tok not in known)
 
 
-def preprocess_line(line: str, lang: str, tokenizer: str, truecase_model: str, known_tokens: Set[str]) -> str:
+def preprocess_line(line: str,
+                    lang: str,
+                    tokenizer: str,
+                    truecase_model: str,
+                    known_tokens: Set[str],
+                    use_kvistur=False) -> str:
     # Tokenize
     # Truecase
     # Put Moses placeholders
@@ -326,9 +331,10 @@ def preprocess_line(line: str, lang: str, tokenizer: str, truecase_model: str, k
     truecased = truecase(tokenized, load_from=truecase_model)
     # Now a string
     escaped = list(escape_moses_chars(truecased))[0]
-    # If we are given known_tokens and Icelandic, we use them.
-    if known_tokens is not None and len(known_tokens) != 0 and lang == 'is':
-        # We go through the unkown tokens in the line
+    # If Kvistur is to be used it needs to be available on PYTHONPATH
+    # We only use Kvistur on unknown Icelandic tokens, specify known tokens.
+    if use_kvistur and known_tokens is not None and len(known_tokens) != 0 and lang == 'is':
+        # We go through the unkown tokens in the line, split on white-space since text is tokenized.
         tokens = [tok.strip() for tok in escaped.split(' ')]
         processed_tokens = []
         for token in tokens:
@@ -337,6 +343,7 @@ def preprocess_line(line: str, lang: str, tokenizer: str, truecase_model: str, k
                 # Either this does nothing, and the token is the same
                 # or the token is split s.t. "x_y" -> "x y"
                 token = re.sub("_", " ", _lazy_load_kvistur().re_split(token))
+            # We only split each token once.
             processed_tokens.append(token)
         return " ".join(processed_tokens)
 

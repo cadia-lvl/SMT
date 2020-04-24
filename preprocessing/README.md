@@ -1,16 +1,29 @@
-# Preprocessing
-A few scripts and classes which are used for preprocessing.
+# Forvinnsla
+Hér eru ýmsar skriftur og Python forrit sem er notað til þess að forvinna gögn áður en Moses líkan er þjálfað sem og til þess að keyra sem þjón til að forvinna gögn fyrir þýðingar.
 
-## The pipeline
-From a given `(corpus).(en|is)` we transform the parallel corpora to files suitable for Moses and LM training.
+- `preprocessing` inniheldur Python föll sem hægt er að nota í skjáhermi til þess að keyra ýmis skref.
+- `scripts` ýmis konar skriftur sem nota Python forritið á gögn.
+- `tests` innihalda nokkrar prófanir á Python forriti.
+- `main.py` er notað til þess að keyra Python forritið.
+- `requirements.txt` inniheldur lista yfir öll nauðsynleg forrit til þess að keyra Python forritið.
 
-1. Read the parallel corpora and transform to `PCorpora` data type.
-1. Enrich `PCorpora` with part-of-speech tags and lemmas -> `EnrichedPCorpora`. As an intermediary step, the data is tokenized.
-1. Split data to `train/val`, `*/2000` lines.
-1. Train a truecasing model for both languages, using `form` and `lemma` parts of the enriched corpus, `truecase-model.(form|lemma).(en|is)`.
-1. Write data for Moses and LM training. This will take care of Moses special character requirements.
+Python forritið er yfirleitt notað í gengum `scipts` eða sem þjónn.
 
-## The code
+## Skref í forvinnslu
+Við byrjum með stöðluð gögn, þar sem skjölin enda á `.en` eða `.is` til þess að vísa til tungumáls.
+- Enska málheild
+- Íslenska málheild
+- ParIce
+
+1. Gögn lesin og tilreidd
+1. Truecasing líkan þjálfað á einhliða og tvíhliða gögnum
+1. Upphaflegu gögn forunnin með `preprocess` falli
+1. Gögn fyrir mállíkön undirbúin.
+
+Einnig eru önnur skref, án númers, sem voru notuð til að framkvæma tilfallandi vinnslu.
+
+## Python forrit
+
 `file_handler.py` manages reading and writing data, including Moses format.
 `pipeline.py` applies transformations, including enrichment, to the data.
 `tools.py` implements truecasing, splitting, enriching and detokenization.

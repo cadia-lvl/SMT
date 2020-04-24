@@ -1,16 +1,14 @@
 import logging
-import pickle
 import pathlib
-from typing import Union, List, Dict
+from typing import List
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 import itertools
 from xml.etree import ElementTree as ET
 
 from tqdm import tqdm
-import ujson
 
-from .types import (iCorpus, iTokCorpus, EnrichedCorpus, PCorpora, EnrichedPCorpora, EnrichedSentence)
+from .types import (iCorpus, iTokCorpus, EnrichedCorpus, EnrichedSentence)
 from preprocessing import pipeline
 
 log = logging.getLogger()
@@ -30,30 +28,6 @@ def deserialize(path: str) -> iCorpus:
     with open(path) as f_in:
         for line in f_in:
             yield line
-
-
-def read_json(path: str) -> Dict:
-    log.info(f'Reading json={path}')
-    with open(path, 'r') as f_in:
-        return ujson.load(f_in)
-
-
-def write_json(path: str, corpus: Union[Dict, List]) -> None:
-    log.info(f'Writing json={path}')
-    with open(path, '+w') as f_out:
-        ujson.dump(corpus, f_out)
-
-
-def read_pickle(path: str) -> Union[PCorpora, EnrichedPCorpora]:
-    log.info(f'Reading pickle={path}')
-    with open(path, 'rb') as handle:
-        return pickle.load(handle)
-
-
-def write_pickle(path: str, corpora: Union[PCorpora, EnrichedPCorpora]) -> None:
-    log.info(f'Writing pickle={path}')
-    with open(path, '+wb') as handle:
-        pickle.dump(corpora, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def make_batches(sequence, batch_size: int):

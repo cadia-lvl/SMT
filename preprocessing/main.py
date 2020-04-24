@@ -7,7 +7,6 @@ import click
 
 from preprocessing import file_handler
 from preprocessing import pipeline
-from preprocessing.types import (EnrichedPCorpora)
 from preprocessing import server as p_server
 from preprocessing import client
 
@@ -25,8 +24,9 @@ log = logging.getLogger()
 @click.option('--threads', type=int, default=1)
 @click.option('--chunksize', type=int, default=4000)
 def write_factor(input, lang, save_to, lemma, pos, form, lines, threads, chunksize):
-    p_corpora: EnrichedPCorpora = file_handler.read_json(input)
-    file_handler.write_moses(p_corpora[lang], output_file=save_to, threads=threads, chunksize=chunksize, write_form=form, write_pos=pos, write_lemma=lemma)
+    # file_handler.write_moses(p_corpora[lang], output_file=save_to, threads=threads, chunksize=chunksize, write_form=form, write_pos=pos, write_lemma=lemma)
+    # TODO: To create a factored model, fix this
+    pass
 
 
 @click.command()
@@ -156,10 +156,10 @@ def split(input, output_train, output_test, test_size, shuffle, seed):
 @click.option('--chunksize', type=int, default=4000, help="Number of lines to process at once.")
 @click.option('--lines', type=int, default=0, help="For debugging, limit processing to x lines per corpus. 0 for all.")
 def enrich(input, output, lang, chunksize: int, lines: int):
-    # TODO: remove deserialize and test
-    corpus = file_handler.deserialize(input)
-    file_handler.write_json(output, [*pipeline.enrich(corpus, lang=lang, chunksize=chunksize, lines=lines)])
-    log.info('Done.')
+    # TODO: Fix if we ever want to try factored again.
+    # file_handler.write_json(output, [*pipeline.enrich(corpus, lang=lang, chunksize=chunksize, lines=lines)])
+    # log.info('Done.')
+    pass
 
 
 @click.command()

@@ -1,9 +1,9 @@
 #!/bin/bash
 
-source environment.sh
- 
 LANG="$1"
-EXTENSION=""
+DATA="$2"
+SAVE_TO="$3"
+ORDER="$4"
 # Train LM
 function train_lm() {
   LM_DATA="$1"
@@ -27,5 +27,5 @@ function eval_lm() {
   done
 }
 
-train_lm "$LM_SURFACE_TRAIN""$EXTENSION"."$LANG" "$LM_SURFACE_5""$EXTENSION"."$LANG" 5
-eval_lm "$LM_SURFACE_5""$EXTENSION"."$LANG" "$LM_SURFACE_TEST"
+train_lm "$DATA" "$SAVE_TO" "$ORDER"
+#eval_lm "$LM_SURFACE_5""$EXTENSION"."$LANG" "$LM_SURFACE_TEST"

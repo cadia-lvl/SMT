@@ -6,3 +6,4 @@
 */*.egg-info/
 kvistur/
 data/formatted/**
+data/out/**

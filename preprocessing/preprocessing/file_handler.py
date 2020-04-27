@@ -74,7 +74,8 @@ def rmh_2_corpus(files: List[str], threads=1, chunksize=100) -> iTokCorpus:
         results = tqdm(executor.map(
             read_rmh_file,
             files,
-            chunksize=chunksize))
+            chunksize=chunksize),
+            total=len(files))
         for result in results:
             yield from result
 

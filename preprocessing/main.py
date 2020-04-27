@@ -215,7 +215,8 @@ def read_rmh(dir, output, threads, chunksize):
     """
     files = [xml_file for xml_file in glob(f'{dir}/**/*.xml', recursive=True) if not (xml_file.endswith('rmh2Hdr.xml') or xml_file.endswith('rmh1Hdr.xml'))]
     log.info(f'Processing dir={dir}, files found={len(files)}')
-    file_handler.serialize(output, (' '.join(line) + '\n' for line in file_handler.rmh_2_corpus(files, threads=threads, chunksize=chunksize)))
+    for line in file_handler.rmh_2_corpus(files, threads=threads, chunksize=chunksize):
+        output.write(' '.join(line) + '\n')
     log.info('Done.')
 
 
@@ -268,5 +269,5 @@ cli.add_command(train_bpe)
 
 
 if __name__ == "__main__":
-    logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.DEBUG)
+    logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
     cli()

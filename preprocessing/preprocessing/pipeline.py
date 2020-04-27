@@ -233,7 +233,9 @@ def tokenize(corpus: iCorpus, lang: Lang, tokenizer="", model="", threads=1, bat
                     yield result
 
 
-def detokenize(corpus: iCorpus, lang: Lang, tokenizer=str, model=str) -> iCorpus:
+def detokenize(corpus: iCorpus, lang: Lang, tokenizer=str, model=str, progress=True) -> iCorpus:
+    if progress:
+        corpus = tqdm(corpus)
     if lang == 'en':
         if tokenizer is None or tokenizer == "" or tokenizer == 'moses':
             return (_lazy_load_moses_detokenizer('en').detokenize(line.split(' '), return_str=True, unescape=False) for line in corpus)

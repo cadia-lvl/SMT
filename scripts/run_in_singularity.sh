@@ -7,12 +7,11 @@
 #SBATCH --time=8:01:00
 #SBATCH --output=%x-%j.out
 
-WORK_DIR="/work/haukurpj"
 export MOSESDECODER="/opt/moses"
 export MOSESDECODER_TOOLS="/opt/moses_tools"
 singularity exec \
   -B "$WORK_DIR":"$WORK_DIR" \
-  -B /home/staff/haukurpj/SMT:/home/staff/haukurpj/SMT \
+  -B "$REPO_DIR":"$REPO_DIR" \
   -B /data/tools/anaconda:/data/tools/anaconda \
 	docker://haukurp/moses-smt:1.1.0 \
   "$@"

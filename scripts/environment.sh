@@ -8,29 +8,32 @@ else
     export THREADS=4
     export MEMORY=4096
 fi
+# The location of this repo
 export REPO_DIR=/home/staff/haukurpj/SMT/
-export WORK_DIR=/work/haukurpj/
-export DATA_DIR=/work/haukurpj/data/
+
 # Don't use language endings.
 export LANGS="en is"
-# Mono data
-export MONO_DETOK="$DATA_DIR"mono/data-dedup-6578547-detok
-export MONO_READY="$DATA_DIR"intermediary/lm-data
 
-# Parallel
-export TRAIN="$DATA_DIR"intermediary/train
+# Mosesdecoder
+export MOSESDECODER=$REPO_DIR/../mosesdecoder
 
-# Dictionary
-export DICT_DIR="$REPO_DIR"/data/formatted/dictionary
+# Data locations
+# In these folders a symbolic link should refer to the actual data
+export FORMATTED_DIR="$REPO_DIR"/data/formatted
+export RAW_DIR="$REPO_DIR"/data/raw
+export OUT_DIR="$REPO_DIR"/data/out
 
-# Truecasing
-export TRUECASE_DATA="$DATA_DIR"intermediary/truecase-data
+# The location of the actual data and work directory, for volume mapping
+export WORK_DIR=/work/haukurpj/
+
+# Truecasing - Where to write the model
 export TRUECASE_MODEL=preprocessing/preprocessing/resources/truecase-model
 
+# Model locations - Use a symbolic link
+export MODEL_DIR="$REPO_DIR"/model
+
 # LM
-export LM_SURFACE_TRAIN="$DATA_DIR"train/form/lm-data
-export LM_SURFACE_5="$DATA_DIR"train/form/blm
-export LM_SURFACE_TEST="$DATA_DIR"test/form/
+export LM_MODEL="$MODEL_DIR"/blm
 
 export TRAINING_DATA="$DATA_DIR"train/form/data
 export DEV_DATA="$DATA_DIR"dev/form/data

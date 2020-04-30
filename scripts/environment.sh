@@ -9,7 +9,7 @@ else
     export MEMORY=4096
 fi
 # The location of this repo
-export REPO_DIR=/home/staff/haukurpj/SMT/
+export REPO_DIR=/home/staff/haukurpj/SMT
 
 # Don't use language endings.
 export LANGS="en is"
@@ -24,17 +24,24 @@ export RAW_DIR="$REPO_DIR"/data/raw
 export OUT_DIR="$REPO_DIR"/data/out
 
 # The location of the actual data and work directory, for volume mapping
-export WORK_DIR=/work/haukurpj/
+export WORK_DIR=/work/haukurpj
 
 # Truecasing - Where to write the model
 export TRUECASE_MODEL=preprocessing/preprocessing/resources/truecase-model
 
 # Model locations - Use a symbolic link
 export MODEL_DIR="$REPO_DIR"/model
+export EN_IS_DIR="$MODEL_DIR"/en-is
+export IS_EN_DIR="$MODEL_DIR"/is-en
+export MODEL_RESULTS_DIR="$MODEL_DIR"/results
 
-# LM
-export LM_MODEL="$MODEL_DIR"/blm
+# LM - Use a symbolic link
+export LM_MODEL="$OUT_DIR"/blm
+export LM_ORDER=5
 
-export TRAINING_DATA="$DATA_DIR"train/form/data
-export DEV_DATA="$DATA_DIR"dev/form/data
-export TEST_DIR="$DATA_DIR"test/raw/
+export TRAINING_DATA="$OUT_DIR"/train/data
+export DEV_DATA="$OUT_DIR"/dev/data
+export TEST_DIR="$OUT_DIR"/test
+
+export TEST_SETS="ees ema opensubtitles"
+export TEST_SET_CORRECT_COMBINED="$TEST_DIR"/combined."$LANG_TO"

@@ -7,3 +7,5 @@
 kvistur/
 data/formatted/**
 data/out/**
+model/**
+logs/**

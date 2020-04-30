@@ -1,12 +1,22 @@
 #!/bin/bash
-#SBATCH --job-name=moses
+#SBATCH --job-name=moses-singularity
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=10
 #SBATCH --mem=16G
+#SBATCH --partition=longrunning
 #SBATCH --chdir=/home/staff/haukurpj/SMT
 #SBATCH --time=8:01:00
-#SBATCH --output=%x-%j.out
+#SBATCH --output=logs/%x-%j.out
 
+# check if script is started via SLURM or bash
+# if with SLURM: there variable '$SLURM_JOB_ID' will exist
+if [ -n "$SLURM_JOB_ID" ];  then
+    export THREADS="$SLURM_CPUS_PER_TASK"
+    export MEMORY="$SLURM_MEM_PER_NODE"
+else
+    export THREADS=4
+    export MEMORY=4096
+fi
 export MOSESDECODER="/opt/moses"
 export MOSESDECODER_TOOLS="/opt/moses_tools"
 singularity exec \

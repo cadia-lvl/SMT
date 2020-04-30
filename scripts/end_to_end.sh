@@ -75,21 +75,23 @@ if ((FIRST_STEP <= 3 && LAST_STEP >= 3)); then
     #sbatch --wait scripts/run_in_singularity.sh scripts/3train/dict.sh en is "$EN_IS_DIR" &
     #sbatch --wait scripts/run_in_singularity.sh scripts/3train/dict.sh is en "$IS_EN_DIR" &
     wait
-    
+    rm "$MODEL_RESULTS_DIR"/combined-translated-post.* || true
     for TEST in $TEST_SETS; do
         # Translate
-        sbatch --wait scripts/run_in_singularity.sh scripts/3train/translate.sh \
-                "$EN_IS_DIR"/binarised/moses.ini \
-                "$TEST_DIR"/"$TEST"-processed.en \
-                "$MODEL_RESULTS_DIR"/"$TEST"-translated.en-is &
-        sbatch --wait scripts/run_in_singularity.sh scripts/3train/translate.sh \
-                "$IS_EN_DIR"/binarised/moses.ini \
-                "$TEST_DIR"/"$TEST"-processed.is \
-                "$MODEL_RESULTS_DIR"/"$TEST"-translated.is-en &
-        wait
-        preprocessing/main.py postprocess "$MODEL_RESULTS_DIR"/"$TEST"-translated.is-en "$MODEL_RESULTS_DIR"/"$TEST"-translated-post.is-en en
-        preprocessing/main.py postprocess "$MODEL_RESULTS_DIR"/"$TEST"-translated.en-is "$MODEL_RESULTS_DIR"/"$TEST"-translated-post.en-is is
-    
+        #sbatch --wait scripts/run_in_singularity.sh scripts/3train/translate.sh \
+        #        "$EN_IS_DIR"/binarised/moses.ini \
+        #        "$TEST_DIR"/"$TEST"-processed.en \
+        #        "$MODEL_RESULTS_DIR"/"$TEST"-translated.en-is &
+        #sbatch --wait scripts/run_in_singularity.sh scripts/3train/translate.sh \
+        #        "$IS_EN_DIR"/binarised/moses.ini \
+        #        "$TEST_DIR"/"$TEST"-processed.is \
+        #        "$MODEL_RESULTS_DIR"/"$TEST"-translated.is-en &
+        #wait
+        #preprocessing/main.py postprocess "$MODEL_RESULTS_DIR"/"$TEST"-translated.is-en "$MODEL_RESULTS_DIR"/"$TEST"-translated-post.is-en en
+        #preprocessing/main.py postprocess "$MODEL_RESULTS_DIR"/"$TEST"-translated.en-is "$MODEL_RESULTS_DIR"/"$TEST"-translated-post.en-is is
+        
+        cat "$MODEL_RESULTS_DIR"/"$TEST"-translated-post.is-en >> "$MODEL_RESULTS_DIR"/combined-translated-post.is-en
+        cat "$MODEL_RESULTS_DIR"/"$TEST"-translated-post.en-is >> "$MODEL_RESULTS_DIR"/combined-translated-post.en-is
         # Evaluate
         sbatch --wait scripts/run_in_singularity.sh scripts/3train/evaluate.sh \
                 "$MODEL_RESULTS_DIR"/"$TEST"-translated-post.en-is \
@@ -102,13 +104,13 @@ if ((FIRST_STEP <= 3 && LAST_STEP >= 3)); then
         wait
     done
     sbatch --wait scripts/run_in_singularity.sh scripts/3train/evaluate.sh \
-            $(cat "$MODEL_RESULTS_DIR"/*-translated-post.en-is) \
-            $(cat "$TEST_DIR"/*.is) \
-            "$MODEL_RESULTS_DIR"/combined.en-is.bleu &
-    sbatch --wait scripts/run_in_singularity.sh scripts/3train/evaluate.sh \
-            $(cat "$MODEL_RESULTS_DIR"/*-translated-post.is-en) \
-            $(cat "$TEST_DIR"/*.en) \
+            "$MODEL_RESULTS_DIR"/combined-translated-post.is-en \
+            "$TEST_DIR"/combined.en \
             "$MODEL_RESULTS_DIR"/combined.is-en.bleu &
+    sbatch --wait scripts/run_in_singularity.sh scripts/3train/evaluate.sh \
+            "$MODEL_RESULTS_DIR"/combined-translated-post.en-is \
+            "$TEST_DIR"/combined.is \
+            "$MODEL_RESULTS_DIR"/combined.en-is.bleu &
     wait
 fi
 

@@ -40,7 +40,11 @@ preprocessing/main.py preprocess "$FORMATTED_DIR"/parice/dev."$LANG" "$DEV_DATA"
 cat "$TRAINING_DATA"."$LANG" "$OUT_DIR"/mono."$LANG" > "$OUT_DIR"/lm-data."$LANG"
 bash scripts/run_in_singularity.sh scripts/2preprocess/lm.sh is "$OUT_DIR"/lm-data."$LANG" "$LM_MODEL"."$LANG" "$LM_ORDER" 
 # The test data
+rm "$TEST_DIR"/combined."$LANG" || true
+rm "$TEST_DIR"/combined-processed."$LANG" || true
 for TEST in $TEST_SETS; do
     cp "$FORMATTED_DIR"/parice/test-"$TEST"."$LANG" "$TEST_DIR"/"$TEST"."$LANG"
     preprocessing/main.py preprocess "$TEST_DIR"/"$TEST"."$LANG" "$TEST_DIR"/"$TEST"-processed."$LANG" "$LANG" --truecase_model "$TRUECASE_MODEL"."$LANG" --threads "$THREADS" --batch_size 5000000 --chunksize 10000
+    cat "$TEST_DIR"/"$TEST"."$LANG" >> "$TEST_DIR"/combined."$LANG"
+    cat "$TEST_DIR"/"$TEST"-processed."$LANG" >> "$TEST_DIR"/combined-processed."$LANG"
 done

@@ -12,8 +12,8 @@ set -ex
 # We assume that the script is run from the base repo directory
 
 # 1=Format, 2=Preprocess, 3=Train, 4=Package
-FIRST_STEP=3
-LAST_STEP=3
+FIRST_STEP=4
+LAST_STEP=4
 
 source scripts/environment.sh
 
@@ -67,28 +67,28 @@ fi
 # Train & eval -> MODEL_DIR
 if ((FIRST_STEP <= 3 && LAST_STEP >= 3)); then
     mkdir -p "$MODEL_DIR"
-    #rm -rf "$EN_IS_DIR" || true
-    #rm -rf "$IS_EN_DIR" || true
+    rm -rf "$EN_IS_DIR" || true
+    rm -rf "$IS_EN_DIR" || true
     mkdir -p "$EN_IS_DIR"
     mkdir -p "$IS_EN_DIR"
     mkdir -p "$MODEL_RESULTS_DIR"
-    #sbatch --wait scripts/run_in_singularity.sh scripts/3train/dict.sh en is "$EN_IS_DIR" &
-    #sbatch --wait scripts/run_in_singularity.sh scripts/3train/dict.sh is en "$IS_EN_DIR" &
+    sbatch --wait scripts/run_in_singularity.sh scripts/3train/dict.sh en is "$EN_IS_DIR" &
+    sbatch --wait scripts/run_in_singularity.sh scripts/3train/dict.sh is en "$IS_EN_DIR" &
     wait
     rm "$MODEL_RESULTS_DIR"/combined-translated-post.* || true
     for TEST in $TEST_SETS; do
         # Translate
-        #sbatch --wait scripts/run_in_singularity.sh scripts/3train/translate.sh \
-        #        "$EN_IS_DIR"/binarised/moses.ini \
-        #        "$TEST_DIR"/"$TEST"-processed.en \
-        #        "$MODEL_RESULTS_DIR"/"$TEST"-translated.en-is &
-        #sbatch --wait scripts/run_in_singularity.sh scripts/3train/translate.sh \
-        #        "$IS_EN_DIR"/binarised/moses.ini \
-        #        "$TEST_DIR"/"$TEST"-processed.is \
-        #        "$MODEL_RESULTS_DIR"/"$TEST"-translated.is-en &
-        #wait
-        #preprocessing/main.py postprocess "$MODEL_RESULTS_DIR"/"$TEST"-translated.is-en "$MODEL_RESULTS_DIR"/"$TEST"-translated-post.is-en en
-        #preprocessing/main.py postprocess "$MODEL_RESULTS_DIR"/"$TEST"-translated.en-is "$MODEL_RESULTS_DIR"/"$TEST"-translated-post.en-is is
+        sbatch --wait scripts/run_in_singularity.sh scripts/3train/translate.sh \
+                "$EN_IS_DIR"/binarised/moses.ini \
+                "$TEST_DIR"/"$TEST"-processed.en \
+                "$MODEL_RESULTS_DIR"/"$TEST"-translated.en-is &
+        sbatch --wait scripts/run_in_singularity.sh scripts/3train/translate.sh \
+                "$IS_EN_DIR"/binarised/moses.ini \
+                "$TEST_DIR"/"$TEST"-processed.is \
+                "$MODEL_RESULTS_DIR"/"$TEST"-translated.is-en &
+        wait
+        preprocessing/main.py postprocess "$MODEL_RESULTS_DIR"/"$TEST"-translated.is-en "$MODEL_RESULTS_DIR"/"$TEST"-translated-post.is-en en
+        preprocessing/main.py postprocess "$MODEL_RESULTS_DIR"/"$TEST"-translated.en-is "$MODEL_RESULTS_DIR"/"$TEST"-translated-post.en-is is
         
         cat "$MODEL_RESULTS_DIR"/"$TEST"-translated-post.is-en >> "$MODEL_RESULTS_DIR"/combined-translated-post.is-en
         cat "$MODEL_RESULTS_DIR"/"$TEST"-translated-post.en-is >> "$MODEL_RESULTS_DIR"/combined-translated-post.en-is
@@ -117,6 +117,6 @@ fi
 # Package (Moses and Python) - cannot be run on the cluster
 if ((FIRST_STEP <= 4 && LAST_STEP >= 4)); then
     bash preprocessing/docker-build.sh 3.2.0
-    bash scripts/4package/docker-build.sh haukurpj@torpaq:/home/staff/haukurpj/model/en-is/binarised haukurp/moses-smt:en-is
-    bash scripts/4package/docker-build.sh haukurpj@torpaq:/home/staff/haukurpj/model/is-en/binarised haukurp/moses-smt:is-en
+    bash scripts/4package/docker-build.sh haukurpj@torpaq:/home/staff/haukurpj/SMT/model/en-is/binarised haukurp/moses-smt:en-is
+    bash scripts/4package/docker-build.sh haukurpj@torpaq:/home/staff/haukurpj/SMT/model/is-en/binarised haukurp/moses-smt:is-en
 fi

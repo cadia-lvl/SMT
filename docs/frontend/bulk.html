@@ -1,0 +1,1356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.7.2" />
+<title>frontend.bulk API documentation</title>
+<meta name="description" content="A collection of functions to process files, a sentence per line. Uses multiple threads to process …" />
+<link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
+<link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
+<style>.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{font-weight:bold}#index h4 + ul{margin-bottom:.6em}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>frontend.bulk</code></h1>
+</header>
+<section id="section-intro">
+<p>A collection of functions to process files, a sentence per line. Uses multiple threads to process.</p>
+<ul>
+<li>Uses pathlib.Path to manipulate files.</li>
+<li>Has a naming convention to read and write files: modifier1-modifier2.lang. Use the "read()" and "write()" functions
+to avoid implementation details.</li>
+</ul>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">&#34;&#34;&#34;A collection of functions to process files, a sentence per line. Uses multiple threads to process.
+
+- Uses pathlib.Path to manipulate files.
+- Has a naming convention to read and write files: modifier1-modifier2.lang. Use the &#34;read()&#34; and &#34;write()&#34; functions
+to avoid implementation details.
+&#34;&#34;&#34;
+import re
+from collections import Counter
+from concurrent.futures import ProcessPoolExecutor
+from functools import partial
+from pathlib import Path
+from random import sample as r_sample
+from subprocess import run
+from typing import Dict, Tuple, Optional, Sequence, List, Iterator, Callable, Iterable
+import os
+from xml.etree import ElementTree as ET
+
+from tqdm import tqdm
+from translate.storage.tmx import tmxfile
+
+from .core import Lang, get_tokenizer, apply_tokenizer, should_drop
+from .core import regexp as c_regexp, lowercase_normalize as c_lower_norm
+
+TMX_2_LANG: Dict[str, Lang] = {
+    &#39;EN-GB&#39;: Lang.EN,
+    &#39;IS-IS&#39;: Lang.IS
+}
+&#34;&#34;&#34;A dict to map between &#34;ISO 639-1-ISO 3166-1&#34; to ISO 639-1 (two letter language code).
+Used for .tmx file reading.
+&#34;&#34;&#34;
+
+# Some parts of the processing support threading, set the value here.
+THREADS = int(os.environ.get(&#39;THREADS&#39;, 4))
+&#34;&#34;&#34;Some parts of the processing support threading.
+Set the number of threads using core.THREADS = 4.
+
+Default value is 4.
+&#34;&#34;&#34;
+CHUNKSIZE = 4000
+&#34;&#34;&#34;The chunksize/number of sentences sent to each thread during parallel processing.
+Set the chunksize using core.CHUNKSIZE = 4000. A higher values are often better.
+
+Default value is 4000.
+&#34;&#34;&#34;
+
+
+def _sizeof_fmt(num: float, suffix: str = &#39;B&#39;) -&gt; str:
+    for unit in [&#39;&#39;, &#39;Ki&#39;, &#39;Mi&#39;, &#39;Gi&#39;, &#39;Ti&#39;, &#39;Pi&#39;, &#39;Ei&#39;, &#39;Zi&#39;]:
+        if abs(num) &lt; 1024.0:
+            return &#34;%3.1f%s%s&#34; % (num, unit, suffix)
+        num /= 1024.0
+    return &#34;%.1f%s%s&#34; % (num, &#39;Yi&#39;, suffix)
+
+
+def _get_line_count(path: Path) -&gt; int:
+    &#34;&#34;&#34;Count the number of new-lines in a file.&#34;&#34;&#34;
+    with path.open(&#39;rb&#39;) as f_in:
+        lines = 0
+        buf_size = 1024 * 1024
+        read_f = f_in.raw.read  # type: ignore
+
+        buf = read_f(buf_size)
+        while buf:
+            lines += buf.count(b&#39;\n&#39;)
+            buf = read_f(buf_size)
+
+    return lines
+
+
+def info(path: Path) -&gt; Tuple[str, str, int]:
+    &#34;&#34;&#34;Get some basic information of the file input.
+
+    :param path: The pathlib.Path to the file.\n
+    :return: A tuple (path, size, line count) of the input.
+    &#34;&#34;&#34;
+    size = _sizeof_fmt(path.stat().st_size)
+    line_count = _get_line_count(path.resolve())
+    return str(path.resolve()), size, line_count
+
+
+def info_formatted(path: Path) -&gt; str:
+    &#34;&#34;&#34;Get some basic information of the file input and returns as a formatted string.
+
+    :param path: The pathlib.Path to the file.\n
+    :return: Returns the formatted bulk.info()
+    &#34;&#34;&#34;
+    path_s, size, lines = info(path)
+    return f&#39;{path_s:&lt;40}{size:^15}{lines:&gt;10}&#39;
+
+
+def read(directory: Path, lang: Lang, *modifiers) -&gt; Optional[Path]:
+    &#34;&#34;&#34;A handy helper function to retrieve the pathlib.Path given a collection of modifiers.
+    Works as a nice abstraction from the implementation of the naming convention.
+
+    Assumes the naming convention: modifier-modifier.lang\n
+    :param directory: The directory to search for the modifiers.\n
+    :param lang: The core.Lang of the file to read.\n
+    :param modifiers: A sequence of modifiers to search for.\n
+    :return: If exists, returns a Path pointing to the file, o.w. error.
+    &#34;&#34;&#34;
+    path = Path(directory.joinpath(&#34;-&#34;.join(modifiers)).with_suffix(f&#34;.{lang.value}&#34;))
+    if path.exists():
+        return path
+    raise FileNotFoundError(f&#34;{path} does not exist&#34;)
+
+
+def write(directory: Path, lang: Lang, *modifiers, overwrite=True) -&gt; Optional[Path]:
+    &#34;&#34;&#34;A handy helper function to create a pathlib.Path given a collection of modifiers.
+    Works as a nice abstraction from the implementation of the naming convention.
+
+    Assumes the naming convention: modifier-modifier.lang\n
+    :param directory: The directory to write to.\n
+    :param lang: The Lang to write.\n
+    :param modifiers: A sequence of modifiers.\n
+    :param overwrite: If set True, will not raise error if the file exists.\n
+    :return: A pathlin.Path pointing to the file.
+    &#34;&#34;&#34;
+    path = Path(directory.joinpath(&#34;-&#34;.join(modifiers)).with_suffix(f&#34;.{lang.value}&#34;))
+    if path.exists() and not overwrite:
+        raise FileExistsError(f&#34;{path} exists&#34;)
+    return path
+
+
+def list_dir(directory: Path, langs: Sequence[Lang], *modifiers, print_info=True) -&gt; List[Path]:
+    &#34;&#34;&#34;A handy helper function to list a pathlib.Path given a collection of modifiers.
+    Works as a nice abstraction from the implementation of the naming convention.
+
+    Assumes the naming convention: modifier-modifier.lang\n
+    :param directory: The directory to list.\n
+    :param langs: The core.Langs to list.\n
+    :param modifiers: A sequence of modifiers.\n
+    :param print_info: If set True, will print_info of files.\n
+    :return: A List[Path] pointing to the files.
+    &#34;&#34;&#34;
+    results = []
+    for lang in langs:
+        results.extend(directory.glob(f&#34;*.{lang.value}&#34;))
+    if modifiers:
+        results = [result for result in results for modifier in modifiers if modifier in str(result)]
+    results.sort()
+    if print_info:
+        for result in results:
+            print(info_formatted(result))
+    return results
+
+
+def _lang(path: Path) -&gt; Lang:
+    # The first part of the suffix is &#39;.&#39;, omit it.
+    return Lang(path.suffix[1:])
+
+
+def tmx_split(paths: Tuple[Path],
+              src_lang: str,
+              tar_lang: str) -&gt; List[Tuple[Path, Path]]:
+    &#34;&#34;&#34;Split a collection tmx file to multiple language files with a line per sentence.
+
+    :param paths: A sequence of tmx files to split.\n
+    :param src_lang: The source language code as defined in the .tmx file.\n
+    :param tar_lang: The target language code as defined in the .tmx file.\n
+    :return: A List of Tuples with pathlib.Path pointing to the source and target language files.
+    &#34;&#34;&#34;
+    result: List[Tuple[Path, Path]] = list()
+    for tmx_path in paths:
+        # We read the file as bytes since the xml defines an encoding.
+        with tmx_path.open(&#39;rb&#39;) as f_in:
+            tmx = tmxfile(f_in, src_lang, tar_lang)
+        # We assume that there is only one stem
+        src_path = tmx_path.with_name(
+            f&#39;{tmx_path.stem}.{TMX_2_LANG[src_lang].value}&#39;)
+        tar_path = tmx_path.with_name(
+            f&#39;{tmx_path.stem}.{TMX_2_LANG[tar_lang].value}&#39;)
+        with src_path.open(&#39;w+&#39;) as f_src, tar_path.open(&#39;w+&#39;) as f_tar:
+            for node in tmx.unit_iter():
+                f_src.write(node.source + &#39;\n&#39;)
+                f_tar.write(node.target + &#39;\n&#39;)
+        result.append((src_path, tar_path))
+    return result
+
+
+def tei_read_file(path: Path) -&gt; Sequence[str]:
+    &#34;&#34;&#34;Reads a tei file to extract the contents. Hand-tailored to reading the RMH.
+
+    Adjusted code from xml_tools.py from Róbert Kjaran &lt;robert@kjaran.com&gt;
+
+    :param path: A pathlib.Path to the .tei file to read.\n
+    :return: A List of sentences as defined in the .tei file.
+    &#34;&#34;&#34;
+    NS = {&#39;a&#39;: &#39;http://www.tei-c.org/ns/1.0&#39;}
+    root = ET.parse(str(path)).getroot()
+    sentences = []
+    # We gather all the paragraphs from the body, avoiding the divs
+    for paragraph_node in root.findall(&#39;.//a:body//a:p&#39;, NS):
+        for sentence_node in paragraph_node.findall(&#39;.//a:s&#39;, NS):
+            tokens = [(token_node.text, token_node.attrib[&#39;type&#39;])
+                      for token_node in sentence_node.findall(&#39;./*&#39;)]
+            sentence: List[str] = []
+            tokens_len = len(tokens)
+            for i, token in enumerate(tokens):
+                if token[0] is None:
+                    continue
+                sentence.append(token[0])
+                if i != tokens_len - 1 and (tokens[i + 1][1] != &#39;punctuation&#39;):
+                    sentence.append(&#39; &#39;)
+            sentences.append(&#39;&#39;.join(sentence) + &#39;\n&#39;)
+    return sentences
+
+
+def tei_read(paths: Sequence[Path], out_path: Path) -&gt; bool:
+    &#34;&#34;&#34;Reads a sequence of Path of TEI files from RMH and writes to a single file.
+    Uses multiple threads.
+
+    :param paths: A Sequence of pathlib.Path of .tei files to read.\n
+    :param out_path: pathlib.Path to write the contents to.\n
+    :return: True if successful.
+    &#34;&#34;&#34;
+    with out_path.open(&#39;w+&#39;) as f_out:
+        with ProcessPoolExecutor(max_workers=14) as executor:
+            results = list(tqdm(executor.map(
+                tei_read_file,
+                paths,
+                chunksize=100),
+                total=len(paths)))
+            for result in results:
+                f_out.write(&#39;&#39;.join(result))
+    return True
+
+
+def peek(path: Path, length: int = 10) -&gt; Iterator[str]:
+    &#34;&#34;&#34;A handy function to yield the first lines of a file.
+
+    :param path: The pathlib.Path of the file to peek into.\n
+    :param length: The number of lines to yield.\n
+    :return: An iterator yielding the next line.
+    &#34;&#34;&#34;
+    with path.open() as f:
+        index = 0
+        for line in f:
+            index += 1
+            yield line
+            if index == length:
+                return
+
+
+def peeks(paths: List[Path], length: int = 10) -&gt; Iterator[str]:
+    &#34;&#34;&#34;A handy function to yield the first lines of multiple files.
+    Formats the output.
+
+    :param paths: A list of pathlib.Path of the files to peek into.\n
+    :param length: The number of lines to yield from each file.\n
+    :return: An iterator yielding the next line from multiple files at once, prepended with the language of the file.
+    &#34;&#34;&#34;
+    langs = [_lang(path) for path in paths]
+    generators = [peek(path, length) for path in paths]
+    remaining = True
+    while remaining:
+        for index, lang in enumerate(langs):
+            try:
+                sentence = next(generators[index])
+                yield f&#39;{lang.value}: {sentence}&#39;
+            except StopIteration:
+                return
+
+
+def combine(paths: Sequence[Path], out_path: Path) -&gt; bool:
+    &#34;&#34;&#34;Combines a collection of files to a single file.
+    The output gets written over if run multiple times.
+
+    :param paths: A Sequence of pathlib.Path to concatenate together.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :return: True if successful.
+    &#34;&#34;&#34;
+    command = [&#39;cat&#39;] + [str(path) for path in paths]
+    with out_path.open(&#39;w+&#39;) as f_out:
+        run(command, stdout=f_out, check=True)
+
+    return True
+
+
+def in_parallel(path: Path,
+                out_path: Path,
+                threads: int,
+                func: Callable,
+                chunksize: int = 4000,
+                **kwargs) -&gt; bool:
+    &#34;&#34;&#34;Runs the given function with **kwargs arguments in parallel on the given file.
+
+    :param path: The pathlib.Path of the file to process.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :param threads: The number of threads to use.\n
+    :param func: The function to apply per line.\n
+    :param chunksize: The number of lines to process in parallel.\n
+    :param kwargs: The arguments to the function to apply.\n
+    :return: True if successful.
+    &#34;&#34;&#34;
+    with ProcessPoolExecutor(max_workers=threads) as executor:
+        with path.open() as f_in, out_path.open(&#39;w+&#39;) as f_out:
+            # get the list now since executor.map will read everyting to mem.
+            f_list = f_in.readlines()
+            results = tqdm(executor.map(
+                partial(func, **kwargs),
+                f_list,
+                chunksize=chunksize),
+                total=len(f_list))
+            for result in results:
+                f_out.write(result)
+    return True
+
+
+def split(path: Path, out_path_1: Path, out_path_2: Path, count) -&gt; bool:
+    &#34;&#34;&#34;Splits a file to the two files provided. The latter file will have count number of lines.
+
+    :param path: The pathlib.Path of the file to split.\n
+    :param out_path_1: A pathlib.Path to write the first x lines to.\n
+    :param out_path_2: A pathlib.Path to write count last lines to.\n
+    :param count: The number of lines the latter file should have.\n
+    :return: True if succesful.
+    &#34;&#34;&#34;
+    with path.open() as f_in:
+        # Careful, we read all the lines
+        lines = f_in.readlines()
+        with out_path_1.open(&#39;w+&#39;) as f_s1, \
+                out_path_2.open(&#39;w+&#39;) as f_s2:
+            f_s1.writelines(lines[:-count])
+            f_s2.writelines(lines[-count:])
+
+    return True
+
+
+def regexp(path: Path,
+           out_path: Path,
+           regexps: List[Tuple[re.Pattern, str]]) -&gt; bool:
+    &#34;&#34;&#34;Applies a list of regular expressions and their substitions to each line in a file.
+    Uses multiple threads.
+
+    :param path: The pathlib.Path of the file to apply the regular expression to.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :param regexps: A list of Tuples (re.Pattern, str).
+    The pattern is used to match and the str is used as a replacement.
+    The str supports referencing groups in the match expression.\n
+    :return: True if successful.
+    &#34;&#34;&#34;
+    return in_parallel(path,
+                       out_path,
+                       THREADS,
+                       partial(c_regexp, regexps=regexps)
+                       )
+
+
+def shuffle(path: Path, out_path: Path, seed_path: Path) -&gt; bool:
+    &#34;&#34;&#34;Shuffles a file using a file as a random seed.
+
+    :param path: The pathlib.Path of the file to shuffle.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :param seed_path: The pathlib.Path to use a as a random seed. Can be the input file.\n
+    :return: True if successful.
+    &#34;&#34;&#34;
+    command = [
+        &#39;shuf&#39;,
+        f&#39;--random-source={str(seed_path)}&#39;,
+        f&#39;{str(path)}&#39;
+    ]
+    with out_path.open(&#39;w+&#39;) as f_out:
+        run(command, stdout=f_out, check=True)
+    return True
+
+
+def sample(path: Path, count: int) -&gt; Iterable[str]:
+    &#34;&#34;&#34;Yields a random sample of count many lines from a file.
+
+    :param path: The pathlib.Path of the file to sample from.\n
+    :param count: The number of lines to sample.\n
+    :return: An iterator of strings.
+    &#34;&#34;&#34;
+    with path.open() as f_in:
+        # Careful, we read the whole file...
+        lines = f_in.readlines()
+    yield from r_sample(lines, count)
+
+
+def sentence_counter(path: Path) -&gt; Counter:
+    &#34;&#34;&#34;Count the number of sentences in a file.
+
+    :param path: The pathlib.Path of the file to count.\n
+    :return: A collections.Counter with the sentence length as key and the count as value.
+    &#34;&#34;&#34;
+    with path.open() as f_in:
+        counter: Counter = Counter()
+        for line in f_in:
+            sent_length = len(line.split(&#34; &#34;))
+            counter[sent_length] += 1
+    return counter
+
+
+def token_counter(path: Path) -&gt; Counter:
+    &#34;&#34;&#34;Count the number of unique tokens in a file.
+    A collections.Counter with the token as key and the count as value.
+
+    :param path: The pathlib.Path of the file to count.\n
+    :return: A collections.Counter with the token as key and the count as value.
+    &#34;&#34;&#34;
+    with path.open() as f_in:
+        counter: Counter = Counter()
+        for line in f_in:
+            counter.update(line.strip(&#39;\n&#39;).split(&#34; &#34;))
+    return counter
+
+
+def lowercase_normalize(path: Path,
+                        out_path: Path) -&gt; bool:
+    &#34;&#34;&#34;Applies unicode lowercase and normalize on a file.
+    Uses many threads.
+
+    :param path: The pathlib.Path of the file to lowercase and normalize.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :return: True if successful.
+    &#34;&#34;&#34;
+    return in_parallel(path,
+                       out_path,
+                       THREADS,
+                       c_lower_norm)
+
+
+def tokenize(path: Path,
+             out_path: Path,
+             method: str = &#39;pass-through&#39;) -&gt; bool:
+    &#34;&#34;&#34;Tokenizes a file using the specified method. Reads the language from the filename.
+    See core.tokenize() for accepted methods. Uses many threads.
+
+    :param path: The pathlib.Path of the file to tokenize.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :param method: The tokenization method to use. See core.tokenize() for accepted methods.\n
+    :return: True if successful.
+    &#34;&#34;&#34;
+    tok = get_tokenizer(_lang(path), method)
+    return in_parallel(path,
+                       out_path,
+                       THREADS,
+                       partial(apply_tokenizer, tokenizer=tok)
+                       )
+
+
+def get_drop_lines(path: Path,
+                   regexps: Sequence[re.Pattern],
+                   known_tokens: Sequence[str],
+                   keep_ratio=0.5,
+                   normalize=True,
+                   keep_sent_length=1) -&gt; List[Tuple[int, float, str]]:
+    &#34;&#34;&#34;Returns a list of line number and lines which should be dropped given the criteria.
+    Regexp defines a black-list of regular expressions.
+
+    If normalized=True all non-words are removed from the sentence before counting the numer of words.\n
+    If the remaining sentence contains any of the regexps it is DROPPED.\n
+    If the remaining sentence has length less than or equal to keep_sent_length is it KEPT.\n
+    If the keep_ratio is smaller or equal to the fraction of known_tokens in sentence it is KEPT.
+
+    :param path: The pathlib.Path of the file to get the drop lines from.\n
+    :param regexps: A black-list of regular expressions. If any is matched in a sentence, it is DROPPED.\n
+    :param known_tokens: A whitelist of tokens which are considered as known.\n
+    :param keep_ratio: If the fraction of known tokens is higher than keep_ration, the sentence is KEPT.\n
+    :param normalize: If True, we first normalize the sentence by removing all words which contain non-words.\n
+    :param keep_sent_length: If a sentence contains keep_sent_length of fewer words, it is KEPT.\n
+    :return: A List of Tuples (the line number, the known fraction, the line).
+    &#34;&#34;&#34;
+    drop_lines: List[Tuple[int, float, str]] = []
+    with ProcessPoolExecutor(max_workers=THREADS) as executor:
+        with path.open() as f_in:
+            f_list = f_in.readlines()
+            results = tqdm(executor.map(
+                partial(should_drop,
+                        regexps=regexps,
+                        known_tokens=known_tokens,
+                        keep_ratio=keep_ratio,
+                        normalize=normalize,
+                        keep_sent_length=keep_sent_length),
+                f_list,
+                chunksize=CHUNKSIZE),
+                total=len(f_list))
+            for index, result in enumerate(results):
+                skip, fraction, line = result
+                if skip:
+                    drop_lines.append((index + 1, fraction, line))
+    return drop_lines
+
+
+def drop_lines(path: Path, out_path, lines_in: List[int]) -&gt; bool:
+    &#34;&#34;&#34;Drops the given line numbers in a file. Words as a second step from &#34;get_drop_lines()&#34;
+
+    :param path: The pathlib.Path of the file to drop the lines from.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :param lines_in: A List of line numbers to drop.\n
+    :return: True if successful.
+    &#34;&#34;&#34;
+    lines = list(lines_in)
+    with path.open() as f_in, out_path.open(&#39;w+&#39;) as f_out:
+        next_skip = -1
+        if lines:
+            next_skip = lines.pop(0)
+        for index, line in enumerate(f_in):
+            if index + 1 == next_skip:
+                if lines:
+                    next_skip = lines.pop(0)
+            else:
+                f_out.write(line)
+    return True</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-variables">Global variables</h2>
+<dl>
+<dt id="frontend.bulk.CHUNKSIZE"><code class="name">var <span class="ident">CHUNKSIZE</span></code></dt>
+<dd>
+<section class="desc"><p>The chunksize/number of sentences sent to each thread during parallel processing.
+Set the chunksize using core.CHUNKSIZE = 4000. A higher values are often better.</p>
+<p>Default value is 4000.</p></section>
+</dd>
+<dt id="frontend.bulk.THREADS"><code class="name">var <span class="ident">THREADS</span></code></dt>
+<dd>
+<section class="desc"><p>Some parts of the processing support threading.
+Set the number of threads using core.THREADS = 4.</p>
+<p>Default value is 4.</p></section>
+</dd>
+<dt id="frontend.bulk.TMX_2_LANG"><code class="name">var <span class="ident">TMX_2_LANG</span></code></dt>
+<dd>
+<section class="desc"><p>A dict to map between "ISO 639-1-ISO 3166-1" to ISO 639-1 (two letter language code).
+Used for .tmx file reading.</p></section>
+</dd>
+</dl>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="frontend.bulk.combine"><code class="name flex">
+<span>def <span class="ident">combine</span></span>(<span>paths, out_path)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Combines a collection of files to a single file.
+The output gets written over if run multiple times.</p>
+<p>:param paths: A Sequence of pathlib.Path to concatenate together.</p>
+<p>:param out_path: A pathlib.Path to write the result to.</p>
+<p>:return: True if successful.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def combine(paths: Sequence[Path], out_path: Path) -&gt; bool:
+    &#34;&#34;&#34;Combines a collection of files to a single file.
+    The output gets written over if run multiple times.
+
+    :param paths: A Sequence of pathlib.Path to concatenate together.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :return: True if successful.
+    &#34;&#34;&#34;
+    command = [&#39;cat&#39;] + [str(path) for path in paths]
+    with out_path.open(&#39;w+&#39;) as f_out:
+        run(command, stdout=f_out, check=True)
+
+    return True</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.drop_lines"><code class="name flex">
+<span>def <span class="ident">drop_lines</span></span>(<span>path, out_path, lines_in)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Drops the given line numbers in a file. Words as a second step from "get_drop_lines()"</p>
+<p>:param path: The pathlib.Path of the file to drop the lines from.</p>
+<p>:param out_path: A pathlib.Path to write the result to.</p>
+<p>:param lines_in: A List of line numbers to drop.</p>
+<p>:return: True if successful.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def drop_lines(path: Path, out_path, lines_in: List[int]) -&gt; bool:
+    &#34;&#34;&#34;Drops the given line numbers in a file. Words as a second step from &#34;get_drop_lines()&#34;
+
+    :param path: The pathlib.Path of the file to drop the lines from.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :param lines_in: A List of line numbers to drop.\n
+    :return: True if successful.
+    &#34;&#34;&#34;
+    lines = list(lines_in)
+    with path.open() as f_in, out_path.open(&#39;w+&#39;) as f_out:
+        next_skip = -1
+        if lines:
+            next_skip = lines.pop(0)
+        for index, line in enumerate(f_in):
+            if index + 1 == next_skip:
+                if lines:
+                    next_skip = lines.pop(0)
+            else:
+                f_out.write(line)
+    return True</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.get_drop_lines"><code class="name flex">
+<span>def <span class="ident">get_drop_lines</span></span>(<span>path, regexps, known_tokens, keep_ratio=0.5, normalize=True, keep_sent_length=1)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Returns a list of line number and lines which should be dropped given the criteria.
+Regexp defines a black-list of regular expressions.</p>
+<p>If normalized=True all non-words are removed from the sentence before counting the numer of words.</p>
+<p>If the remaining sentence contains any of the regexps it is DROPPED.</p>
+<p>If the remaining sentence has length less than or equal to keep_sent_length is it KEPT.</p>
+<p>If the keep_ratio is smaller or equal to the fraction of known_tokens in sentence it is KEPT.</p>
+<p>:param path: The pathlib.Path of the file to get the drop lines from.</p>
+<p>:param regexps: A black-list of regular expressions. If any is matched in a sentence, it is DROPPED.</p>
+<p>:param known_tokens: A whitelist of tokens which are considered as known.</p>
+<p>:param keep_ratio: If the fraction of known tokens is higher than keep_ration, the sentence is KEPT.</p>
+<p>:param normalize: If True, we first normalize the sentence by removing all words which contain non-words.</p>
+<p>:param keep_sent_length: If a sentence contains keep_sent_length of fewer words, it is KEPT.</p>
+<p>:return: A List of Tuples (the line number, the known fraction, the line).</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_drop_lines(path: Path,
+                   regexps: Sequence[re.Pattern],
+                   known_tokens: Sequence[str],
+                   keep_ratio=0.5,
+                   normalize=True,
+                   keep_sent_length=1) -&gt; List[Tuple[int, float, str]]:
+    &#34;&#34;&#34;Returns a list of line number and lines which should be dropped given the criteria.
+    Regexp defines a black-list of regular expressions.
+
+    If normalized=True all non-words are removed from the sentence before counting the numer of words.\n
+    If the remaining sentence contains any of the regexps it is DROPPED.\n
+    If the remaining sentence has length less than or equal to keep_sent_length is it KEPT.\n
+    If the keep_ratio is smaller or equal to the fraction of known_tokens in sentence it is KEPT.
+
+    :param path: The pathlib.Path of the file to get the drop lines from.\n
+    :param regexps: A black-list of regular expressions. If any is matched in a sentence, it is DROPPED.\n
+    :param known_tokens: A whitelist of tokens which are considered as known.\n
+    :param keep_ratio: If the fraction of known tokens is higher than keep_ration, the sentence is KEPT.\n
+    :param normalize: If True, we first normalize the sentence by removing all words which contain non-words.\n
+    :param keep_sent_length: If a sentence contains keep_sent_length of fewer words, it is KEPT.\n
+    :return: A List of Tuples (the line number, the known fraction, the line).
+    &#34;&#34;&#34;
+    drop_lines: List[Tuple[int, float, str]] = []
+    with ProcessPoolExecutor(max_workers=THREADS) as executor:
+        with path.open() as f_in:
+            f_list = f_in.readlines()
+            results = tqdm(executor.map(
+                partial(should_drop,
+                        regexps=regexps,
+                        known_tokens=known_tokens,
+                        keep_ratio=keep_ratio,
+                        normalize=normalize,
+                        keep_sent_length=keep_sent_length),
+                f_list,
+                chunksize=CHUNKSIZE),
+                total=len(f_list))
+            for index, result in enumerate(results):
+                skip, fraction, line = result
+                if skip:
+                    drop_lines.append((index + 1, fraction, line))
+    return drop_lines</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.in_parallel"><code class="name flex">
+<span>def <span class="ident">in_parallel</span></span>(<span>path, out_path, threads, func, chunksize=4000, **kwargs)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Runs the given function with **kwargs arguments in parallel on the given file.</p>
+<p>:param path: The pathlib.Path of the file to process.</p>
+<p>:param out_path: A pathlib.Path to write the result to.</p>
+<p>:param threads: The number of threads to use.</p>
+<p>:param func: The function to apply per line.</p>
+<p>:param chunksize: The number of lines to process in parallel.</p>
+<p>:param kwargs: The arguments to the function to apply.</p>
+<p>:return: True if successful.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def in_parallel(path: Path,
+                out_path: Path,
+                threads: int,
+                func: Callable,
+                chunksize: int = 4000,
+                **kwargs) -&gt; bool:
+    &#34;&#34;&#34;Runs the given function with **kwargs arguments in parallel on the given file.
+
+    :param path: The pathlib.Path of the file to process.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :param threads: The number of threads to use.\n
+    :param func: The function to apply per line.\n
+    :param chunksize: The number of lines to process in parallel.\n
+    :param kwargs: The arguments to the function to apply.\n
+    :return: True if successful.
+    &#34;&#34;&#34;
+    with ProcessPoolExecutor(max_workers=threads) as executor:
+        with path.open() as f_in, out_path.open(&#39;w+&#39;) as f_out:
+            # get the list now since executor.map will read everyting to mem.
+            f_list = f_in.readlines()
+            results = tqdm(executor.map(
+                partial(func, **kwargs),
+                f_list,
+                chunksize=chunksize),
+                total=len(f_list))
+            for result in results:
+                f_out.write(result)
+    return True</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.info"><code class="name flex">
+<span>def <span class="ident">info</span></span>(<span>path)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Get some basic information of the file input.</p>
+<p>:param path: The pathlib.Path to the file.</p>
+<p>:return: A tuple (path, size, line count) of the input.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def info(path: Path) -&gt; Tuple[str, str, int]:
+    &#34;&#34;&#34;Get some basic information of the file input.
+
+    :param path: The pathlib.Path to the file.\n
+    :return: A tuple (path, size, line count) of the input.
+    &#34;&#34;&#34;
+    size = _sizeof_fmt(path.stat().st_size)
+    line_count = _get_line_count(path.resolve())
+    return str(path.resolve()), size, line_count</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.info_formatted"><code class="name flex">
+<span>def <span class="ident">info_formatted</span></span>(<span>path)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Get some basic information of the file input and returns as a formatted string.</p>
+<p>:param path: The pathlib.Path to the file.</p>
+<p>:return: Returns the formatted bulk.info()</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def info_formatted(path: Path) -&gt; str:
+    &#34;&#34;&#34;Get some basic information of the file input and returns as a formatted string.
+
+    :param path: The pathlib.Path to the file.\n
+    :return: Returns the formatted bulk.info()
+    &#34;&#34;&#34;
+    path_s, size, lines = info(path)
+    return f&#39;{path_s:&lt;40}{size:^15}{lines:&gt;10}&#39;</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.list_dir"><code class="name flex">
+<span>def <span class="ident">list_dir</span></span>(<span>directory, langs, *modifiers, print_info=True)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>A handy helper function to list a pathlib.Path given a collection of modifiers.
+Works as a nice abstraction from the implementation of the naming convention.</p>
+<p>Assumes the naming convention: modifier-modifier.lang</p>
+<p>:param directory: The directory to list.</p>
+<p>:param langs: The core.Langs to list.</p>
+<p>:param modifiers: A sequence of modifiers.</p>
+<p>:param print_info: If set True, will print_info of files.</p>
+<p>:return: A List[Path] pointing to the files.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def list_dir(directory: Path, langs: Sequence[Lang], *modifiers, print_info=True) -&gt; List[Path]:
+    &#34;&#34;&#34;A handy helper function to list a pathlib.Path given a collection of modifiers.
+    Works as a nice abstraction from the implementation of the naming convention.
+
+    Assumes the naming convention: modifier-modifier.lang\n
+    :param directory: The directory to list.\n
+    :param langs: The core.Langs to list.\n
+    :param modifiers: A sequence of modifiers.\n
+    :param print_info: If set True, will print_info of files.\n
+    :return: A List[Path] pointing to the files.
+    &#34;&#34;&#34;
+    results = []
+    for lang in langs:
+        results.extend(directory.glob(f&#34;*.{lang.value}&#34;))
+    if modifiers:
+        results = [result for result in results for modifier in modifiers if modifier in str(result)]
+    results.sort()
+    if print_info:
+        for result in results:
+            print(info_formatted(result))
+    return results</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.lowercase_normalize"><code class="name flex">
+<span>def <span class="ident">lowercase_normalize</span></span>(<span>path, out_path)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Applies unicode lowercase and normalize on a file.
+Uses many threads.</p>
+<p>:param path: The pathlib.Path of the file to lowercase and normalize.</p>
+<p>:param out_path: A pathlib.Path to write the result to.</p>
+<p>:return: True if successful.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def lowercase_normalize(path: Path,
+                        out_path: Path) -&gt; bool:
+    &#34;&#34;&#34;Applies unicode lowercase and normalize on a file.
+    Uses many threads.
+
+    :param path: The pathlib.Path of the file to lowercase and normalize.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :return: True if successful.
+    &#34;&#34;&#34;
+    return in_parallel(path,
+                       out_path,
+                       THREADS,
+                       c_lower_norm)</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.peek"><code class="name flex">
+<span>def <span class="ident">peek</span></span>(<span>path, length=10)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>A handy function to yield the first lines of a file.</p>
+<p>:param path: The pathlib.Path of the file to peek into.</p>
+<p>:param length: The number of lines to yield.</p>
+<p>:return: An iterator yielding the next line.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def peek(path: Path, length: int = 10) -&gt; Iterator[str]:
+    &#34;&#34;&#34;A handy function to yield the first lines of a file.
+
+    :param path: The pathlib.Path of the file to peek into.\n
+    :param length: The number of lines to yield.\n
+    :return: An iterator yielding the next line.
+    &#34;&#34;&#34;
+    with path.open() as f:
+        index = 0
+        for line in f:
+            index += 1
+            yield line
+            if index == length:
+                return</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.peeks"><code class="name flex">
+<span>def <span class="ident">peeks</span></span>(<span>paths, length=10)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>A handy function to yield the first lines of multiple files.
+Formats the output.</p>
+<p>:param paths: A list of pathlib.Path of the files to peek into.</p>
+<p>:param length: The number of lines to yield from each file.</p>
+<p>:return: An iterator yielding the next line from multiple files at once, prepended with the language of the file.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def peeks(paths: List[Path], length: int = 10) -&gt; Iterator[str]:
+    &#34;&#34;&#34;A handy function to yield the first lines of multiple files.
+    Formats the output.
+
+    :param paths: A list of pathlib.Path of the files to peek into.\n
+    :param length: The number of lines to yield from each file.\n
+    :return: An iterator yielding the next line from multiple files at once, prepended with the language of the file.
+    &#34;&#34;&#34;
+    langs = [_lang(path) for path in paths]
+    generators = [peek(path, length) for path in paths]
+    remaining = True
+    while remaining:
+        for index, lang in enumerate(langs):
+            try:
+                sentence = next(generators[index])
+                yield f&#39;{lang.value}: {sentence}&#39;
+            except StopIteration:
+                return</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.read"><code class="name flex">
+<span>def <span class="ident">read</span></span>(<span>directory, lang, *modifiers)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>A handy helper function to retrieve the pathlib.Path given a collection of modifiers.
+Works as a nice abstraction from the implementation of the naming convention.</p>
+<p>Assumes the naming convention: modifier-modifier.lang</p>
+<p>:param directory: The directory to search for the modifiers.</p>
+<p>:param lang: The core.Lang of the file to read.</p>
+<p>:param modifiers: A sequence of modifiers to search for.</p>
+<p>:return: If exists, returns a Path pointing to the file, o.w. error.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def read(directory: Path, lang: Lang, *modifiers) -&gt; Optional[Path]:
+    &#34;&#34;&#34;A handy helper function to retrieve the pathlib.Path given a collection of modifiers.
+    Works as a nice abstraction from the implementation of the naming convention.
+
+    Assumes the naming convention: modifier-modifier.lang\n
+    :param directory: The directory to search for the modifiers.\n
+    :param lang: The core.Lang of the file to read.\n
+    :param modifiers: A sequence of modifiers to search for.\n
+    :return: If exists, returns a Path pointing to the file, o.w. error.
+    &#34;&#34;&#34;
+    path = Path(directory.joinpath(&#34;-&#34;.join(modifiers)).with_suffix(f&#34;.{lang.value}&#34;))
+    if path.exists():
+        return path
+    raise FileNotFoundError(f&#34;{path} does not exist&#34;)</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.regexp"><code class="name flex">
+<span>def <span class="ident">regexp</span></span>(<span>path, out_path, regexps)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Applies a list of regular expressions and their substitions to each line in a file.
+Uses multiple threads.</p>
+<p>:param path: The pathlib.Path of the file to apply the regular expression to.</p>
+<p>:param out_path: A pathlib.Path to write the result to.</p>
+<p>:param regexps: A list of Tuples (re.Pattern, str).
+The pattern is used to match and the str is used as a replacement.
+The str supports referencing groups in the match expression.</p>
+<p>:return: True if successful.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def regexp(path: Path,
+           out_path: Path,
+           regexps: List[Tuple[re.Pattern, str]]) -&gt; bool:
+    &#34;&#34;&#34;Applies a list of regular expressions and their substitions to each line in a file.
+    Uses multiple threads.
+
+    :param path: The pathlib.Path of the file to apply the regular expression to.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :param regexps: A list of Tuples (re.Pattern, str).
+    The pattern is used to match and the str is used as a replacement.
+    The str supports referencing groups in the match expression.\n
+    :return: True if successful.
+    &#34;&#34;&#34;
+    return in_parallel(path,
+                       out_path,
+                       THREADS,
+                       partial(c_regexp, regexps=regexps)
+                       )</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.sample"><code class="name flex">
+<span>def <span class="ident">sample</span></span>(<span>path, count)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Yields a random sample of count many lines from a file.</p>
+<p>:param path: The pathlib.Path of the file to sample from.</p>
+<p>:param count: The number of lines to sample.</p>
+<p>:return: An iterator of strings.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def sample(path: Path, count: int) -&gt; Iterable[str]:
+    &#34;&#34;&#34;Yields a random sample of count many lines from a file.
+
+    :param path: The pathlib.Path of the file to sample from.\n
+    :param count: The number of lines to sample.\n
+    :return: An iterator of strings.
+    &#34;&#34;&#34;
+    with path.open() as f_in:
+        # Careful, we read the whole file...
+        lines = f_in.readlines()
+    yield from r_sample(lines, count)</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.sentence_counter"><code class="name flex">
+<span>def <span class="ident">sentence_counter</span></span>(<span>path)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Count the number of sentences in a file.</p>
+<p>:param path: The pathlib.Path of the file to count.</p>
+<p>:return: A collections.Counter with the sentence length as key and the count as value.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def sentence_counter(path: Path) -&gt; Counter:
+    &#34;&#34;&#34;Count the number of sentences in a file.
+
+    :param path: The pathlib.Path of the file to count.\n
+    :return: A collections.Counter with the sentence length as key and the count as value.
+    &#34;&#34;&#34;
+    with path.open() as f_in:
+        counter: Counter = Counter()
+        for line in f_in:
+            sent_length = len(line.split(&#34; &#34;))
+            counter[sent_length] += 1
+    return counter</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.shuffle"><code class="name flex">
+<span>def <span class="ident">shuffle</span></span>(<span>path, out_path, seed_path)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Shuffles a file using a file as a random seed.</p>
+<p>:param path: The pathlib.Path of the file to shuffle.</p>
+<p>:param out_path: A pathlib.Path to write the result to.</p>
+<p>:param seed_path: The pathlib.Path to use a as a random seed. Can be the input file.</p>
+<p>:return: True if successful.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def shuffle(path: Path, out_path: Path, seed_path: Path) -&gt; bool:
+    &#34;&#34;&#34;Shuffles a file using a file as a random seed.
+
+    :param path: The pathlib.Path of the file to shuffle.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :param seed_path: The pathlib.Path to use a as a random seed. Can be the input file.\n
+    :return: True if successful.
+    &#34;&#34;&#34;
+    command = [
+        &#39;shuf&#39;,
+        f&#39;--random-source={str(seed_path)}&#39;,
+        f&#39;{str(path)}&#39;
+    ]
+    with out_path.open(&#39;w+&#39;) as f_out:
+        run(command, stdout=f_out, check=True)
+    return True</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.split"><code class="name flex">
+<span>def <span class="ident">split</span></span>(<span>path, out_path_1, out_path_2, count)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Splits a file to the two files provided. The latter file will have count number of lines.</p>
+<p>:param path: The pathlib.Path of the file to split.</p>
+<p>:param out_path_1: A pathlib.Path to write the first x lines to.</p>
+<p>:param out_path_2: A pathlib.Path to write count last lines to.</p>
+<p>:param count: The number of lines the latter file should have.</p>
+<p>:return: True if succesful.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def split(path: Path, out_path_1: Path, out_path_2: Path, count) -&gt; bool:
+    &#34;&#34;&#34;Splits a file to the two files provided. The latter file will have count number of lines.
+
+    :param path: The pathlib.Path of the file to split.\n
+    :param out_path_1: A pathlib.Path to write the first x lines to.\n
+    :param out_path_2: A pathlib.Path to write count last lines to.\n
+    :param count: The number of lines the latter file should have.\n
+    :return: True if succesful.
+    &#34;&#34;&#34;
+    with path.open() as f_in:
+        # Careful, we read all the lines
+        lines = f_in.readlines()
+        with out_path_1.open(&#39;w+&#39;) as f_s1, \
+                out_path_2.open(&#39;w+&#39;) as f_s2:
+            f_s1.writelines(lines[:-count])
+            f_s2.writelines(lines[-count:])
+
+    return True</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.tei_read"><code class="name flex">
+<span>def <span class="ident">tei_read</span></span>(<span>paths, out_path)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Reads a sequence of Path of TEI files from RMH and writes to a single file.
+Uses multiple threads.</p>
+<p>:param paths: A Sequence of pathlib.Path of .tei files to read.</p>
+<p>:param out_path: pathlib.Path to write the contents to.</p>
+<p>:return: True if successful.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def tei_read(paths: Sequence[Path], out_path: Path) -&gt; bool:
+    &#34;&#34;&#34;Reads a sequence of Path of TEI files from RMH and writes to a single file.
+    Uses multiple threads.
+
+    :param paths: A Sequence of pathlib.Path of .tei files to read.\n
+    :param out_path: pathlib.Path to write the contents to.\n
+    :return: True if successful.
+    &#34;&#34;&#34;
+    with out_path.open(&#39;w+&#39;) as f_out:
+        with ProcessPoolExecutor(max_workers=14) as executor:
+            results = list(tqdm(executor.map(
+                tei_read_file,
+                paths,
+                chunksize=100),
+                total=len(paths)))
+            for result in results:
+                f_out.write(&#39;&#39;.join(result))
+    return True</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.tei_read_file"><code class="name flex">
+<span>def <span class="ident">tei_read_file</span></span>(<span>path)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Reads a tei file to extract the contents. Hand-tailored to reading the RMH.</p>
+<p>Adjusted code from xml_tools.py from Róbert Kjaran <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#114;&#111;&#98;&#101;&#114;&#116;&#64;&#107;&#106;&#97;&#114;&#97;&#110;&#46;&#99;&#111;&#109;">&#114;&#111;&#98;&#101;&#114;&#116;&#64;&#107;&#106;&#97;&#114;&#97;&#110;&#46;&#99;&#111;&#109;</a></p>
+<p>:param path: A pathlib.Path to the .tei file to read.</p>
+<p>:return: A List of sentences as defined in the .tei file.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def tei_read_file(path: Path) -&gt; Sequence[str]:
+    &#34;&#34;&#34;Reads a tei file to extract the contents. Hand-tailored to reading the RMH.
+
+    Adjusted code from xml_tools.py from Róbert Kjaran &lt;robert@kjaran.com&gt;
+
+    :param path: A pathlib.Path to the .tei file to read.\n
+    :return: A List of sentences as defined in the .tei file.
+    &#34;&#34;&#34;
+    NS = {&#39;a&#39;: &#39;http://www.tei-c.org/ns/1.0&#39;}
+    root = ET.parse(str(path)).getroot()
+    sentences = []
+    # We gather all the paragraphs from the body, avoiding the divs
+    for paragraph_node in root.findall(&#39;.//a:body//a:p&#39;, NS):
+        for sentence_node in paragraph_node.findall(&#39;.//a:s&#39;, NS):
+            tokens = [(token_node.text, token_node.attrib[&#39;type&#39;])
+                      for token_node in sentence_node.findall(&#39;./*&#39;)]
+            sentence: List[str] = []
+            tokens_len = len(tokens)
+            for i, token in enumerate(tokens):
+                if token[0] is None:
+                    continue
+                sentence.append(token[0])
+                if i != tokens_len - 1 and (tokens[i + 1][1] != &#39;punctuation&#39;):
+                    sentence.append(&#39; &#39;)
+            sentences.append(&#39;&#39;.join(sentence) + &#39;\n&#39;)
+    return sentences</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.tmx_split"><code class="name flex">
+<span>def <span class="ident">tmx_split</span></span>(<span>paths, src_lang, tar_lang)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Split a collection tmx file to multiple language files with a line per sentence.</p>
+<p>:param paths: A sequence of tmx files to split.</p>
+<p>:param src_lang: The source language code as defined in the .tmx file.</p>
+<p>:param tar_lang: The target language code as defined in the .tmx file.</p>
+<p>:return: A List of Tuples with pathlib.Path pointing to the source and target language files.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def tmx_split(paths: Tuple[Path],
+              src_lang: str,
+              tar_lang: str) -&gt; List[Tuple[Path, Path]]:
+    &#34;&#34;&#34;Split a collection tmx file to multiple language files with a line per sentence.
+
+    :param paths: A sequence of tmx files to split.\n
+    :param src_lang: The source language code as defined in the .tmx file.\n
+    :param tar_lang: The target language code as defined in the .tmx file.\n
+    :return: A List of Tuples with pathlib.Path pointing to the source and target language files.
+    &#34;&#34;&#34;
+    result: List[Tuple[Path, Path]] = list()
+    for tmx_path in paths:
+        # We read the file as bytes since the xml defines an encoding.
+        with tmx_path.open(&#39;rb&#39;) as f_in:
+            tmx = tmxfile(f_in, src_lang, tar_lang)
+        # We assume that there is only one stem
+        src_path = tmx_path.with_name(
+            f&#39;{tmx_path.stem}.{TMX_2_LANG[src_lang].value}&#39;)
+        tar_path = tmx_path.with_name(
+            f&#39;{tmx_path.stem}.{TMX_2_LANG[tar_lang].value}&#39;)
+        with src_path.open(&#39;w+&#39;) as f_src, tar_path.open(&#39;w+&#39;) as f_tar:
+            for node in tmx.unit_iter():
+                f_src.write(node.source + &#39;\n&#39;)
+                f_tar.write(node.target + &#39;\n&#39;)
+        result.append((src_path, tar_path))
+    return result</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.token_counter"><code class="name flex">
+<span>def <span class="ident">token_counter</span></span>(<span>path)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Count the number of unique tokens in a file.
+A collections.Counter with the token as key and the count as value.</p>
+<p>:param path: The pathlib.Path of the file to count.</p>
+<p>:return: A collections.Counter with the token as key and the count as value.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def token_counter(path: Path) -&gt; Counter:
+    &#34;&#34;&#34;Count the number of unique tokens in a file.
+    A collections.Counter with the token as key and the count as value.
+
+    :param path: The pathlib.Path of the file to count.\n
+    :return: A collections.Counter with the token as key and the count as value.
+    &#34;&#34;&#34;
+    with path.open() as f_in:
+        counter: Counter = Counter()
+        for line in f_in:
+            counter.update(line.strip(&#39;\n&#39;).split(&#34; &#34;))
+    return counter</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.tokenize"><code class="name flex">
+<span>def <span class="ident">tokenize</span></span>(<span>path, out_path, method='pass-through')</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Tokenizes a file using the specified method. Reads the language from the filename.
+See core.tokenize() for accepted methods. Uses many threads.</p>
+<p>:param path: The pathlib.Path of the file to tokenize.</p>
+<p>:param out_path: A pathlib.Path to write the result to.</p>
+<p>:param method: The tokenization method to use. See core.tokenize() for accepted methods.</p>
+<p>:return: True if successful.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def tokenize(path: Path,
+             out_path: Path,
+             method: str = &#39;pass-through&#39;) -&gt; bool:
+    &#34;&#34;&#34;Tokenizes a file using the specified method. Reads the language from the filename.
+    See core.tokenize() for accepted methods. Uses many threads.
+
+    :param path: The pathlib.Path of the file to tokenize.\n
+    :param out_path: A pathlib.Path to write the result to.\n
+    :param method: The tokenization method to use. See core.tokenize() for accepted methods.\n
+    :return: True if successful.
+    &#34;&#34;&#34;
+    tok = get_tokenizer(_lang(path), method)
+    return in_parallel(path,
+                       out_path,
+                       THREADS,
+                       partial(apply_tokenizer, tokenizer=tok)
+                       )</code></pre>
+</details>
+</dd>
+<dt id="frontend.bulk.write"><code class="name flex">
+<span>def <span class="ident">write</span></span>(<span>directory, lang, *modifiers, overwrite=True)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>A handy helper function to create a pathlib.Path given a collection of modifiers.
+Works as a nice abstraction from the implementation of the naming convention.</p>
+<p>Assumes the naming convention: modifier-modifier.lang</p>
+<p>:param directory: The directory to write to.</p>
+<p>:param lang: The Lang to write.</p>
+<p>:param modifiers: A sequence of modifiers.</p>
+<p>:param overwrite: If set True, will not raise error if the file exists.</p>
+<p>:return: A pathlin.Path pointing to the file.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def write(directory: Path, lang: Lang, *modifiers, overwrite=True) -&gt; Optional[Path]:
+    &#34;&#34;&#34;A handy helper function to create a pathlib.Path given a collection of modifiers.
+    Works as a nice abstraction from the implementation of the naming convention.
+
+    Assumes the naming convention: modifier-modifier.lang\n
+    :param directory: The directory to write to.\n
+    :param lang: The Lang to write.\n
+    :param modifiers: A sequence of modifiers.\n
+    :param overwrite: If set True, will not raise error if the file exists.\n
+    :return: A pathlin.Path pointing to the file.
+    &#34;&#34;&#34;
+    path = Path(directory.joinpath(&#34;-&#34;.join(modifiers)).with_suffix(f&#34;.{lang.value}&#34;))
+    if path.exists() and not overwrite:
+        raise FileExistsError(f&#34;{path} exists&#34;)
+    return path</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="frontend" href="index.html">frontend</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-variables">Global variables</a></h3>
+<ul class="">
+<li><code><a title="frontend.bulk.CHUNKSIZE" href="#frontend.bulk.CHUNKSIZE">CHUNKSIZE</a></code></li>
+<li><code><a title="frontend.bulk.THREADS" href="#frontend.bulk.THREADS">THREADS</a></code></li>
+<li><code><a title="frontend.bulk.TMX_2_LANG" href="#frontend.bulk.TMX_2_LANG">TMX_2_LANG</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="two-column">
+<li><code><a title="frontend.bulk.combine" href="#frontend.bulk.combine">combine</a></code></li>
+<li><code><a title="frontend.bulk.drop_lines" href="#frontend.bulk.drop_lines">drop_lines</a></code></li>
+<li><code><a title="frontend.bulk.get_drop_lines" href="#frontend.bulk.get_drop_lines">get_drop_lines</a></code></li>
+<li><code><a title="frontend.bulk.in_parallel" href="#frontend.bulk.in_parallel">in_parallel</a></code></li>
+<li><code><a title="frontend.bulk.info" href="#frontend.bulk.info">info</a></code></li>
+<li><code><a title="frontend.bulk.info_formatted" href="#frontend.bulk.info_formatted">info_formatted</a></code></li>
+<li><code><a title="frontend.bulk.list_dir" href="#frontend.bulk.list_dir">list_dir</a></code></li>
+<li><code><a title="frontend.bulk.lowercase_normalize" href="#frontend.bulk.lowercase_normalize">lowercase_normalize</a></code></li>
+<li><code><a title="frontend.bulk.peek" href="#frontend.bulk.peek">peek</a></code></li>
+<li><code><a title="frontend.bulk.peeks" href="#frontend.bulk.peeks">peeks</a></code></li>
+<li><code><a title="frontend.bulk.read" href="#frontend.bulk.read">read</a></code></li>
+<li><code><a title="frontend.bulk.regexp" href="#frontend.bulk.regexp">regexp</a></code></li>
+<li><code><a title="frontend.bulk.sample" href="#frontend.bulk.sample">sample</a></code></li>
+<li><code><a title="frontend.bulk.sentence_counter" href="#frontend.bulk.sentence_counter">sentence_counter</a></code></li>
+<li><code><a title="frontend.bulk.shuffle" href="#frontend.bulk.shuffle">shuffle</a></code></li>
+<li><code><a title="frontend.bulk.split" href="#frontend.bulk.split">split</a></code></li>
+<li><code><a title="frontend.bulk.tei_read" href="#frontend.bulk.tei_read">tei_read</a></code></li>
+<li><code><a title="frontend.bulk.tei_read_file" href="#frontend.bulk.tei_read_file">tei_read_file</a></code></li>
+<li><code><a title="frontend.bulk.tmx_split" href="#frontend.bulk.tmx_split">tmx_split</a></code></li>
+<li><code><a title="frontend.bulk.token_counter" href="#frontend.bulk.token_counter">token_counter</a></code></li>
+<li><code><a title="frontend.bulk.tokenize" href="#frontend.bulk.tokenize">tokenize</a></code></li>
+<li><code><a title="frontend.bulk.write" href="#frontend.bulk.write">write</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.7.2</a>.</p>
+</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad()</script>
+</body>
+</html>

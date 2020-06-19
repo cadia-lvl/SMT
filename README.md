@@ -13,7 +13,20 @@ Dreift sem Python pakka og Docker á DockerHub `haukurp/moses-lvl:3.2.0`.
 1. Aukalega fylgja reiknirit sem eru notuð til þess að forvinna og samhæfa gögn, `preprocessing`, `scripts` og `notebooks`.
 
 # Efnisyfirlit
-TODO: Add
+- [Moses - PBSMT](#moses---pbsmt)
+- [Efnisyfirlit](#efnisyfirlit)
+- [Uppsetning](#uppsetning)
+- [Keyrsla](#keyrsla)
+- [Leyfi](#leyfi)
+- [Höfundar](#h-fundar)
+  * [Þakkir](#-akkir)
+- [Frekari þróun](#frekari--r-un)
+  * [Möppufyrirkomulag](#m-ppufyrirkomulag)
+  * [Gögn](#g-gn)
+  * [Prófanir](#pr-fanir)
+    + [Sjálfvirkar](#sj-lfvirkar)
+    + [BLEU stig](#bleu-stig)
+- [Greinar](#greinar)
 
 # Uppsetning
 Þar sem verkefninu er deilt með `docker` þarf einungis að setja upp [`docker`](https://www.docker.com/)

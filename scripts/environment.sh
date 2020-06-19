@@ -35,13 +35,15 @@ export EN_IS_DIR="$MODEL_DIR"/en-is
 export IS_EN_DIR="$MODEL_DIR"/is-en
 export MODEL_RESULTS_DIR="$MODEL_DIR"/results
 
-# LM - Use a symbolic link
+# LM location and order
 export LM_MODEL="$OUT_DIR"/blm
 export LM_ORDER=5
 
+# Location of data.
 export TRAINING_DATA="$OUT_DIR"/train/data
 export DEV_DATA="$OUT_DIR"/dev/data
 export TEST_DIR="$OUT_DIR"/test
 
+# Name of test sets.
 export TEST_SETS="ees ema opensubtitles"
 export TEST_SET_CORRECT_COMBINED="$TEST_DIR"/combined."$LANG_TO"

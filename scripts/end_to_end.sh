@@ -67,8 +67,8 @@ fi
 # Train & eval -> MODEL_DIR
 if ((FIRST_STEP <= 3 && LAST_STEP >= 3)); then
     mkdir -p "$MODEL_DIR"
-    rm -rf "$EN_IS_DIR" || true
-    rm -rf "$IS_EN_DIR" || true
+    rm -r "$EN_IS_DIR" || true
+    rm -r "$IS_EN_DIR" || true
     mkdir -p "$EN_IS_DIR"
     mkdir -p "$IS_EN_DIR"
     mkdir -p "$MODEL_RESULTS_DIR"

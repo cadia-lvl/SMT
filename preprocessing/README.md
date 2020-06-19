@@ -1,30 +1,37 @@
 # Forvinnsla
-Hér eru ýmsar skriftur og Python forrit sem er notað til þess að forvinna gögn áður en Moses líkan er þjálfað sem og til þess að keyra sem þjón til að forvinna gögn fyrir þýðingar.
+Hér er Python forrit sem er notað til þess að forvinna gögn áður en Moses líkan er þjálfað sem og til þess að keyra sem þjón til að forvinna gögn fyrir þýðingar.
 
-- `preprocessing` inniheldur Python föll sem hægt er að nota í skjáhermi til þess að keyra ýmis skref.
-- `scripts` ýmis konar skriftur sem nota Python forritið á gögn.
+- `preprocessing` inniheldur Python forritið sem hægt er að nota í skjáhermi til þess að keyra ýmis skref.
 - `tests` innihalda nokkrar prófanir á Python forriti.
 - `main.py` er notað til þess að keyra Python forritið.
 - `requirements.txt` inniheldur lista yfir öll nauðsynleg forrit til þess að keyra Python forritið.
+- `Dockerfile` skilgreining Docker myndina sem er notuð til þess að dreifa kóðanum.
+- `docker-build.sh` er script-a til þess að byggja Docker myndina.
 
 Python forritið er yfirleitt notað í gengum `scipts` eða sem þjónn.
 
-## Skref í forvinnslu
-Við byrjum með stöðluð gögn, þar sem skjölin enda á `.en` eða `.is` til þess að vísa til tungumáls.
-- Enska málheild
-- Íslenska málheild
-- ParIce
-
-1. Gögn lesin og tilreidd
-1. Truecasing líkan þjálfað á einhliða og tvíhliða gögnum
-1. Upphaflegu gögn forunnin með `preprocess` falli
-1. Gögn fyrir mállíkön undirbúin.
-
-Einnig eru önnur skref, án númers, sem voru notuð til að framkvæma tilfallandi vinnslu.
+## Keyrsla
+Forvinna texta eða skjal:
+```
+./main.py preprocess "Íslenskur texti" output.txt "is"
+```
+Keyrsla á forvinnsluþjóni:
+```
+./main.py server --debug
+```
+Til að skilgreina Moses bakenda, þarf að setja stýrikerfisbreytu sem vísar á keyrandi Moses bakenda:
+```shell script
+export MODEL_en_is_moses=http://moses-en-is:8080/RPC2
+```
+Fyrir frekari útfærð föll sjá:
+```
+./main.py --help
+```
 
 ## Python forrit
-
-`file_handler.py` manages reading and writing data, including Moses format.
-`pipeline.py` applies transformations, including enrichment, to the data.
-`tools.py` implements truecasing, splitting, enriching and detokenization.
-`types.py` implements useful types common during processing.
+- `api.py` skilgreinir einföld föll sem hægt er að kalla í.
+- `client.py` skilgreinir föll til þess að senda þýðingarbeiðnir á keyrandi Moses þýðingarvél.
+- `file_handler.py` sér um lestur, skrif og aðra hráatexta vinnslu.
+- `pipeline.py` skilgreinir föll fyrir einstök skref í textavinnslu.
+- `server.py` skilgreinir þjón sem hægt er að keyra til þess að taka á móti þýðingarbeiðnum, forvinna, sendir á Moses og eftirvinnur þýðingar.
+- `types.py` útfærir gagna tegundir sem unnið er með í forritinu.

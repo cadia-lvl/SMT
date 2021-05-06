@@ -12,7 +12,7 @@ cryptography==2.8
 entrypoints==0.3
 flake8==3.7.9
 Flask==1.1.2
-Flask-Cors==3.0.8
+Flask-Cors==3.0.9
 Flask-RESTful==0.3.8
 idna==2.9
 idna-ssl==1.1.0

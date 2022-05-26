@@ -60,7 +60,7 @@ tqdm==4.45.0
 typed-ast==1.4.1
 typing==3.6.4
 typing-extensions==3.7.4.1
-ujson==2.0.3
+ujson==5.2.0
 urllib3==1.25.7
 wcwidth==0.1.9
 Werkzeug==1.0.1
